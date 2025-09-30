@@ -9,6 +9,7 @@ import org.springframework.stereotype.Repository;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.util.List;
+import java.util.Optional;
 
 @Repository
 public interface EducationHistoryRepository extends JpaRepository<EducationHistory, Long> {
@@ -30,4 +31,10 @@ public interface EducationHistoryRepository extends JpaRepository<EducationHisto
     @Modifying
     @Query(value = "DELETE FROM education_history WHERE profile_id = :profileId", nativeQuery = true)
     void deleteByProfileIdNative(@Param("profileId") Long profileId);
+    
+    @Transactional
+    @Modifying
+    void deleteByProfile_ProfileIdAndId(Long profileId, Long id);
+    
+    Optional<EducationHistory> findByProfile_ProfileIdAndId(Long profileId, Long id);
 }

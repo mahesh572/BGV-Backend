@@ -26,7 +26,8 @@ import lombok.Setter;
 public class EducationDocuments implements BaseDocument{
 	@Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
-    private Long doc_id;
+	@Column(name = "doc_id")
+    private Long docId;
 
     @ManyToOne
     @JoinColumn(name = "category_id")
@@ -34,19 +35,32 @@ public class EducationDocuments implements BaseDocument{
 
     @ManyToOne
     @JoinColumn(name = "doc_type_id")
-    private DocumentType type_id;
+    private DocumentType docTypeId;
 
     @ManyToOne
     @JoinColumn(name = "profile_id")
     private Profile profile;
+    @Column(name = "file_url")
+    private String fileUrl;
 
-    private String file_url;
-    private Long file_size;
+    @Column(name = "file_size")
+    private Long fileSize;
+
+    @Column(name = "status")
     private String status;
+
+    @Column(name = "uploaded_at")
     private LocalDateTime uploadedAt;
+
+    @Column(name = "verified_at")
     private LocalDateTime verifiedAt;
+
+    @Column(name = "comments")
     private String comments;
+
+    @Column(name = "aws_doc_key")
     private String awsDocKey;
+
     @Column(name = "object_id")
-    private Long objectId; // Changed from object_id to objectId
+    private Long objectId;
 }

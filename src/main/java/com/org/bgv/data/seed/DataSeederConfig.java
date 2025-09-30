@@ -4,6 +4,7 @@ import com.org.bgv.entity.DegreeType;
 import com.org.bgv.entity.DocumentCategory;
 import com.org.bgv.entity.DocumentType;
 import com.org.bgv.entity.FieldOfStudy;
+import com.org.bgv.entity.Other;
 import com.org.bgv.entity.Permission;
 import com.org.bgv.entity.Role;
 import com.org.bgv.entity.RolePermission;
@@ -11,6 +12,7 @@ import com.org.bgv.repository.DegreeTypeRepository;
 import com.org.bgv.repository.DocumentCategoryRepository;
 import com.org.bgv.repository.DocumentTypeRepository;
 import com.org.bgv.repository.FieldOfStudyRepository;
+import com.org.bgv.repository.OtherRepository;
 import com.org.bgv.repository.PermissionRepository;
 import com.org.bgv.repository.RolePermissionRepository;
 import com.org.bgv.repository.RoleRepository;
@@ -36,6 +38,7 @@ public class DataSeederConfig implements CommandLineRunner {
     private final RolePermissionRepository rolePermissionRepository;
     private final DegreeTypeRepository degreeTypeRepository;
     private final FieldOfStudyRepository fieldOfStudyRepository;
+    private final OtherRepository otherRepository;
 
     @Override
     public void run(String... args) {
@@ -45,6 +48,17 @@ public class DataSeederConfig implements CommandLineRunner {
         seedRolePermissions();
         seedDegreeTypes(); 
         seedFieldsOfStudy();
+        seedSingleOtherRecord();
+    }
+    
+    
+    // Alternative method: Create a single sample record if none exists
+    private void seedSingleOtherRecord() {
+        if (otherRepository.count() == 0) {
+            Other sampleRecord = Other.builder().build();
+            otherRepository.save(sampleRecord);
+            System.out.println("Sample Other record created successfully");
+        }
     }
     
     private void seedDocumentCategoriesAndTypes() {

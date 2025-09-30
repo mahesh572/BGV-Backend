@@ -26,4 +26,5 @@ public class BasicdetailsDTO {
     private Long user_id;
     private String verificationStatus;
     private String status;
+    private String linkedIn;
 }

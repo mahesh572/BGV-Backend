@@ -15,16 +15,22 @@ import java.util.List;
 @AllArgsConstructor
 @Builder
 public class WorkExperienceDTO {
-	private Long experienceId;
+	private Long id;
     private String companyName;
     private String position;
     private LocalDate startDate;
     private LocalDate endDate;
     private Long employeeId;
-    private String managerEmailId;
-    private String hrEmailId;
-    private String address;
+    private String managerEmail;
+    private String hrEmail;
+    private String companyAddress;
     private String reasonForLeaving;
+    private Boolean currentlyWorking;
+    private String city;
+    private String country;
+    private String state;
+    private String noticePeriod;
+    private String employmentType;
     private List<DocumentResponse> documents;
   //  private DocumentStats documentStats;
 }

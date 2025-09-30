@@ -12,5 +12,6 @@ public interface DocumentCategoryRepository extends JpaRepository<DocumentCatego
 	
     Optional<DocumentCategory> findByNameIgnoreCase(String name);
     
+    
     Optional<DocumentCategory> findByNameContainingIgnoreCase(String name);
 }

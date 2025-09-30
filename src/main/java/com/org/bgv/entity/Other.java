@@ -1,10 +1,15 @@
 package com.org.bgv.entity;
 
+import java.time.LocalDate;
+import java.time.LocalDateTime;
 
+import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
 import jakarta.persistence.GeneratedValue;
 import jakarta.persistence.GenerationType;
 import jakarta.persistence.Id;
+import jakarta.persistence.JoinColumn;
+import jakarta.persistence.ManyToOne;
 import jakarta.persistence.Table;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
@@ -13,21 +18,19 @@ import lombok.NoArgsConstructor;
 import lombok.Setter;
 
 @Entity
-@Table(name = "document_category")
+@Table(name = "other")
 @Getter
 @Setter
 @NoArgsConstructor
 @AllArgsConstructor
 @Builder
-public class DocumentCategory {
-   
-	@Id
-    @GeneratedValue(strategy = GenerationType.IDENTITY)
-    private Long categoryId;
-
-    private String name;
-    private String description;
-    private String label;
-
-    // getters and setters
+public class Other {
+	 @Id
+	    @GeneratedValue(strategy = GenerationType.IDENTITY)
+	    @Column(name = "object_id")
+	    private Long id;
+	 
+	 	@ManyToOne
+	    @JoinColumn(name = "profile_id")
+	    private Profile profile;
 }

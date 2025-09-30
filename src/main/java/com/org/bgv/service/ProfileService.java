@@ -32,12 +32,12 @@ public class ProfileService {
     
     private static final Logger logger = LoggerFactory.getLogger(ProfileService.class);
     
-    public ProfileDTO createProfile(ProfileDTO profileDTO) {
+    public BasicdetailsDTO createProfile(BasicdetailsDTO profileDTO) {
         Profile profile = mapToEntity(profileDTO);
         profile.setStatus(ProfileStatus.CREATED.name());
         System.out.println("profile==========="+profile.toString());
         Profile savedProfile = profileRepository.save(profile);
-        return mapToDTO(savedProfile);
+        return mapToBasicdetailsDTO(savedProfile);
     }
     
  
@@ -71,25 +71,26 @@ public class ProfileService {
                 .build();
     }
     
-    public ProfileDTO getProfile(Long profileId) {
+    public BasicdetailsDTO getProfile(Long profileId) {
         Profile profile = profileRepository.findById(profileId)
                 .orElseThrow(() -> new RuntimeException("Profile not found: " + profileId));
-        return mapToDTO(profile);
+        return mapToBasicdetailsDTO(profile);
     }
 
-    public ProfileDTO updateProfile(Long profileId, ProfileDTO profileDTO) {
+    public BasicdetailsDTO updateProfile(Long profileId, BasicdetailsDTO basicdetailsDTO) {
         Profile existingProfile = profileRepository.findById(profileId)
                 .orElseThrow(() -> new RuntimeException("Profile not found: " + profileId));
-        BasicdetailsDTO basicdetailsDTO  = profileDTO.getBasicDetails();
+      //  BasicdetailsDTO basicdetailsDTO  = profileDTO.getBasicDetails();
         existingProfile.setFirst_name(basicdetailsDTO.getFirstName());
         existingProfile.setLast_name(basicdetailsDTO.getLastName());
         existingProfile.setEmail_address(basicdetailsDTO.getEmail());
         existingProfile.setPhoneNumber(basicdetailsDTO.getPhone());
         existingProfile.setDate_of_birth(basicdetailsDTO.getDateOfBirth());
         existingProfile.setGender(basicdetailsDTO.getGender());
+        existingProfile.setLinkedIn(basicdetailsDTO.getLinkedIn());
 
         Profile updatedProfile = profileRepository.save(existingProfile);
-        return mapToDTO(updatedProfile);
+        return mapToBasicdetailsDTO(updatedProfile);
     }
 
     @Transactional
@@ -120,21 +121,42 @@ public class ProfileService {
                 .collect(Collectors.toList());
     }
 
-    private Profile mapToEntity(ProfileDTO dto) {
+    private Profile mapToEntity(BasicdetailsDTO dto) {
     	
         return Profile.builder()
-                .profileId(dto.getBasicDetails().getProfileId())
-                .first_name(dto.getBasicDetails().getFirstName())
-                .last_name(dto.getBasicDetails().getLastName())
-                .email_address(dto.getBasicDetails().getEmail())
-                .phoneNumber(dto.getBasicDetails().getPhone())
-                .date_of_birth(dto.getBasicDetails().getDateOfBirth())
-                .gender(dto.getBasicDetails().getGender())
+              //  .profileId(dto.getBasicDetails().getProfileId())
+                .first_name(dto.getFirstName())
+                .last_name(dto.getLastName())
+                .email_address(dto.getEmail())
+                .phoneNumber(dto.getPhone())
+                .date_of_birth(dto.getDateOfBirth())
+                .gender(dto.getGender())
                // .userId(dto.getUser_id())
                 .userId(1l)
                 .status("PENDING")
                 .build();
     }
+    
+    
+    private BasicdetailsDTO mapToBasicdetailsDTO(Profile entity) {
+    	
+    	BasicdetailsDTO basicdetailsDTO = BasicdetailsDTO.builder()
+    	    	.firstName(entity.getFirst_name())
+    	    	.lastName(entity.getLast_name())
+    	    	.email(entity.getEmail_address())
+    	    	.dateOfBirth(entity.getDate_of_birth())
+    	    	.phone(entity.getPhoneNumber())
+    	    	.profileId(entity.getProfileId())
+    	    	.gender(entity.getGender())
+    	    	.user_id(entity.getUserId())
+    	    	.verificationStatus(entity.getVerificationStatus()==null ?"":entity.getVerificationStatus())
+    	    	.status(entity.getStatus())
+    	    	.linkedIn(entity.getLinkedIn())
+    	    	.build();
+    	    	
+    	return basicdetailsDTO;
+    }
+    
 
     private ProfileDTO mapToDTO(Profile entity) {
     	
@@ -156,7 +178,7 @@ public class ProfileService {
                 .workExperiences(workExperienceService.getWorkExperiencesByProfile(entity.getProfileId()))
                 .addresses(profileAddressService.getAddressesByProfile(entity.getProfileId())) 
                 .educationHistory(educationHistoryService.getEducationByProfile(entity.getProfileId()))
-                .documents(documentService.getDocumentsByProfileGroupedByCategory(entity.getProfileId()))
+               // .documents(documentService.getDocumentsByProfileGroupedByCategory(entity.getProfileId()))
                 .build();
     }
     

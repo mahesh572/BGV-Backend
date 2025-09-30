@@ -63,6 +63,9 @@ public class Profile {
     
     @Column(name = "verification_status")
     private String verificationStatus;
+    
+    @Column(name = "linkedIn")
+    private String linkedIn;
 
     @PrePersist
     protected void onCreate() {

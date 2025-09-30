@@ -2,6 +2,7 @@ package com.org.bgv.entity;
 
 import java.time.LocalDateTime;
 
+import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
 import jakarta.persistence.GeneratedValue;
 import jakarta.persistence.GenerationType;
@@ -22,10 +23,12 @@ import lombok.Setter;
 @NoArgsConstructor
 @AllArgsConstructor
 @Builder
-public class Document implements BaseDocument{
+public class Document implements BaseDocument {
+    
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
-    private Long doc_id;
+    @Column(name = "doc_id")
+    private Long docId;
 
     @ManyToOne
     @JoinColumn(name = "category_id")
@@ -33,20 +36,38 @@ public class Document implements BaseDocument{
 
     @ManyToOne
     @JoinColumn(name = "doc_type_id")
-    private DocumentType type_id;
+    private DocumentType docTypeId;
 
     @ManyToOne
     @JoinColumn(name = "profile_id")
     private Profile profile;
 
-    private String file_url;
-    private Long file_size;
-    private String status;
-    private LocalDateTime uploadedAt;
-    private LocalDateTime verifiedAt;
-    private String comments;
-    private String awsDocKey;
-    private Long object_id;
+    @Column(name = "file_url")
+    private String fileUrl;
 
-    // getters and setters
+    @Column(name = "file_size")
+    private Long fileSize;
+
+    @Column(name = "status")
+    private String status;
+
+    @Column(name = "uploaded_at")
+    private LocalDateTime uploadedAt;
+
+    @Column(name = "verified_at")
+    private LocalDateTime verifiedAt;
+
+    @Column(name = "comments")
+    private String comments;
+
+    @Column(name = "aws_doc_key")
+    private String awsDocKey;
+
+    @Column(name = "object_id")
+    private Long objectId;
+
+	
+
+
+	
 }

@@ -2,6 +2,8 @@ package com.org.bgv.controller;
 
 import com.org.bgv.api.response.ApiResponse;
 import com.org.bgv.dto.*;
+import com.org.bgv.dto.document.CategoriesDTO;
+import com.org.bgv.dto.document.DocumentCategoryDto;
 import com.org.bgv.service.*;
 
 import jakarta.persistence.EntityNotFoundException;
@@ -31,10 +33,10 @@ public class ProfileController {
     private static final Logger logger = LoggerFactory.getLogger(ProfileController.class);
     // Create a new profile
     @PostMapping
-    public ResponseEntity<ApiResponse<ProfileDTO>> createProfile(@RequestBody ProfileDTO profileDTO) {
+    public ResponseEntity<ApiResponse<BasicdetailsDTO>> createProfile(@RequestBody BasicdetailsDTO profileDTO) {
         try {
         	
-            ProfileDTO createdProfile = profileService.createProfile(profileDTO);
+        	BasicdetailsDTO createdProfile = profileService.createProfile(profileDTO);
             return ResponseEntity.status(HttpStatus.CREATED)
                     .body(ApiResponse.success("Profile created successfully", createdProfile, HttpStatus.CREATED));
         } catch (Exception e) {
@@ -72,9 +74,9 @@ public class ProfileController {
 
     // Get basic profile info
     @GetMapping("/{profileId}")
-    public ResponseEntity<ApiResponse<ProfileDTO>> getProfile(@PathVariable Long profileId) {
+    public ResponseEntity<ApiResponse<BasicdetailsDTO>> getProfile(@PathVariable Long profileId) {
         try {
-            ProfileDTO profileDTO = profileService.getProfile(profileId);
+        	BasicdetailsDTO profileDTO = profileService.getProfile(profileId);
             return ResponseEntity.ok(ApiResponse.success("Profile retrieved successfully", profileDTO, HttpStatus.OK));
         } catch (RuntimeException e) {
             return ResponseEntity.status(HttpStatus.NOT_FOUND)
@@ -87,11 +89,11 @@ public class ProfileController {
 
     // Update profile
     @PutMapping("/{profileId}")
-    public ResponseEntity<ApiResponse<ProfileDTO>> updateProfile(@PathVariable Long profileId, @RequestBody ProfileDTO profileDTO) {
+    public ResponseEntity<ApiResponse<BasicdetailsDTO>> updateProfile(@PathVariable Long profileId, @RequestBody BasicdetailsDTO profileDTO) {
         try {
         	logger.info("profileId:::UPDATE::::{}",profileId);
         	logger.info("ProfileDTO::::UPDATE:::{}",profileDTO);
-            ProfileDTO updatedProfile = profileService.updateProfile(profileId, profileDTO);
+        	BasicdetailsDTO updatedProfile = profileService.updateProfile(profileId, profileDTO);
             return ResponseEntity.ok(ApiResponse.success("Profile updated successfully", updatedProfile, HttpStatus.OK));
         } catch (RuntimeException e) {
             return ResponseEntity.status(HttpStatus.NOT_FOUND)
@@ -139,6 +141,7 @@ public class ProfileController {
             @PathVariable Long profileId,
             @RequestBody List<EducationHistoryDTO> educationHistoryDTOs) {
         try {
+        	logger.info("profile controller:::::::{}",profileId);
             List<EducationHistoryDTO> updatedEducation = educationHistoryService.updateEducationHistories(educationHistoryDTOs, profileId);
             return ResponseEntity.ok()
                     .body(ApiResponse.success("Education history updated successfully", updatedEducation, HttpStatus.OK));
@@ -163,11 +166,11 @@ public class ProfileController {
                     .body(ApiResponse.failure("Failed to retrieve education history: " + e.getMessage(), HttpStatus.INTERNAL_SERVER_ERROR));
         }
     }
-    @DeleteMapping("/education/{educationId}")
-    public ResponseEntity<ApiResponse<Void>> deleteEducationHistory(
+    @DeleteMapping("/{profileId}/education/{educationId}")
+    public ResponseEntity<ApiResponse<Void>> deleteEducationHistory(@PathVariable Long profileId,
             @PathVariable Long educationId) {
         try {
-            educationHistoryService.deleteEducationHistory(educationId);
+            educationHistoryService.deleteEducationHistory(profileId,educationId);
             return ResponseEntity.ok()
                     .body(ApiResponse.success("Education history deleted successfully", null, HttpStatus.OK));
         } catch (RuntimeException e) {
@@ -226,6 +229,23 @@ public class ProfileController {
                     .body(ApiResponse.failure("Failed to update work experiences: " + e.getMessage(), HttpStatus.INTERNAL_SERVER_ERROR));
         }
     }
+    
+    @DeleteMapping("/{profileId}/work-experiences/{id}")
+    public ResponseEntity<ApiResponse<Void>> deleteWorkExperience(
+            @PathVariable Long profileId,
+            @PathVariable Long id) {
+        try {
+            workExperienceService.deleteWorkExperience(profileId, id);
+            return ResponseEntity.ok()
+                    .body(ApiResponse.success("Work experience deleted successfully", null, HttpStatus.OK));
+        } catch (RuntimeException e) {
+            return ResponseEntity.status(HttpStatus.NOT_FOUND)
+                    .body(ApiResponse.failure(e.getMessage(), HttpStatus.NOT_FOUND));
+        } catch (Exception e) {
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
+                    .body(ApiResponse.failure("Failed to delete work experience: " + e.getMessage(), HttpStatus.INTERNAL_SERVER_ERROR));
+        }
+    }
     // Addresses endpoints
     @PostMapping("/{profileId}/addresses")
     public ResponseEntity<ApiResponse<List<ProfileAddressDTO>>> saveProfileAddresses(
@@ -280,7 +300,7 @@ public class ProfileController {
         }
     }
     
-    
+    /*
     // Documents endpoints
     @GetMapping("/{profileId}/documents")
     public ResponseEntity<ApiResponse<List<DocumentCategoryGroup>>> getDocuments(@PathVariable Long profileId) {
@@ -296,8 +316,22 @@ public class ProfileController {
         }
     }
 
+    */
     
-    
+    @GetMapping("/{profileId}/documents")
+    public ResponseEntity<ApiResponse<CategoriesDTO>> getDocuments(@PathVariable Long profileId) {
+        try {
+            CategoriesDTO documents = documentService.getDocuments(profileId);
+            return ResponseEntity.ok(ApiResponse.success("Documents retrieved successfully", documents, HttpStatus.OK));
+        } catch (RuntimeException e) {
+            return ResponseEntity.status(HttpStatus.NOT_FOUND)
+                    .body(ApiResponse.failure(e.getMessage(), HttpStatus.NOT_FOUND));
+        } catch (Exception e) {
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
+                    .body(ApiResponse.failure("Failed to retrieve documents: " + e.getMessage(), HttpStatus.INTERNAL_SERVER_ERROR));
+        }
+    }
+    /*
  // Document Upload Configuration endpoints
     @GetMapping("/document-upload-config")
     public ResponseEntity<ApiResponse<Map<String, Object>>> getDocumentUploadConfig() {
@@ -309,10 +343,10 @@ public class ProfileController {
                     .body(ApiResponse.failure("Failed to fetch document upload configuration: " + e.getMessage(), HttpStatus.INTERNAL_SERVER_ERROR));
         }
     }
-
+*/
  // Upload multiple documents endpoint
     @PostMapping(value = "/{profileId}/documents/upload-multiple", consumes = "multipart/form-data")
-    public ResponseEntity<ApiResponse<List<DocumentResponse>>> uploadMultipleDocuments(
+    public ResponseEntity<ApiResponse<DocumentCategoryDto>> uploadMultipleDocuments(
             @PathVariable Long profileId,
             @RequestParam("files") List<MultipartFile> files,
             @RequestParam("documentTypeId") Long documentTypeId,
@@ -323,7 +357,7 @@ public class ProfileController {
     	
     	logger.info("DocumentTypeId: {}, CategoryId: {}", documentTypeId, categoryId);
         try {
-            List<DocumentResponse> uploadedDocuments = documentService.createDocuments(
+        	DocumentCategoryDto uploadedDocuments = documentService.createDocuments(
                 files, profileId,categoryId,documentTypeId,objectId);
             logger.info("***************************uploaded successfully");
             return ResponseEntity.status(HttpStatus.CREATED)
@@ -357,14 +391,16 @@ public class ProfileController {
         }
     }
    */
-    @DeleteMapping("/documents")
+    @DeleteMapping("/documents/{docId}")
     public ResponseEntity<ApiResponse<DeleteResponse>> deleteDocument(
-            @RequestParam Long docId,
-            @RequestParam Long docTypeId, 
-            @RequestParam String category) {
-
+    		
+    		@PathVariable Long docId
+            ) {
+    	// logger.info("Received upload request for profile: {}", profileId);
+    	
+    	// logger.info("DocumentTypeId: {}, CategoryId: {}", docTypeId, category);
         try {
-            DeleteResponse deleteResponse = documentService.deleteDocument(docId, docTypeId, category);
+            DeleteResponse deleteResponse = documentService.deleteDocument(docId);
             return ResponseEntity.ok(ApiResponse.success("Document deleted successfully", deleteResponse, HttpStatus.OK));
 
         } catch (RuntimeException e) {
@@ -448,4 +484,28 @@ public class ProfileController {
                     .body(ApiResponse.failure("Failed to update profile status: " + e.getMessage(), HttpStatus.INTERNAL_SERVER_ERROR));
         }
     }
+    
+ // Get documents for specific section
+    @GetMapping("/{profileId}/section")
+    public ResponseEntity<ApiResponse<DocumentCategoryDto>> getDocumentsBySection(
+            @PathVariable Long profileId,
+            @RequestParam String section) {
+        try {
+        	DocumentCategoryDto categories = documentService.getDocumentsBySection(profileId, section);
+            return ResponseEntity.ok(
+                    ApiResponse.success("Documents retrieved successfully for section: " + section, categories, HttpStatus.OK)
+            );
+        } catch (RuntimeException e) {
+            return ResponseEntity.status(HttpStatus.NOT_FOUND)
+                    .body(ApiResponse.failure("Section not found: " + section, HttpStatus.NOT_FOUND));
+        } catch (Exception e) {
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
+                    .body(ApiResponse.failure("Failed to retrieve documents: " + e.getMessage(), HttpStatus.INTERNAL_SERVER_ERROR));
+        }
+    }
+    
+    
+    
+    
+    
 }

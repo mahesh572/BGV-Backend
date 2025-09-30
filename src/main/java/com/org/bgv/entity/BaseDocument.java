@@ -3,11 +3,11 @@ package com.org.bgv.entity;
 import java.time.LocalDateTime;
 
 public interface BaseDocument {
-	Long getDoc_id();
+	Long getDocId();
     DocumentCategory getCategory();
-    DocumentType getType_id();
-    String getFile_url();
-    Long getFile_size();
+    DocumentType getDocTypeId();
+    String getFileUrl();
+    Long getFileSize();
     String getStatus();
     LocalDateTime getUploadedAt();
     LocalDateTime getVerifiedAt();

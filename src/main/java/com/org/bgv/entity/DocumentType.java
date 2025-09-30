@@ -5,7 +5,7 @@ import lombok.Builder;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
 import lombok.Setter;
-
+import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
 import jakarta.persistence.GeneratedValue;
 import jakarta.persistence.GenerationType;
@@ -25,7 +25,8 @@ import jakarta.persistence.Table;
 public class DocumentType {
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
-    private Long doc_type_id;
+    @Column(name = "doc_type_id")
+    private Long docTypeId;
 
     private String name;
 
