@@ -300,23 +300,26 @@ public class ProfileController {
         }
     }
     
-    /*
-    // Documents endpoints
-    @GetMapping("/{profileId}/documents")
-    public ResponseEntity<ApiResponse<List<DocumentCategoryGroup>>> getDocuments(@PathVariable Long profileId) {
+    @DeleteMapping("/{profileId}/addresses/{addressId}")
+    public ResponseEntity<ApiResponse<String>> deleteProfileAddress(
+            @PathVariable Long profileId,
+            @PathVariable Long addressId) {
         try {
-            List<DocumentCategoryGroup> documents = documentService.getDocumentsByProfileGroupedByCategory(profileId);
-            return ResponseEntity.ok(ApiResponse.success("Documents retrieved successfully", documents, HttpStatus.OK));
-        } catch (RuntimeException e) {
+            profileAddressService.deleteProfileAddress(addressId, profileId);
+            return ResponseEntity.ok()
+                    .body(ApiResponse.success("Address deleted successfully", "Address with ID: " + addressId + " has been deleted", HttpStatus.OK));
+        } catch (EntityNotFoundException e) {
             return ResponseEntity.status(HttpStatus.NOT_FOUND)
                     .body(ApiResponse.failure(e.getMessage(), HttpStatus.NOT_FOUND));
+        } catch (IllegalArgumentException e) {
+            return ResponseEntity.status(HttpStatus.BAD_REQUEST)
+                    .body(ApiResponse.failure(e.getMessage(), HttpStatus.BAD_REQUEST));
         } catch (Exception e) {
+            // log.error("Error deleting address with ID: {} for profileId: {}", addressId, profileId, e);
             return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
-                    .body(ApiResponse.failure("Failed to retrieve documents: " + e.getMessage(), HttpStatus.INTERNAL_SERVER_ERROR));
+                    .body(ApiResponse.failure("Failed to delete address", HttpStatus.INTERNAL_SERVER_ERROR));
         }
     }
-
-    */
     
     @GetMapping("/{profileId}/documents")
     public ResponseEntity<ApiResponse<CategoriesDTO>> getDocuments(@PathVariable Long profileId) {
@@ -331,19 +334,7 @@ public class ProfileController {
                     .body(ApiResponse.failure("Failed to retrieve documents: " + e.getMessage(), HttpStatus.INTERNAL_SERVER_ERROR));
         }
     }
-    /*
- // Document Upload Configuration endpoints
-    @GetMapping("/document-upload-config")
-    public ResponseEntity<ApiResponse<Map<String, Object>>> getDocumentUploadConfig() {
-        try {
-            Map<String, Object> config = documentService.getDocumentUploadConfig();
-            return ResponseEntity.ok(ApiResponse.success("Document upload configuration retrieved successfully", config, HttpStatus.OK));
-        } catch (Exception e) {
-            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
-                    .body(ApiResponse.failure("Failed to fetch document upload configuration: " + e.getMessage(), HttpStatus.INTERNAL_SERVER_ERROR));
-        }
-    }
-*/
+  
  // Upload multiple documents endpoint
     @PostMapping(value = "/{profileId}/documents/upload-multiple", consumes = "multipart/form-data")
     public ResponseEntity<ApiResponse<DocumentCategoryDto>> uploadMultipleDocuments(

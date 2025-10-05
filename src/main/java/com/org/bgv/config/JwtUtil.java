@@ -1,6 +1,7 @@
 package com.org.bgv.config;
 
 import java.util.Date;
+import java.util.function.Function;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -8,6 +9,7 @@ import org.springframework.beans.factory.annotation.Value;
 import org.springframework.security.core.userdetails.UserDetails;
 import org.springframework.stereotype.Component;
 
+import io.jsonwebtoken.Claims;
 import io.jsonwebtoken.JwtException;
 import io.jsonwebtoken.Jwts;
 import io.jsonwebtoken.SignatureAlgorithm;
@@ -23,6 +25,28 @@ public class JwtUtil {
 
     @Value("${jwt.expiration}")
     private long jwtExpirationMs;
+    
+    private final long expiration = 86400000; // 24 hours
+
+    public String extractUsername(String token) {
+        return extractClaim(token, Claims::getSubject);
+    }
+    public <T> T extractClaim(String token, Function<Claims, T> claimsResolver) {
+        final Claims claims = extractAllClaims(token);
+        return claimsResolver.apply(claims);
+    }
+    private Claims extractAllClaims(String token) {
+        System.out.println("🔐 Extracting claims from token...");
+        try {
+            return Jwts.parser()
+                    .setSigningKey(jwtSecret)
+                    .parseClaimsJws(token)
+                    .getBody();
+        } catch (Exception e) {
+            System.out.println("❌ Error extracting claims: " + e.getMessage());
+            throw e;
+        }
+    }
 
     public String generateToken(UserDetails userDetails) {
     	logger.debug("JwtUtil::::secret:::{}:expiration::::{}",jwtSecret,jwtExpirationMs);
@@ -53,5 +77,28 @@ public class JwtUtil {
         } catch (JwtException e) {
             return false;
         }
+    }
+    public String extractTokenFromHeader(String authorizationHeader) {
+        if (authorizationHeader != null && authorizationHeader.startsWith("Bearer ")) {
+            return authorizationHeader.substring(7);
+        }
+        return null;
+    }
+    public Boolean validateToken(String token, UserDetails userDetails) {
+        final String username = getUsernameFromToken(token);
+        boolean valid = (username.equals(userDetails.getUsername()) && !isTokenExpired(token));
+        System.out.println("🔐 Token validation result: " + valid);
+        return valid;
+    }
+    private Boolean isTokenExpired(String token) {
+        Date expiration = extractExpiration(token);
+        boolean expired = expiration.before(new Date());
+        if (expired) {
+            System.out.println("❌ Token expired at: " + expiration);
+        }
+        return expired;
+    }
+    public Date extractExpiration(String token) {
+        return extractClaim(token, Claims::getExpiration);
     }
 }

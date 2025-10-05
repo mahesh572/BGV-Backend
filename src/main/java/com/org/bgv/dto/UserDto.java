@@ -18,4 +18,6 @@ public class UserDto {
 	    private List<AddressDTO> addresses;
 	    private List<String> roles;
 	    private List<String> permissions;
+	    private Long profileId;
+	    private Long companyId;
 }

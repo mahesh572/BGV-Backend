@@ -14,14 +14,15 @@ import java.time.LocalDate;
 @AllArgsConstructor
 @Builder
 public class ProfileAddressDTO {
-    private Long profileAddressId;
+    private Long id;
     private String addressLine1;
     private String city;
     private String state;
     private String country;
     private String zipCode;
-    private Boolean curResiding;
-    private LocalDate curResidingFrom;
-    private Boolean isPermanentAddress;
-    private Long profile_id;
+ //   private Boolean curResiding;
+    private LocalDate currentlyResidingFrom;
+    private Boolean isMyPermanentAddress;
+ //   private Long profile_id;
+    private boolean currentlyResidingAtThisAddress;
 }

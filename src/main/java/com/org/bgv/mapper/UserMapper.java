@@ -15,16 +15,16 @@ public class UserMapper implements BaseMapper<User, UserDto> {
     public UserDto toDto(User entity) {
         UserDto dto = new UserDto();
         dto.setUserId(entity.getUserId());
-        dto.setFirstName(entity.getFirstName());
-        dto.setLastName(entity.getLastName());
+      //  dto.setFirstName(entity.getFirstName());
+      //  dto.setLastName(entity.getLastName());
         dto.setEmail(entity.getEmail());
-        dto.setUserType(entity.getUserType());
-        dto.setPhoneNumber(entity.getPhoneNumber());
-        if (entity.getAddresses() != null && !entity.getAddresses().isEmpty()) {
-            dto.setAddresses(entity.getAddresses().stream()
-                .map(this::mapAddressDto)
-                .collect(Collectors.toList()));
-        }
+       // dto.setUserType(entity.getUserType());
+      //  dto.setPhoneNumber(entity.getPhoneNumber());
+		/*
+		 * if (entity.getAddresses() != null && !entity.getAddresses().isEmpty()) {
+		 * dto.setAddresses(entity.getAddresses().stream() .map(this::mapAddressDto)
+		 * .collect(Collectors.toList())); }
+		 */
 
         return dto;
     }

@@ -8,6 +8,8 @@ import com.org.bgv.entity.Other;
 import com.org.bgv.entity.Permission;
 import com.org.bgv.entity.Role;
 import com.org.bgv.entity.RolePermission;
+import com.org.bgv.entity.User;
+import com.org.bgv.entity.UserRole;
 import com.org.bgv.repository.DegreeTypeRepository;
 import com.org.bgv.repository.DocumentCategoryRepository;
 import com.org.bgv.repository.DocumentTypeRepository;
@@ -16,10 +18,13 @@ import com.org.bgv.repository.OtherRepository;
 import com.org.bgv.repository.PermissionRepository;
 import com.org.bgv.repository.RolePermissionRepository;
 import com.org.bgv.repository.RoleRepository;
+import com.org.bgv.repository.UserRepository;
+import com.org.bgv.repository.UserRoleRepository;
 
 import lombok.RequiredArgsConstructor;
 
 import org.springframework.boot.CommandLineRunner;
+import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Component;
 
 import java.util.Arrays;
@@ -33,12 +38,15 @@ public class DataSeederConfig implements CommandLineRunner {
 
     private final DocumentCategoryRepository categoryRepo;
     private final DocumentTypeRepository docTypeRepo;
-    private final RoleRepository roleRepository;
     private final PermissionRepository permissionRepository;
     private final RolePermissionRepository rolePermissionRepository;
     private final DegreeTypeRepository degreeTypeRepository;
     private final FieldOfStudyRepository fieldOfStudyRepository;
     private final OtherRepository otherRepository;
+    private final UserRepository userRepository;
+    private final UserRoleRepository userRoleRepository;
+    private final RoleRepository roleRepository;
+    private final PasswordEncoder passwordEncoder;
 
     @Override
     public void run(String... args) {
@@ -49,8 +57,36 @@ public class DataSeederConfig implements CommandLineRunner {
         seedDegreeTypes(); 
         seedFieldsOfStudy();
         seedSingleOtherRecord();
+        seedDefaultAdminUser(); // Add this line
     }
     
+    private void seedDefaultAdminUser() {
+        if (userRepository.findByEmail("admin@example.com").isEmpty()) {
+            User adminUser = User.builder()
+                    .firstName("System Administrator")
+                    .email("admin@example.com")
+                    .password(passwordEncoder.encode("admin123"))
+                    .firstName("System")
+                    .lastName("Administrator")
+                    .phoneNumber("+1234567890")
+                    .userType("ADMIN")
+                    .build();
+            
+            User savedAdmin = userRepository.save(adminUser);
+            
+            // Assign ROLE_ADMIN to the admin user
+            Role adminRole = roleRepository.findByName("ROLE_ADMIN")
+                    .orElseThrow(() -> new RuntimeException("ROLE_ADMIN not found"));
+            
+            UserRole userRole = UserRole.builder()
+                    .user(savedAdmin)
+                    .role(adminRole)
+                    .build();
+            
+            userRoleRepository.save(userRole);
+            System.out.println("Default admin user created successfully");
+        }
+    }
     
     // Alternative method: Create a single sample record if none exists
     private void seedSingleOtherRecord() {
@@ -146,12 +182,13 @@ public class DataSeederConfig implements CommandLineRunner {
     }
     
     private void seedPermissions() {
+        // Fixed permission names to match what's used in rolePermissions mapping
         List<Permission> defaultPermissions = Arrays.asList(
             createPermission("CREATE_PROFILE", "Create Profile"),
             createPermission("EDIT_PROFILE", "Edit Profile"),
             createPermission("DELETE_PROFILE", "Delete Profile"),
             createPermission("VIEW_PROFILE", "View Profile"),
-            createPermission("MANAGE_PROFILES", "Manage Profiles"),
+            createPermission("MANAGE_USERS", "Manage Users"), // Changed from MANAGE_PROFILES
             createPermission("VIEW_PROFILES", "View Profiles")
         );
 
@@ -177,7 +214,12 @@ public class DataSeederConfig implements CommandLineRunner {
         List<Role> defaultRoles = Arrays.asList(
             createRole("ROLE_USER", "User"),
             createRole("ROLE_VENDOR", "Vendor"),
-            createRole("ROLE_ADMIN", "Administrator")
+            createRole("ROLE_ADMIN", "Administrator"),
+            createRole("ROLE_COMPANY_HR", "HR"),
+            createRole("ROLE_CANDIDATE_USER", "Candidate"),
+            createRole("ROLE_COMPANY_ADMIN", "Company Administrator"),
+            createRole("ROLE_COMPANY_HR_MANAGER", "Company HR Manager")
+            
         );
 
         for (Role role : defaultRoles) {
@@ -199,10 +241,11 @@ public class DataSeederConfig implements CommandLineRunner {
     }
 
     private void seedRolePermissions() {
+        // Fixed permission names to match what we seeded
         Map<String, List<String>> rolePermissions = Map.of(
-            "ROLE_USER", Arrays.asList("VIEW_PROFILES", "CREATE_PROFILES", "EDIT_PROFILES"),
-            "ROLE_VENDOR", Arrays.asList(),
-            "ROLE_ADMIN", Arrays.asList("MANAGE_USERS", "VIEW_PROFILES", "CREATE_PROFILES", "EDIT_PROFILES", "DELETE_PROFILES")
+            "ROLE_USER", Arrays.asList("VIEW_PROFILES", "CREATE_PROFILE", "EDIT_PROFILE", "VIEW_PROFILE"),
+            "ROLE_VENDOR", Arrays.asList("VIEW_PROFILES", "VIEW_PROFILE"),
+            "ROLE_ADMIN", Arrays.asList("MANAGE_USERS", "VIEW_PROFILES", "CREATE_PROFILE", "EDIT_PROFILE", "DELETE_PROFILE", "VIEW_PROFILE")
         );
 
         for (Map.Entry<String, List<String>> entry : rolePermissions.entrySet()) {
@@ -212,7 +255,10 @@ public class DataSeederConfig implements CommandLineRunner {
 
             for (String permName : entry.getValue()) {
                 Permission permission = permissionRepository.findByName(permName).orElse(null);
-                if (permission == null) continue;
+                if (permission == null) {
+                    System.out.println("Permission not found: " + permName);
+                    continue;
+                }
 
                 saveRolePermissionIfNotExists(role, permission);
             }
