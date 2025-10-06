@@ -45,6 +45,8 @@ public class Status {
     
     public static final String  ROLE_COMPANY_ADMIN = "ROLE_COMPANY_ADMIN";
     public static final String  ROLE_COMPANY_HR_MANAGER = "ROLE_COMPANY_HR_MANAGER";
+    public static final String  ROLE_USER = "ROLE_USER";
+    
     
     // Get all main statuses
     public static String[] getAllMainStatuses() {

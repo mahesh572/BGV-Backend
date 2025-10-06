@@ -194,19 +194,30 @@ public class UserService {
         }
     }
     public UserDto getUserFromToken(String token) {
-    	UserDto userDto = null;
-    	if(jwtUtil.validateToken(token)) {
-    		String email = jwtUtil.getUsernameFromToken(token);
-    		userDto = getUserByEmail(email);
-    	//	userDto.setProfileId(profileService.getProfileIdByUserId(userDto.getUserId()));
-    		
-    		List<CompanyUser> companyUsers = companyUserRepository.findByUserUserId(userDto.getUserId());
-    		if (companyUsers == null || companyUsers.isEmpty()) {
-    	        
-    	    }else {
-    	    	userDto.setCompanyId(companyUsers.get(0).getCompanyId());
-    	    }
-    	}
-    	return userDto;
+        UserDto userDto = null;
+
+        if (jwtUtil.validateToken(token)) {
+            String email = jwtUtil.getUsernameFromToken(token);
+            userDto = getUserByEmail(email);
+
+            // ✅ Try setting profileId, skip if not found
+            try {
+                Long profileId = profileService.getProfileIdByUserId(userDto.getUserId());
+                if (profileId != null) {
+                    userDto.setProfileId(profileId);
+                }
+            } catch (Exception e) {
+                System.out.println("⚠️ No profile found for userId: " + userDto.getUserId());
+            }
+
+            // ✅ Set company info if available
+            List<CompanyUser> companyUsers = companyUserRepository.findByUserUserId(userDto.getUserId());
+            if (companyUsers != null && !companyUsers.isEmpty()) {
+                userDto.setCompanyId(companyUsers.get(0).getCompanyId());
+            }
+        }
+
+        return userDto;
     }
+
 }

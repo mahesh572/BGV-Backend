@@ -1,6 +1,7 @@
 package com.org.bgv.service;
 
 import com.org.bgv.common.ProfileStatus;
+import com.org.bgv.common.Status;
 import com.org.bgv.controller.ProfileController;
 import com.org.bgv.dto.BasicdetailsDTO;
 import com.org.bgv.dto.ProfileDTO;
@@ -36,6 +37,7 @@ public class ProfileService {
     private static final Logger logger = LoggerFactory.getLogger(ProfileService.class);
     
     public BasicdetailsDTO createProfile(BasicdetailsDTO profileDTO) {
+    	profileDTO.setStatus(Status.PENDING);
         Profile profile = mapToEntity(profileDTO);
         profile.setStatus(ProfileStatus.CREATED.name());
         System.out.println("profile==========="+profile.toString());
@@ -140,7 +142,7 @@ public class ProfileService {
                 .gender(dto.getGender())
                // .userId(dto.getUser_id())
                 .user(user)
-                .status("PENDING")
+                .status(dto.getStatus())
                 .build();
     }
     

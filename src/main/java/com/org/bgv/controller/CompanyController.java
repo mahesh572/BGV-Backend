@@ -21,7 +21,7 @@ import org.springframework.web.bind.annotation.RestController;
 import com.org.bgv.api.response.ApiResponse;
 import com.org.bgv.company.dto.CompanyRegistrationRequestDTO;
 import com.org.bgv.company.dto.CompanyRegistrationResponse;
-import com.org.bgv.company.dto.EmployeeDTO;
+import com.org.bgv.company.dto.PersonDTO;
 import com.org.bgv.entity.Company;
 import com.org.bgv.service.CompanyService;
 
@@ -242,14 +242,14 @@ public class CompanyController {
     @PostMapping("/{companyId}/employee")
     public ResponseEntity<ApiResponse<Boolean>> addEmployee(
     		@PathVariable Long companyId,
-            @RequestBody EmployeeDTO employeeDTO,
+            @RequestBody PersonDTO employeeDTO,
             @RequestParam(defaultValue = "ACTIVE") String status) {
         
         log.info("Received employee addition request for company ID: {}, employee: {}", 
                  companyId, employeeDTO.getEmail());
         
         try {
-            Boolean response = companyService.addEmployee(companyId, employeeDTO, status);
+            Boolean response = companyService.addPerson(companyId, employeeDTO);
             return ResponseEntity.ok(ApiResponse.success(
                 "Employee added successfully", 
                 response, 
@@ -276,4 +276,42 @@ public class CompanyController {
         }
     }
 
+    @PostMapping("/{companyId}/candidate")
+    public ResponseEntity<ApiResponse<Boolean>> addCandidate(
+    		@PathVariable Long companyId,
+            @RequestBody PersonDTO candidateDTO
+            ) {
+        
+        log.info("Received Candidate addition request for company ID: {}, Candidate: {}", 
+                 companyId, candidateDTO.getEmail());
+        
+        try {
+            Boolean response = companyService.addPerson(companyId, candidateDTO);
+            return ResponseEntity.ok(ApiResponse.success(
+                "Candidate added successfully", 
+                response, 
+                HttpStatus.CREATED
+            ));
+            
+        } catch (IllegalArgumentException e) {
+            log.warn("Validation error in candidate addition: {}", e.getMessage());
+            return ResponseEntity.status(HttpStatus.BAD_REQUEST)
+                    .body(ApiResponse.failure(e.getMessage(), HttpStatus.BAD_REQUEST));
+                    
+        } catch (RuntimeException e) {
+            log.error("Business logic error during candidate addition: {}", e.getMessage());
+            return ResponseEntity.status(HttpStatus.CONFLICT)
+                    .body(ApiResponse.failure(e.getMessage(), HttpStatus.CONFLICT));
+                    
+        } catch (Exception e) {
+            log.error("Unexpected error during candidate addition: {}", e.getMessage(), e);
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
+                    .body(ApiResponse.failure(
+                        "Internal server error while adding candidate", 
+                        HttpStatus.INTERNAL_SERVER_ERROR
+                    ));
+        }
+    }
+    
+    
 }

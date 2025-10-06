@@ -212,13 +212,14 @@ public class DataSeederConfig implements CommandLineRunner {
 
     private void seedRoles() {
         List<Role> defaultRoles = Arrays.asList(
-            createRole("ROLE_USER", "User"),
+            createRole("ROLE_USER", "Regular User"),
             createRole("ROLE_VENDOR", "Vendor"),
             createRole("ROLE_ADMIN", "Administrator"),
             createRole("ROLE_COMPANY_HR", "HR"),
             createRole("ROLE_CANDIDATE_USER", "Candidate"),
             createRole("ROLE_COMPANY_ADMIN", "Company Administrator"),
-            createRole("ROLE_COMPANY_HR_MANAGER", "Company HR Manager")
+            createRole("ROLE_COMPANY_HR_MANAGER", "Company HR Manager"),
+            createRole("ROLE_CANDIDATE", "Company Candidate")
             
         );
 
