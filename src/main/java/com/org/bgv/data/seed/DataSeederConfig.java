@@ -1,5 +1,7 @@
 package com.org.bgv.data.seed;
 
+import com.org.bgv.entity.BGVCategory;
+import com.org.bgv.entity.CheckType;
 import com.org.bgv.entity.DegreeType;
 import com.org.bgv.entity.DocumentCategory;
 import com.org.bgv.entity.DocumentType;
@@ -10,6 +12,8 @@ import com.org.bgv.entity.Role;
 import com.org.bgv.entity.RolePermission;
 import com.org.bgv.entity.User;
 import com.org.bgv.entity.UserRole;
+import com.org.bgv.repository.BGVCategoryRepository;
+import com.org.bgv.repository.CheckTypeRepository;
 import com.org.bgv.repository.DegreeTypeRepository;
 import com.org.bgv.repository.DocumentCategoryRepository;
 import com.org.bgv.repository.DocumentTypeRepository;
@@ -47,6 +51,8 @@ public class DataSeederConfig implements CommandLineRunner {
     private final UserRoleRepository userRoleRepository;
     private final RoleRepository roleRepository;
     private final PasswordEncoder passwordEncoder;
+    private final BGVCategoryRepository bgvCategoryRepository;
+    private final CheckTypeRepository checkTypeJPARepository;
 
     @Override
     public void run(String... args) {
@@ -57,7 +63,8 @@ public class DataSeederConfig implements CommandLineRunner {
         seedDegreeTypes(); 
         seedFieldsOfStudy();
         seedSingleOtherRecord();
-        seedDefaultAdminUser(); // Add this line
+        seedDefaultAdminUser(); 
+        seedBGVCategoriesAndCheckTypes();
     }
     
     private void seedDefaultAdminUser() {
@@ -65,7 +72,7 @@ public class DataSeederConfig implements CommandLineRunner {
             User adminUser = User.builder()
                     .firstName("System Administrator")
                     .email("admin@example.com")
-                    .password(passwordEncoder.encode("admin123"))
+                    .password(passwordEncoder.encode("123456"))
                     .firstName("System")
                     .lastName("Administrator")
                     .phoneNumber("+1234567890")
@@ -219,8 +226,8 @@ public class DataSeederConfig implements CommandLineRunner {
             createRole("ROLE_CANDIDATE_USER", "Candidate"),
             createRole("ROLE_COMPANY_ADMIN", "Company Administrator"),
             createRole("ROLE_COMPANY_HR_MANAGER", "Company HR Manager"),
-            createRole("ROLE_CANDIDATE", "Company Candidate")
-            
+            createRole("ROLE_CANDIDATE", "Company Candidate"),
+            createRole("ROLE_COMPANY_RECRUITER", "Recruiter")
         );
 
         for (Role role : defaultRoles) {
@@ -346,4 +353,107 @@ public class DataSeederConfig implements CommandLineRunner {
             fieldOfStudyRepository.save(field)
         );
     }
+    
+    private void seedBGVCategoriesAndCheckTypes() {
+        // Step 1: Seed categories
+        List<BGVCategory> categories = Arrays.asList(
+            createBGVCategory("IDENTITY", "Identity Verification"),
+            createBGVCategory("EDUCATION", "Education Verification"),
+            createBGVCategory("EMPLOYMENT", "Employment Verification"),
+            createBGVCategory("ADDRESS", "Address Verification"),
+            createBGVCategory("CRIMINAL", "Criminal Record Check"),
+            createBGVCategory("FINANCIAL", "Financial Verification"),
+            createBGVCategory("REFERENCE", "Reference Check"),
+            createBGVCategory("HEALTH", "Health Check"),
+            createBGVCategory("SOCIAL", "Social Media Screening"),
+            createBGVCategory("OTHER", "Other Checks")
+        );
+
+        for (BGVCategory category : categories) {
+            bgvCategoryRepository.findByName(category.getName())
+                    .orElseGet(() -> bgvCategoryRepository.save(category));
+        }
+
+        // Step 2: Seed check types
+        seedBGVCheckTypes();
+    }
+
+    private BGVCategory createBGVCategory(String name, String label) {
+        return BGVCategory.builder()
+                .name(name)
+                .label(label)
+                .isActive(Boolean.TRUE)
+                .build();
+    }
+
+    private void seedBGVCheckTypes() {
+        Map<String, List<String[]>> categoryToCheckTypes = Map.of(
+            "IDENTITY", Arrays.asList(
+                new String[]{"AADHAAR_VERIFICATION", "Aadhaar Verification"},
+                new String[]{"PAN_VERIFICATION", "PAN Card Verification"},
+                new String[]{"PASSPORT_VERIFICATION", "Passport Verification"},
+                new String[]{"VOTER_ID_VERIFICATION", "Voter ID Verification"}
+            ),
+            "EDUCATION", Arrays.asList(
+                new String[]{"DEGREE_VERIFICATION", "Degree Verification"},
+                new String[]{"MARKSHEET_VERIFICATION", "Marksheet Verification"}
+            ),
+            "EMPLOYMENT", Arrays.asList(
+                new String[]{"PREVIOUS_EMPLOYMENT_VERIFICATION", "Previous Employment Verification"},
+                new String[]{"TENURE_VERIFICATION", "Tenure Verification"},
+                new String[]{"SALARY_VERIFICATION", "Salary Verification"}
+            ),
+            "ADDRESS", Arrays.asList(
+                new String[]{"CURRENT_ADDRESS_VERIFICATION", "Current Address Verification"},
+                new String[]{"PERMANENT_ADDRESS_VERIFICATION", "Permanent Address Verification"}
+            ),
+            "CRIMINAL", Arrays.asList(
+                new String[]{"POLICE_VERIFICATION", "Police Verification"},
+                new String[]{"COURT_RECORD_CHECK", "Court Record Check"},
+                new String[]{"GLOBAL_WATCHLIST_CHECK", "Global Watchlist Check"}
+            ),
+            "FINANCIAL", Arrays.asList(
+                new String[]{"CREDIT_CHECK", "Credit History Check"},
+                new String[]{"CIBIL_CHECK", "CIBIL Score Check"}
+            ),
+            "REFERENCE", Arrays.asList(
+                new String[]{"PROFESSIONAL_REFERENCE_CHECK", "Professional Reference Check"},
+                new String[]{"CHARACTER_REFERENCE_CHECK", "Character Reference Check"}
+            ),
+            "HEALTH", Arrays.asList(
+                new String[]{"DRUG_TEST", "Drug Test"},
+                new String[]{"MEDICAL_FITNESS", "Medical Fitness Check"}
+            ),
+            "SOCIAL", Arrays.asList(
+                new String[]{"SOCIAL_MEDIA_SCREENING", "Social Media Screening"},
+                new String[]{"ONLINE_REPUTATION_CHECK", "Online Reputation Check"}
+            ),
+            "OTHER", Arrays.asList(
+                new String[]{"GAP_ANALYSIS", "Gap Analysis"},
+                new String[]{"PROFESSIONAL_LICENSE_VERIFICATION", "Professional License Verification"}
+            )
+        );
+
+        categoryToCheckTypes.forEach((categoryName, checkTypes) -> {
+            BGVCategory category = bgvCategoryRepository.findByName(categoryName)
+                    .orElseThrow(() -> new RuntimeException("Category not found: " + categoryName));
+
+            for (String[] ct : checkTypes) {
+                String name = ct[0];
+                String label = ct[1];
+
+                checkTypeJPARepository.findByName(name)
+                    .orElseGet(() -> checkTypeJPARepository.save(
+                            CheckType.builder()
+                                    .name(name)
+                                    .label(label)
+                                    .category(category)
+                                    .build()
+                    ));
+            }
+        });
+
+        System.out.println("✅ BGV Categories and Check Types seeded successfully");
+    }
+
 }

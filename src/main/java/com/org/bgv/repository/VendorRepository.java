@@ -19,7 +19,7 @@ public interface VendorRepository extends JpaRepository<Vendor, Long> {
     
     List<Vendor> findByVendorType(String vendorType);
     
-    List<Vendor> findBySpecializationContaining(String specialization);
+   // List<Vendor> findBySpecializationContaining(String specialization);
     
     List<Vendor> findByCity(String city);
     

@@ -60,6 +60,9 @@ public class User {
     @Column(name = "status")
     private String status;
     
+    @Column(name = "date_of_birth")
+    private LocalDate dateOfBirth;
+    
     
     
     @OneToMany(mappedBy = "user", cascade = CascadeType.ALL, fetch = FetchType.LAZY)

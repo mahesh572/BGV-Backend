@@ -29,23 +29,18 @@ public class Vendor {
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
     
-	 @Column(name = "date_of_birth")
-	    private LocalDate dateOfBirth;
-	    
+	 
 	   
-	    @Column(name = "gender")
-	    private String gender;
+	  
     
     // Professional Information
     
     @Column(name = "vendor_type", nullable = false)
     private String vendorType;
     
-    @Column(name = "specialization", length = 200)
-    private String specialization;
-    
+        
     @Column(name = "experience_years")
-    private Integer experience;
+    private String experience;
     
         
     // Business Information
