@@ -1,7 +1,22 @@
 package com.org.bgv.service;
 
+import com.org.bgv.common.ColumnMetadata;
+import com.org.bgv.common.FilterMetadata;
+import com.org.bgv.common.FilterRequest;
+import com.org.bgv.common.Option;
+import com.org.bgv.common.PageRequestDto;
+import com.org.bgv.common.PaginationMetadata;
+import com.org.bgv.common.PaginationRequest;
+import com.org.bgv.common.PaginationResponse;
+import com.org.bgv.common.SortField;
+import com.org.bgv.common.SortingMetadata;
+import com.org.bgv.common.SortingRequest;
+import com.org.bgv.common.UserDto;
+import com.org.bgv.common.UserSearchRequest;
 import com.org.bgv.config.JwtUtil;
-import com.org.bgv.dto.UserDto;
+import com.org.bgv.controller.UserController;
+import com.org.bgv.dto.UserDetailsDto;
+
 import com.org.bgv.entity.CompanyUser;
 import com.org.bgv.entity.Role;
 import com.org.bgv.entity.User;
@@ -11,10 +26,23 @@ import com.org.bgv.repository.CompanyUserRepository;
 import com.org.bgv.repository.RoleRepository;
 import com.org.bgv.repository.UserRepository;
 import com.org.bgv.repository.UserRoleRepository;
+
+import jakarta.persistence.criteria.Predicate;
 import jakarta.transaction.Transactional;
 import lombok.RequiredArgsConstructor;
-import org.springframework.stereotype.Service;
 
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.PageRequest;
+import org.springframework.data.domain.Pageable;
+import org.springframework.data.domain.Sort;
+import org.springframework.data.jpa.domain.Specification;
+import org.springframework.stereotype.Service;
+import org.springframework.util.StringUtils;
+
+import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.List;
 import java.util.stream.Collectors;
 
@@ -29,8 +57,10 @@ public class UserService {
     private final JwtUtil jwtUtil;
     private final ProfileService profileService;
     private final CompanyUserRepository companyUserRepository;
+    
+    private static final Logger logger = LoggerFactory.getLogger(UserService.class);
 
-    public List<UserDto> getAll() {
+    public List<UserDetailsDto> getAll() {
         try {
             return userRepository.findAll()
                     .stream()
@@ -40,10 +70,85 @@ public class UserService {
             throw new RuntimeException("Failed to fetch users: " + e.getMessage(), e);
         }
     }
+    
+    public PaginationResponse<UserDto> getAllUsers(PageRequestDto pageRequest) {
+        Pageable pageable = createPageable(pageRequest);
+        Page<User> userPage = userRepository.findAll(pageable);
+        
+        return buildCompletePaginationResponse(userPage, pageRequest);
+    }
+   
+    public PaginationResponse<UserDto> searchUsers(UserSearchRequest searchRequest) {
+        // Build pageable
+        Pageable pageable = createPageable(searchRequest.getPagination(), searchRequest.getSorting());
+        
+        // Build specification for filtering
+        Specification<User> spec = buildSearchSpecification(searchRequest);
+        
+        Page<User> userPage = userRepository.findAll(spec, pageable);
+        
+        return buildCompletePaginationResponse(userPage, searchRequest);
+    }
 
-    public UserDto getById(Long id) {
+    private Pageable createPageable(PaginationRequest pagination, SortingRequest sorting) {
+        if (sorting == null) {
+            sorting = SortingRequest.builder()
+                    .sortBy("userId")
+                    .sortDirection("asc")
+                    .build();
+        }
+        
+        Sort sort = Sort.by(
+            sorting.getSortDirection().equalsIgnoreCase("desc") ? 
+            Sort.Direction.DESC : Sort.Direction.ASC, 
+            sorting.getSortBy()
+        );
+        return PageRequest.of(pagination.getPage(), pagination.getSize(), sort);
+    }
+
+    private Specification<User> buildSearchSpecification(UserSearchRequest searchRequest) {
+        return (root, query, criteriaBuilder) -> {
+            List<Predicate> predicates = new ArrayList<>();
+            
+            // Search term
+            if (StringUtils.hasText(searchRequest.getSearch())) {
+                String searchTerm = "%" + searchRequest.getSearch().toLowerCase() + "%";
+                Predicate namePredicate = criteriaBuilder.like(criteriaBuilder.lower(root.get("firstName")), searchTerm);
+                Predicate emailPredicate = criteriaBuilder.like(criteriaBuilder.lower(root.get("email")), searchTerm);
+                Predicate firstNamePredicate = criteriaBuilder.like(criteriaBuilder.lower(root.get("firstName")), searchTerm);
+                Predicate lastNamePredicate = criteriaBuilder.like(criteriaBuilder.lower(root.get("lastName")), searchTerm);
+                predicates.add(criteriaBuilder.or(namePredicate, emailPredicate, firstNamePredicate, lastNamePredicate));
+            }
+            
+            // Filters
+            if (searchRequest.getFilters() != null) {
+                for (FilterRequest filter : searchRequest.getFilters()) {
+                    if (filter.getIsSelected() != null && filter.getIsSelected() && filter.getSelectedValue() != null) {
+                        if (filter.getField().equals("isActive") || filter.getField().equals("isVerified")) {
+                            // Handle boolean fields
+                            Boolean value = Boolean.valueOf(filter.getSelectedValue().toString());
+                            predicates.add(criteriaBuilder.equal(root.get(filter.getField()), value));
+                        } else if (filter.getField().equals("userType")) {
+                            // Handle enum fields
+                            predicates.add(criteriaBuilder.equal(root.get(filter.getField()), filter.getSelectedValue()));
+                        } else if (filter.getField().equals("createdDate")) {
+                            // Handle date range - you might want to implement proper date range logic
+                            predicates.add(criteriaBuilder.equal(root.get(filter.getField()), filter.getSelectedValue()));
+                        } else {
+                            // Handle other string fields
+                            predicates.add(criteriaBuilder.equal(root.get(filter.getField()), filter.getSelectedValue()));
+                        }
+                    }
+                }
+            }
+            
+            return criteriaBuilder.and(predicates.toArray(new Predicate[0]));
+        };
+    }
+
+    public UserDetailsDto getById(Long id) {
         try {
-        	UserDto userDto = userRepository.findById(id)
+        	UserDetailsDto userDto = userRepository.findById(id)
                     .map(userMapper::toDto)
                     .orElseThrow(() -> new RuntimeException("User not found with id: " + id));
         	userDto.setRoles(getUserRoles(id));
@@ -54,7 +159,7 @@ public class UserService {
         }
     }
 
-    public UserDto create(UserDto userDto) {
+    public UserDetailsDto create(UserDetailsDto userDto) {
         try {
             // Check if email already exists
             if (userRepository.existsByEmail(userDto.getEmail())) {
@@ -62,6 +167,7 @@ public class UserService {
             }
 
             User user = userMapper.toEntity(userDto);
+            logger.info("in UserService:::::::::{}",user);
             User saved = userRepository.save(user);
             return userMapper.toDto(saved);
         } catch (Exception e) {
@@ -69,7 +175,7 @@ public class UserService {
         }
     }
 
-    public UserDto update(Long id, UserDto userDto) {
+    public UserDetailsDto update(Long id, UserDetailsDto userDto) {
         try {
             User existingUser = userRepository.findById(id)
                     .orElseThrow(() -> new RuntimeException("User not found with id: " + id));
@@ -89,10 +195,6 @@ public class UserService {
             if (userDto.getPhoneNumber() != null) {
                 existingUser.setPhoneNumber(userDto.getPhoneNumber());
             }
-			/*
-			 * if (userDto.getDateOfBirth() != null) {
-			 * existingUser.setDateOfBirth(userDto.getDateOfBirth()); }
-			 */
 
             User updated = userRepository.save(existingUser);
             return userMapper.toDto(updated);
@@ -112,8 +214,8 @@ public class UserService {
         }
     }
 
-    public UserDto getUserByEmail(String email) {
-    	UserDto userDto=null;
+    public UserDetailsDto getUserByEmail(String email) {
+    	UserDetailsDto userDto=null;
     	try {
         	
     		userDto = userRepository.findByEmail(email)
@@ -193,14 +295,15 @@ public class UserService {
             throw new RuntimeException("Failed to check user existence: " + e.getMessage(), e);
         }
     }
-    public UserDto getUserFromToken(String token) {
-        UserDto userDto = null;
+    
+    public UserDetailsDto getUserFromToken(String token) {
+    	UserDetailsDto userDto = null;
 
         if (jwtUtil.validateToken(token)) {
             String email = jwtUtil.getUsernameFromToken(token);
             userDto = getUserByEmail(email);
 
-            // ✅ Try setting profileId, skip if not found
+            // Try setting profileId, skip if not found
             try {
                 Long profileId = profileService.getProfileIdByUserId(userDto.getUserId());
                 if (profileId != null) {
@@ -210,7 +313,7 @@ public class UserService {
                 System.out.println("⚠️ No profile found for userId: " + userDto.getUserId());
             }
 
-            // ✅ Set company info if available
+            // Set company info if available
             List<CompanyUser> companyUsers = companyUserRepository.findByUserUserId(userDto.getUserId());
             if (companyUsers != null && !companyUsers.isEmpty()) {
                 userDto.setCompanyId(companyUsers.get(0).getCompanyId());
@@ -220,4 +323,218 @@ public class UserService {
         return userDto;
     }
 
+    private Pageable createPageable(PageRequestDto pageRequest) {
+        Sort sort = Sort.by(
+            pageRequest.getSortDirection().equalsIgnoreCase("desc") ? 
+            Sort.Direction.DESC : Sort.Direction.ASC, 
+            pageRequest.getSortBy()
+        );
+        return PageRequest.of(pageRequest.getPage(), pageRequest.getSize(), sort);
+    }
+
+    // Overloaded method for UserSearchRequest
+    private PaginationResponse<UserDto> buildCompletePaginationResponse(Page<User> userPage, UserSearchRequest searchRequest) {
+        List<UserDto> userDtos = userPage.getContent()
+                .stream()
+                .map(userMapper::toUserDto)
+                .collect(Collectors.toList());
+
+        // Build pagination metadata
+        PaginationMetadata paginationMetadata = PaginationMetadata.builder()
+                .currentPage(userPage.getNumber())
+                .pageSize(userPage.getSize())
+                .totalElements(userPage.getTotalElements())
+                .totalPages(userPage.getTotalPages())
+                .hasNext(userPage.hasNext())
+                .hasPrevious(userPage.hasPrevious())
+                .allowedPageSizes(Arrays.asList(10, 25, 50, 100))
+                .build();
+
+        // Build sorting metadata
+        SortingMetadata sortingMetadata = SortingMetadata.builder()
+                .currentSort(SortField.builder()
+                        .field(searchRequest.getSorting().getSortBy())
+                        .displayName(getDisplayNameForField(searchRequest.getSorting().getSortBy()))
+                        .direction(searchRequest.getSorting().getSortDirection())
+                        .build())
+                .sortableFields(getSortableFields())
+                .build();
+
+        // Build filters metadata with selected values
+        List<FilterMetadata> filters = getAvailableFilters(searchRequest);
+
+        // Build columns metadata
+        List<ColumnMetadata> columns = getColumnMetadata();
+
+        return PaginationResponse.<UserDto>builder()
+                .content(userDtos)
+                .pagination(paginationMetadata)
+                .sorting(sortingMetadata)
+                .filters(filters)
+                .columns(columns)
+                .build();
+    }
+
+    // Original method for PageRequestDto
+    private PaginationResponse<UserDto> buildCompletePaginationResponse(Page<User> userPage, PageRequestDto pageRequest) {
+        List<UserDto> userDtos = userPage.getContent()
+                .stream()
+                .map(userMapper::toUserDto)
+                .collect(Collectors.toList());
+
+        // Build pagination metadata
+        PaginationMetadata paginationMetadata = PaginationMetadata.builder()
+                .currentPage(userPage.getNumber())
+                .pageSize(userPage.getSize())
+                .totalElements(userPage.getTotalElements())
+                .totalPages(userPage.getTotalPages())
+                .hasNext(userPage.hasNext())
+                .hasPrevious(userPage.hasPrevious())
+                .allowedPageSizes(Arrays.asList(10, 25, 50, 100))
+                .build();
+
+        // Build sorting metadata
+        SortingMetadata sortingMetadata = SortingMetadata.builder()
+                .currentSort(SortField.builder()
+                        .field(pageRequest.getSortBy())
+                        .displayName(getDisplayNameForField(pageRequest.getSortBy()))
+                        .direction(pageRequest.getSortDirection())
+                        .build())
+                .sortableFields(getSortableFields())
+                .build();
+
+        // Build filters metadata
+        List<FilterMetadata> filters = getAvailableFilters();
+
+        // Build columns metadata
+        List<ColumnMetadata> columns = getColumnMetadata();
+
+        return PaginationResponse.<UserDto>builder()
+                .content(userDtos)
+                .pagination(paginationMetadata)
+                .sorting(sortingMetadata)
+                .filters(filters)
+                .columns(columns)
+                .build();
+    }
+
+    private List<SortField> getSortableFields() {
+        return Arrays.asList(
+            SortField.builder().field("userId").displayName("User ID").build(),
+            SortField.builder().field("firstName").displayName("First Name").build(),
+            SortField.builder().field("lastName").displayName("Last Name").build(),
+            SortField.builder().field("email").displayName("Email").build(),
+            SortField.builder().field("createdDate").displayName("Created Date").build(),
+            SortField.builder().field("userType").displayName("User Type").build()
+        );
+    }
+
+    // Overloaded method with selected filters
+    private List<FilterMetadata> getAvailableFilters(UserSearchRequest searchRequest) {
+        List<FilterMetadata> filters = new ArrayList<>();
+        
+        // User Type filter
+        FilterMetadata userTypeFilter = FilterMetadata.builder()
+                .field("userType")
+                .displayName("User Type")
+                .type("dropdown")
+                .options(Arrays.asList(
+                    Option.builder().label("Admin").value("ADMIN").build(),
+                    Option.builder().label("Vendor").value("VENDOR").build(),
+                    Option.builder().label("Company").value("COMPANY").build(),
+                    Option.builder().label("Employee").value("EMPLOYEE").build()
+                ))
+                .build();
+
+        // Status filter
+        FilterMetadata statusFilter = FilterMetadata.builder()
+                .field("isActive")
+                .displayName("Status")
+                .type("dropdown")
+                .options(Arrays.asList(
+                    Option.builder().label("Active").value("true").build(),
+                    Option.builder().label("Inactive").value("false").build()
+                ))
+                .build();
+
+        // Verification status filter
+        FilterMetadata verificationFilter = FilterMetadata.builder()
+                .field("isVerified")
+                .displayName("Verification Status")
+                .type("dropdown")
+                .options(Arrays.asList(
+                    Option.builder().label("Verified").value("true").build(),
+                    Option.builder().label("Not Verified").value("false").build()
+                ))
+                .build();
+
+        // Date range filter
+        FilterMetadata dateFilter = FilterMetadata.builder()
+                .field("createdDate")
+                .displayName("Created Date Range")
+                .type("dateRange")
+                .build();
+
+        // Set selected values if any
+        if (searchRequest.getFilters() != null) {
+            for (FilterRequest filter : searchRequest.getFilters()) {
+                if (filter.getIsSelected() != null && filter.getIsSelected()) {
+                    switch (filter.getField()) {
+                        case "userType":
+                            userTypeFilter.setSelectedValue(filter.getSelectedValue());
+                            break;
+                        case "isActive":
+                            statusFilter.setSelectedValue(filter.getSelectedValue());
+                            break;
+                        case "isVerified":
+                            verificationFilter.setSelectedValue(filter.getSelectedValue());
+                            break;
+                        case "createdDate":
+                            dateFilter.setSelectedValue(filter.getSelectedValue());
+                            break;
+                    }
+                }
+            }
+        }
+
+        filters.add(userTypeFilter);
+        filters.add(statusFilter);
+        filters.add(verificationFilter);
+        filters.add(dateFilter);
+
+        return filters;
+    }
+
+    // Original method without selected filters
+    private List<FilterMetadata> getAvailableFilters() {
+        return getAvailableFilters(UserSearchRequest.builder().build());
+    }
+
+    private List<ColumnMetadata> getColumnMetadata() {
+        return Arrays.asList(
+            ColumnMetadata.builder().field("userId").displayName("User ID").visible(false).build(),
+            ColumnMetadata.builder().field("name").displayName("Name").visible(true).build(),
+            ColumnMetadata.builder().field("email").displayName("Email").visible(true).build(),
+            ColumnMetadata.builder().field("userType").displayName("User Type").visible(true).build(),
+            ColumnMetadata.builder().field("phoneNumber").displayName("Phone Number").visible(true).build(),
+            ColumnMetadata.builder().field("isActive").displayName("Active").visible(true).build(),
+            ColumnMetadata.builder().field("isVerified").displayName("Verified").visible(true).build(),
+            ColumnMetadata.builder().field("status").displayName("Status").visible(true).build(),
+            ColumnMetadata.builder().field("gender").displayName("Gender").visible(true).build(),
+            ColumnMetadata.builder().field("dateOfBirth").displayName("Date of Birth").visible(false).build(),
+            ColumnMetadata.builder().field("profilePictureUrl").displayName("Profile Picture").visible(false).build()
+        );
+    }
+
+    private String getDisplayNameForField(String field) {
+        switch (field) {
+            case "userId": return "User ID";
+            case "firstName": return "First Name";
+            case "lastName": return "Last Name";
+            case "email": return "Email";
+            case "createdDate": return "Created Date";
+            case "userType": return "User Type";
+            default: return field;
+        }
+    }
 }

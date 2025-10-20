@@ -1,7 +1,9 @@
 package com.org.bgv.mapper;
 
+import com.org.bgv.common.UserDto;
 import com.org.bgv.dto.AddressDTO;
-import com.org.bgv.dto.UserDto;
+import com.org.bgv.dto.UserDetailsDto;
+
 import com.org.bgv.entity.Address;
 import com.org.bgv.entity.User;
 
@@ -10,10 +12,11 @@ import java.util.stream.Collectors;
 import org.springframework.stereotype.Component;
 
 @Component
-public class UserMapper implements BaseMapper<User, UserDto> {
-    @Override
-    public UserDto toDto(User entity) {
-        UserDto dto = new UserDto();
+public class UserMapper implements BaseMapper<User, UserDetailsDto> {
+   
+	@Override
+    public UserDetailsDto toDto(User entity) {
+    	UserDetailsDto dto = new UserDetailsDto();
         dto.setUserId(entity.getUserId());
       //  dto.setFirstName(entity.getFirstName());
       //  dto.setLastName(entity.getLastName());
@@ -28,15 +31,46 @@ public class UserMapper implements BaseMapper<User, UserDto> {
 
         return dto;
     }
+	
+	public UserDto toUserDto(User user) {
+        if (user == null) {
+            return null;
+        }
+
+        String fullName = (user.getFirstName() != null ? user.getFirstName() : "") + 
+                         (user.getLastName() != null ? " " + user.getLastName() : "").trim();
+        
+        if (fullName.isEmpty()) {
+            fullName = null;
+        }
+
+        return UserDto.builder()
+                .userId(user.getUserId())
+                .email(user.getEmail())
+                .userType(user.getUserType())
+                .firstName(user.getFirstName())
+                .lastName(user.getLastName())
+                .name(fullName)
+                .phoneNumber(user.getPhoneNumber())
+                .isActive(user.getIsActive())
+                .isVerified(user.getIsVerified())
+                .profilePictureUrl(user.getProfilePictureUrl())
+                .gender(user.getGender())
+                .status(user.getStatus())
+                .dateOfBirth(user.getDateOfBirth() != null ? user.getDateOfBirth().toString() : null)
+                .build();
+    }
+
 
     @Override
-    public User toEntity(UserDto dto) {
+    public User toEntity(UserDetailsDto dto) {
         User user = new User();
         user.setUserId(dto.getUserId());
         user.setFirstName(dto.getFirstName());
         user.setLastName(dto.getLastName());
         user.setEmail(dto.getEmail());
         user.setPhoneNumber(dto.getPhoneNumber());
+        user.setDateOfBirth(dto.getDateOfBirth());
         user.setUserType(dto.getUserType());
         user.setIsVerified(Boolean.FALSE);
 

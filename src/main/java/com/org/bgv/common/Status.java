@@ -42,10 +42,14 @@ public class Status {
     public static final String NOT_LOOKING = "NOT_LOOKING";
     
     public static final String USER_TYPE_COMPANY = "COMPANY";
+    public static final String USER_TYPE_CANDIDATE = "CANDIDATE";
+    
     
     public static final String  ROLE_COMPANY_ADMIN = "ROLE_COMPANY_ADMIN";
     public static final String  ROLE_COMPANY_HR_MANAGER = "ROLE_COMPANY_HR_MANAGER";
     public static final String  ROLE_USER = "ROLE_USER";
+    public static final String ROLE_CANDIDATE="ROLE_CANDIDATE";
+    public static final String ROLE_COMPANY_EMPLOYEE="ROLE_COMPANY_EMPLOYEE";
     
     
     // Get all main statuses

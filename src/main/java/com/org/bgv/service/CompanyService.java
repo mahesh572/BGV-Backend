@@ -261,8 +261,15 @@ public class CompanyService {
 	        return updatedCompany;
 	    }
 	    
-	    public Boolean addPerson(Long companyId, PersonDTO employeeDTO) {
+	    public Boolean addPerson(Long companyId, PersonDTO employeeDTO,String type) {
 	    	log.info("addPerson::::::::::::::::::::::STARTED");
+	    	
+	    	String roleName=Status.ROLE_CANDIDATE;
+	    	if(type!=null && type.contains("COMPANY")) {
+	    		roleName = Status.ROLE_COMPANY_EMPLOYEE;
+	    		
+	    	}
+	    	
 	    	if(employeeDTO.getStatus().equalsIgnoreCase("ACTIVE")) {
 	    		log.info("addPerson::::::::::::employeeDTO.getStatus()::::::::::{}",employeeDTO.getStatus());
 	    		if(employeeDTO.getId()==null) {
@@ -276,7 +283,7 @@ public class CompanyService {
 	    	                .gender(employeeDTO.getGender())
 	    	               // .password(UUID.randomUUID().toString())
 	    	                .password(passwordEncoder.encode("123456"))
-	    	                .userType(Status.USER_TYPE_COMPANY)
+	    	                .userType(type)
 	    	                .status(employeeDTO.getStatus())
 	    	                .build();
 
@@ -284,7 +291,7 @@ public class CompanyService {
 	    	        userRepository.save(user);
 
 	    	        // Find Role
-	    	        Role companyRole = roleRepository.findByName(employeeDTO.getRole())
+	    	        Role companyRole = roleRepository.findByName(roleName)
 	    	                .orElseThrow(() -> new RuntimeException(employeeDTO.getRole() + " not found"));
 
 	    	        // Create UserRole mapping
@@ -350,7 +357,7 @@ public class CompanyService {
     	                .gender(employeeDTO.getGender())
     	               // .password(UUID.randomUUID().toString())
     	                .password(passwordEncoder.encode("123456"))
-    	                .userType(Status.USER_TYPE_COMPANY)
+    	                .userType(type)
     	                .status(employeeDTO.getStatus())
     	                .build();
 
@@ -358,7 +365,7 @@ public class CompanyService {
     	        userRepository.save(user);
 
     	        // Find Role
-    	        Role companyRole = roleRepository.findByName(employeeDTO.getRole())
+    	        Role companyRole = roleRepository.findByName(roleName)
     	                .orElseThrow(() -> new RuntimeException(employeeDTO.getRole() + " not found"));
 
     	        // Create UserRole mapping
@@ -382,12 +389,141 @@ public class CompanyService {
 	    		
 	    	}
 
-	       
-
 	        return true;
 	    }
 
 
+	    public Boolean addCandidate(Long companyId, PersonDTO employeeDTO) {
+	    	log.info("addCandidate::::::::::::::::::::::STARTED");
+	    	
+	    	String roleName=Status.ROLE_CANDIDATE;
+	    		    	
+	    	if(employeeDTO.getStatus().equalsIgnoreCase("ACTIVE")) {
+	    		log.info("addPerson::::::::::::employeeDTO.getStatus()::::::::::{}",employeeDTO.getStatus());
+	    		if(employeeDTO.getId()==null) {
+	    			log.info("addPerson::::::::::::employeeDTO.getId()::::::::::{}",employeeDTO.getId());
+	    			 // Create new User entity from DTO
+	    	        User user = User.builder()
+	    	                .firstName(employeeDTO.getFirstName())
+	    	                .lastName(employeeDTO.getLastName())
+	    	                .phoneNumber(employeeDTO.getMobileNo())
+	    	                .email(employeeDTO.getEmail())
+	    	                .gender(employeeDTO.getGender())
+	    	               // .password(UUID.randomUUID().toString())
+	    	                .password(passwordEncoder.encode("123456"))
+	    	                .userType(Status.USER_TYPE_CANDIDATE)
+	    	                .status(employeeDTO.getStatus())
+	    	                .build();
+
+	    	        // Save user first (if User is a new entity)
+	    	        userRepository.save(user);
+
+	    	        // Find Role
+	    	        Role companyRole = roleRepository.findByName(roleName)
+	    	                .orElseThrow(() -> new RuntimeException(employeeDTO.getRole() + " not found"));
+
+	    	        // Create UserRole mapping
+	    	        UserRole userRole = UserRole.builder()
+	    	                .user(user)
+	    	                .role(companyRole)
+	    	                .build();
+
+	    	        userRoleRepository.save(userRole);
+
+	    	        // Find Company
+	    	        Company company = companyRepository.findById(companyId)
+	    	                .orElseThrow(() -> new RuntimeException("Company not found with ID: " + companyId));
+
+	    	        // Create CompanyUser mapping
+	    	        CompanyUser companyUser = new CompanyUser();
+	    	        companyUser.setCompany(company);
+	    	        companyUser.setUser(user);
+
+	    	        companyUserRepository.save(companyUser);
+	    	        
+	    	        Profile profile =  Profile.builder()
+	                //  .profileId(dto.getBasicDetails().getProfileId())
+	                  .firstName(employeeDTO.getFirstName())
+	                  .lastName(employeeDTO.getLastName())
+	                  .emailAddress(employeeDTO.getEmail())
+	                  .phoneNumber(employeeDTO.getMobileNo())
+	                 // .dateOfBirth(employeeDTO.getDateOfBirth())
+	                  .gender(employeeDTO.getGender())
+	                 // .userId(dto.getUser_id())
+	                  .user(user)
+	                  .status(employeeDTO.getStatus())
+	                  .build();
+	    			
+	    	        profileRepository.save(profile);
+	    	        
+	    	        // save candidate info
+	    		}else {
+	    			
+	    			 User user = userRepository.findById(employeeDTO.getId())
+	    	                 .orElseThrow(() -> new RuntimeException("User not found: " + employeeDTO.getId()));
+	    			
+	    			 Profile profile=Profile.builder()
+		                //  .profileId(dto.getBasicDetails().getProfileId())
+		                  .firstName(employeeDTO.getFirstName())
+		                  .lastName(employeeDTO.getLastName())
+		                  .emailAddress(employeeDTO.getEmail())
+		                  .phoneNumber(employeeDTO.getMobileNo())
+		                 // .dateOfBirth(employeeDTO.getDateOfBirth())
+		                  .gender(employeeDTO.getGender())
+		                 // .userId(dto.getUser_id())
+		                  .user(user)
+		                  .status(employeeDTO.getStatus())
+		                  .build();
+	    			 profileRepository.save(profile);
+	    		}
+	    		
+	    	}else {
+	    		 // Create new User entity from DTO
+    	        User user = User.builder()
+    	                .firstName(employeeDTO.getFirstName())
+    	                .lastName(employeeDTO.getLastName())
+    	                .phoneNumber(employeeDTO.getMobileNo())
+    	                .email(employeeDTO.getEmail())
+    	                .gender(employeeDTO.getGender())
+    	               // .password(UUID.randomUUID().toString())
+    	                .password(passwordEncoder.encode("123456"))
+    	                .userType(Status.USER_TYPE_CANDIDATE)
+    	                .status(employeeDTO.getStatus())
+    	                .build();
+
+    	        // Save user first (if User is a new entity)
+    	        userRepository.save(user);
+
+    	        // Find Role
+    	        Role companyRole = roleRepository.findByName(roleName)
+    	                .orElseThrow(() -> new RuntimeException(employeeDTO.getRole() + " not found"));
+
+    	        // Create UserRole mapping
+    	        UserRole userRole = UserRole.builder()
+    	                .user(user)
+    	                .role(companyRole)
+    	                .build();
+
+    	        userRoleRepository.save(userRole);
+
+    	        // Find Company
+    	        Company company = companyRepository.findById(companyId)
+    	                .orElseThrow(() -> new RuntimeException("Company not found with ID: " + companyId));
+
+    	        // Create CompanyUser mapping
+    	        CompanyUser companyUser = new CompanyUser();
+    	        companyUser.setCompany(company);
+    	        companyUser.setUser(user);
+
+    	        companyUserRepository.save(companyUser);
+	    		
+	    	}
+
+	        return true;
+	    }
+	    
+	    
+	    
 	    
 	    
 	    private Company createCompanyFromRequest(CompanyRegistrationRequestDTO request) {

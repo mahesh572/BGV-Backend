@@ -19,6 +19,7 @@ import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 
 import com.org.bgv.api.response.ApiResponse;
+import com.org.bgv.common.Status;
 import com.org.bgv.company.dto.CompanyRegistrationRequestDTO;
 import com.org.bgv.company.dto.CompanyRegistrationResponse;
 import com.org.bgv.company.dto.PersonDTO;
@@ -249,7 +250,7 @@ public class CompanyController {
                  companyId, employeeDTO.getEmail());
         
         try {
-            Boolean response = companyService.addPerson(companyId, employeeDTO);
+            Boolean response = companyService.addPerson(companyId, employeeDTO,Status.USER_TYPE_COMPANY);
             return ResponseEntity.ok(ApiResponse.success(
                 "Employee added successfully", 
                 response, 
@@ -286,7 +287,7 @@ public class CompanyController {
                  companyId, candidateDTO.getEmail());
         
         try {
-            Boolean response = companyService.addPerson(companyId, candidateDTO);
+            Boolean response = companyService.addPerson(companyId, candidateDTO,"CANDIDATE");
             return ResponseEntity.ok(ApiResponse.success(
                 "Candidate added successfully", 
                 response, 

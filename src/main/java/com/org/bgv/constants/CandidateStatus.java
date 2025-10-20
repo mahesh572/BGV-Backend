@@ -1,0 +1,20 @@
+package com.org.bgv.constants;
+
+public enum CandidateStatus {
+    PROFILE_CREATED,
+    APPLIED,
+    SHORTLISTED,
+    INTERVIEW_SCHEDULED,
+    INTERVIEWED,
+    SELECTED,
+    OFFERED,
+    OFFER_ACCEPTED,
+    BGV_INITIATED,
+    BGV_IN_PROGRESS,
+    BGV_CLEARED,
+    BGV_FAILED,
+    ONBOARDED,
+    REJECTED,
+    WITHDRAWN
+}
+

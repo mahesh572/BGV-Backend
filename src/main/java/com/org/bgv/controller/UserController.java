@@ -1,8 +1,14 @@
 package com.org.bgv.controller;
 
 import com.org.bgv.api.response.ApiResponse;
+import com.org.bgv.common.PageRequestDto;
+import com.org.bgv.common.PaginationResponse;
+import com.org.bgv.common.UserDto;
+import com.org.bgv.common.UserSearchRequest;
 import com.org.bgv.config.JwtUtil;
-import com.org.bgv.dto.UserDto;
+import com.org.bgv.constants.Constants;
+import com.org.bgv.constants.UserStatus;
+import com.org.bgv.dto.UserDetailsDto;
 import com.org.bgv.service.UserService;
 import lombok.RequiredArgsConstructor;
 
@@ -23,21 +29,51 @@ public class UserController {
     
     private static final Logger logger = LoggerFactory.getLogger(UserController.class);
 
+    
     @GetMapping
-    public ResponseEntity<ApiResponse<List<UserDto>>> getAll() {
+    public ResponseEntity<ApiResponse<PaginationResponse<UserDto>>> getAllUsers(
+            @RequestParam(defaultValue = "0") int page,
+            @RequestParam(defaultValue = "10") int size,
+            @RequestParam(defaultValue = "userId") String sortBy,
+            @RequestParam(defaultValue = "asc") String sortDirection) {
+        
         try {
-            List<UserDto> users = userService.getAll();
-            return ResponseEntity.ok(ApiResponse.success("Users retrieved successfully", users, HttpStatus.OK));
+            PageRequestDto pageRequest = PageRequestDto.builder()
+                    .page(page)
+                    .size(size)
+                    .sortBy(sortBy)
+                    .sortDirection(sortDirection)
+                    .build();
+            
+            PaginationResponse<UserDto> response = userService.getAllUsers(pageRequest);
+            return ResponseEntity.ok(ApiResponse.success("Users retrieved successfully", response, HttpStatus.OK));
         } catch (Exception e) {
             return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
                     .body(ApiResponse.failure("Failed to fetch users: " + e.getMessage(), HttpStatus.INTERNAL_SERVER_ERROR));
         }
     }
-
-    @GetMapping("/{id}")
-    public ResponseEntity<ApiResponse<UserDto>> getById(@PathVariable Long id) {
+    
+    @PostMapping("/admin/users/search")
+    public ResponseEntity<ApiResponse<PaginationResponse<UserDto>>> searchUsers(
+            @RequestBody UserSearchRequest searchRequest) {
+    	logger.info("searchUsers::::::::::::::::::::::{}"+searchRequest);
         try {
-            UserDto user = userService.getById(id);
+            PaginationResponse<UserDto> response = userService.searchUsers(searchRequest);
+            return ResponseEntity.ok(ApiResponse.success("Users retrieved successfully", response, HttpStatus.OK));
+        } catch (RuntimeException e) {
+            return ResponseEntity.status(HttpStatus.BAD_REQUEST)
+                    .body(ApiResponse.failure(e.getMessage(), HttpStatus.BAD_REQUEST));
+        } catch (Exception e) {
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
+                    .body(ApiResponse.failure("Failed to search users: " + e.getMessage(), HttpStatus.INTERNAL_SERVER_ERROR));
+        }
+    }
+    
+   
+    @GetMapping("/{id}")
+    public ResponseEntity<ApiResponse<UserDetailsDto>> getById(@PathVariable Long id) {
+        try {
+        	UserDetailsDto user = userService.getById(id);
             return ResponseEntity.ok(ApiResponse.success("User found", user, HttpStatus.OK));
         } catch (RuntimeException e) {
             return ResponseEntity.status(HttpStatus.NOT_FOUND)
@@ -49,9 +85,11 @@ public class UserController {
     }
 
     @PostMapping
-    public ResponseEntity<ApiResponse<UserDto>> create(@RequestBody UserDto userDto) {
+    public ResponseEntity<ApiResponse<UserDetailsDto>> create(@RequestBody UserDetailsDto userDto) {
         try {
-            UserDto createdUser = userService.create(userDto);
+        	logger.info("users/create::::::{}",userDto);
+        	userDto.setUserType(Constants.USER_TYPE_CANDIDATE);
+        	UserDetailsDto createdUser = userService.create(userDto);
             return ResponseEntity.status(HttpStatus.CREATED)
                     .body(ApiResponse.success("User created successfully", createdUser, HttpStatus.CREATED));
         } catch (RuntimeException e) {
@@ -64,9 +102,9 @@ public class UserController {
     }
 
     @PutMapping("/{id}")
-    public ResponseEntity<ApiResponse<UserDto>> update(@PathVariable Long id, @RequestBody UserDto userDto) {
+    public ResponseEntity<ApiResponse<UserDetailsDto>> update(@PathVariable Long id, @RequestBody UserDetailsDto userDto) {
         try {
-            UserDto updatedUser = userService.update(id, userDto);
+        	UserDetailsDto updatedUser = userService.update(id, userDto);
             return ResponseEntity.ok(ApiResponse.success("User updated successfully", updatedUser, HttpStatus.OK));
         } catch (RuntimeException e) {
             return ResponseEntity.status(HttpStatus.NOT_FOUND)
@@ -92,9 +130,9 @@ public class UserController {
     }
     
     @GetMapping("/by-email")
-    public ResponseEntity<ApiResponse<UserDto>> getUserByEmail(@RequestParam String email) {
+    public ResponseEntity<ApiResponse<UserDetailsDto>> getUserByEmail(@RequestParam String email) {
         try {
-            UserDto userDto = userService.getUserByEmail(email);
+        	UserDetailsDto userDto = userService.getUserByEmail(email);
             return ResponseEntity.ok(ApiResponse.success("User found", userDto, HttpStatus.OK));
         } catch (RuntimeException e) {
             return ResponseEntity.status(HttpStatus.NOT_FOUND)
@@ -119,7 +157,7 @@ public class UserController {
         }
     }
     @GetMapping("/user-from-token")
-    public ResponseEntity<ApiResponse<UserDto>> getUserFromToken(
+    public ResponseEntity<ApiResponse<UserDetailsDto>> getUserFromToken(
             @RequestHeader("Authorization") String authorizationHeader) {
     	logger.info("getUserFromToken:::::::::::::::::::::::::::{}",authorizationHeader);
         try {
@@ -131,7 +169,7 @@ public class UserController {
                         .body(ApiResponse.failure("Authorization token is required", HttpStatus.BAD_REQUEST));
             }
 
-            UserDto userDto = userService.getUserFromToken(token);
+            UserDetailsDto userDto = userService.getUserFromToken(token);
             return ResponseEntity.ok(ApiResponse.success("User retrieved successfully", userDto, HttpStatus.OK));
             
         } catch (RuntimeException e) {

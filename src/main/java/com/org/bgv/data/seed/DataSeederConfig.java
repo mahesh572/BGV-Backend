@@ -1,5 +1,6 @@
 package com.org.bgv.data.seed;
 
+import com.org.bgv.common.RoleConstants;
 import com.org.bgv.entity.BGVCategory;
 import com.org.bgv.entity.CheckType;
 import com.org.bgv.entity.DegreeType;
@@ -219,15 +220,20 @@ public class DataSeederConfig implements CommandLineRunner {
 
     private void seedRoles() {
         List<Role> defaultRoles = Arrays.asList(
-            createRole("ROLE_USER", "Regular User"),
-            createRole("ROLE_VENDOR", "Vendor"),
-            createRole("ROLE_ADMIN", "Administrator"),
-            createRole("ROLE_COMPANY_HR", "HR"),
-            createRole("ROLE_CANDIDATE_USER", "Candidate"),
-            createRole("ROLE_COMPANY_ADMIN", "Company Administrator"),
-            createRole("ROLE_COMPANY_HR_MANAGER", "Company HR Manager"),
-            createRole("ROLE_CANDIDATE", "Company Candidate"),
-            createRole("ROLE_COMPANY_RECRUITER", "Recruiter")
+            createRole("User", "User",RoleConstants.TYPE_REGULAR),
+            createRole("Administrator", "Administrator",RoleConstants.TYPE_REGULAR),
+            
+            createRole("Vendor User", "Vendor User",RoleConstants.TYPE_VENDOR),
+            createRole("Vendor Administrator", "Vendor Administrator",RoleConstants.TYPE_VENDOR),
+            createRole("Vendor Verifier", "Vendor Verifier",RoleConstants.TYPE_VENDOR),
+           
+            
+            createRole("Candidate", "Candidate",RoleConstants.TYPE_COMPANY),
+            createRole("Company Administrator", "Company Administrator",RoleConstants.TYPE_COMPANY),
+            createRole("Company HR Manager", "Company HR Manager",RoleConstants.TYPE_COMPANY),
+            createRole("Recruiter", "Recruiter",RoleConstants.TYPE_COMPANY)
+            
+           
         );
 
         for (Role role : defaultRoles) {
@@ -235,10 +241,11 @@ public class DataSeederConfig implements CommandLineRunner {
         }
     }
     
-    private Role createRole(String name, String label) {
+    private Role createRole(String name, String label,Long type) {
         return Role.builder()
                 .name(name)
                 .label(label)
+                .type(type)
                 .build();
     }
     

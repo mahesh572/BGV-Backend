@@ -96,14 +96,18 @@ public class JobService {
      
      if (search != null && !search.trim().isEmpty()) {
          jobsPage = jobRepository.searchCompanyJobs(companyId, search.trim(), pageable);
-     } else if (status != null) {
+     } else if (status != null && companyId!=0) {
          jobsPage = jobRepository.findByCompanyIdAndStatus(companyId, status, pageable);
      } else if (employmentType != null) {
          jobsPage = jobRepository.findByCompanyIdAndEmploymentType(companyId, employmentType, pageable);
      } else if (experienceLevel != null) {
          jobsPage = jobRepository.findByCompanyIdAndExperienceLevel(companyId, experienceLevel, pageable);
      } else {
+    	 if(companyId==0) {
+    		 jobsPage = jobRepository.findAll(pageable);
+    	 }else {
          jobsPage = jobRepository.findByCompanyId(companyId, pageable);
+    	 }
      }
 
      // Convert to JobDTO
