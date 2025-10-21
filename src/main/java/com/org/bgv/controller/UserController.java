@@ -1,6 +1,6 @@
 package com.org.bgv.controller;
 
-import com.org.bgv.api.response.ApiResponse;
+import com.org.bgv.api.response.CustomApiResponse;
 import com.org.bgv.common.PageRequestDto;
 import com.org.bgv.common.PaginationResponse;
 import com.org.bgv.common.UserDto;
@@ -31,7 +31,7 @@ public class UserController {
 
     
     @GetMapping
-    public ResponseEntity<ApiResponse<PaginationResponse<UserDto>>> getAllUsers(
+    public ResponseEntity<CustomApiResponse<PaginationResponse<UserDto>>> getAllUsers(
             @RequestParam(defaultValue = "0") int page,
             @RequestParam(defaultValue = "10") int size,
             @RequestParam(defaultValue = "userId") String sortBy,
@@ -46,118 +46,118 @@ public class UserController {
                     .build();
             
             PaginationResponse<UserDto> response = userService.getAllUsers(pageRequest);
-            return ResponseEntity.ok(ApiResponse.success("Users retrieved successfully", response, HttpStatus.OK));
+            return ResponseEntity.ok(CustomApiResponse.success("Users retrieved successfully", response, HttpStatus.OK));
         } catch (Exception e) {
             return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
-                    .body(ApiResponse.failure("Failed to fetch users: " + e.getMessage(), HttpStatus.INTERNAL_SERVER_ERROR));
+                    .body(CustomApiResponse.failure("Failed to fetch users: " + e.getMessage(), HttpStatus.INTERNAL_SERVER_ERROR));
         }
     }
     
     @PostMapping("/admin/users/search")
-    public ResponseEntity<ApiResponse<PaginationResponse<UserDto>>> searchUsers(
+    public ResponseEntity<CustomApiResponse<PaginationResponse<UserDto>>> searchUsers(
             @RequestBody UserSearchRequest searchRequest) {
     	logger.info("searchUsers::::::::::::::::::::::{}"+searchRequest);
         try {
             PaginationResponse<UserDto> response = userService.searchUsers(searchRequest);
-            return ResponseEntity.ok(ApiResponse.success("Users retrieved successfully", response, HttpStatus.OK));
+            return ResponseEntity.ok(CustomApiResponse.success("Users retrieved successfully", response, HttpStatus.OK));
         } catch (RuntimeException e) {
             return ResponseEntity.status(HttpStatus.BAD_REQUEST)
-                    .body(ApiResponse.failure(e.getMessage(), HttpStatus.BAD_REQUEST));
+                    .body(CustomApiResponse.failure(e.getMessage(), HttpStatus.BAD_REQUEST));
         } catch (Exception e) {
             return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
-                    .body(ApiResponse.failure("Failed to search users: " + e.getMessage(), HttpStatus.INTERNAL_SERVER_ERROR));
+                    .body(CustomApiResponse.failure("Failed to search users: " + e.getMessage(), HttpStatus.INTERNAL_SERVER_ERROR));
         }
     }
     
    
     @GetMapping("/{id}")
-    public ResponseEntity<ApiResponse<UserDetailsDto>> getById(@PathVariable Long id) {
+    public ResponseEntity<CustomApiResponse<UserDto>> getById(@PathVariable Long id) {
         try {
-        	UserDetailsDto user = userService.getById(id);
-            return ResponseEntity.ok(ApiResponse.success("User found", user, HttpStatus.OK));
+        	UserDto user = userService.getById(id);
+            return ResponseEntity.ok(CustomApiResponse.success("User found", user, HttpStatus.OK));
         } catch (RuntimeException e) {
             return ResponseEntity.status(HttpStatus.NOT_FOUND)
-                    .body(ApiResponse.failure(e.getMessage(), HttpStatus.NOT_FOUND));
+                    .body(CustomApiResponse.failure(e.getMessage(), HttpStatus.NOT_FOUND));
         } catch (Exception e) {
             return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
-                    .body(ApiResponse.failure("Failed to fetch user: " + e.getMessage(), HttpStatus.INTERNAL_SERVER_ERROR));
+                    .body(CustomApiResponse.failure("Failed to fetch user: " + e.getMessage(), HttpStatus.INTERNAL_SERVER_ERROR));
         }
     }
 
     @PostMapping
-    public ResponseEntity<ApiResponse<UserDetailsDto>> create(@RequestBody UserDetailsDto userDto) {
+    public ResponseEntity<CustomApiResponse<UserDto>> create(@RequestBody UserDto userDto) {
         try {
         	logger.info("users/create::::::{}",userDto);
         	userDto.setUserType(Constants.USER_TYPE_CANDIDATE);
-        	UserDetailsDto createdUser = userService.create(userDto);
+        	UserDto createdUser = userService.create(userDto);
             return ResponseEntity.status(HttpStatus.CREATED)
-                    .body(ApiResponse.success("User created successfully", createdUser, HttpStatus.CREATED));
+                    .body(CustomApiResponse.success("User created successfully", createdUser, HttpStatus.CREATED));
         } catch (RuntimeException e) {
             return ResponseEntity.status(HttpStatus.BAD_REQUEST)
-                    .body(ApiResponse.failure(e.getMessage(), HttpStatus.BAD_REQUEST));
+                    .body(CustomApiResponse.failure(e.getMessage(), HttpStatus.BAD_REQUEST));
         } catch (Exception e) {
             return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
-                    .body(ApiResponse.failure("Failed to create user: " + e.getMessage(), HttpStatus.INTERNAL_SERVER_ERROR));
+                    .body(CustomApiResponse.failure("Failed to create user: " + e.getMessage(), HttpStatus.INTERNAL_SERVER_ERROR));
         }
     }
 
     @PutMapping("/{id}")
-    public ResponseEntity<ApiResponse<UserDetailsDto>> update(@PathVariable Long id, @RequestBody UserDetailsDto userDto) {
+    public ResponseEntity<CustomApiResponse<UserDto>> update(@PathVariable Long id, @RequestBody UserDetailsDto userDto) {
         try {
-        	UserDetailsDto updatedUser = userService.update(id, userDto);
-            return ResponseEntity.ok(ApiResponse.success("User updated successfully", updatedUser, HttpStatus.OK));
+        	UserDto updatedUser = userService.update(id, userDto);
+            return ResponseEntity.ok(CustomApiResponse.success("User updated successfully", updatedUser, HttpStatus.OK));
         } catch (RuntimeException e) {
             return ResponseEntity.status(HttpStatus.NOT_FOUND)
-                    .body(ApiResponse.failure(e.getMessage(), HttpStatus.NOT_FOUND));
+                    .body(CustomApiResponse.failure(e.getMessage(), HttpStatus.NOT_FOUND));
         } catch (Exception e) {
             return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
-                    .body(ApiResponse.failure("Failed to update user: " + e.getMessage(), HttpStatus.INTERNAL_SERVER_ERROR));
+                    .body(CustomApiResponse.failure("Failed to update user: " + e.getMessage(), HttpStatus.INTERNAL_SERVER_ERROR));
         }
     }
 
     @DeleteMapping("/{id}")
-    public ResponseEntity<ApiResponse<Void>> delete(@PathVariable Long id) {
+    public ResponseEntity<CustomApiResponse<Void>> delete(@PathVariable Long id) {
         try {
             userService.delete(id);
-            return ResponseEntity.ok(ApiResponse.success("User deleted successfully", null, HttpStatus.OK));
+            return ResponseEntity.ok(CustomApiResponse.success("User deleted successfully", null, HttpStatus.OK));
         } catch (RuntimeException e) {
             return ResponseEntity.status(HttpStatus.NOT_FOUND)
-                    .body(ApiResponse.failure(e.getMessage(), HttpStatus.NOT_FOUND));
+                    .body(CustomApiResponse.failure(e.getMessage(), HttpStatus.NOT_FOUND));
         } catch (Exception e) {
             return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
-                    .body(ApiResponse.failure("Failed to delete user: " + e.getMessage(), HttpStatus.INTERNAL_SERVER_ERROR));
+                    .body(CustomApiResponse.failure("Failed to delete user: " + e.getMessage(), HttpStatus.INTERNAL_SERVER_ERROR));
         }
     }
     
     @GetMapping("/by-email")
-    public ResponseEntity<ApiResponse<UserDetailsDto>> getUserByEmail(@RequestParam String email) {
+    public ResponseEntity<CustomApiResponse<UserDto>> getUserByEmail(@RequestParam String email) {
         try {
-        	UserDetailsDto userDto = userService.getUserByEmail(email);
-            return ResponseEntity.ok(ApiResponse.success("User found", userDto, HttpStatus.OK));
+        	UserDto userDto = userService.getUserByEmail(email);
+            return ResponseEntity.ok(CustomApiResponse.success("User found", userDto, HttpStatus.OK));
         } catch (RuntimeException e) {
             return ResponseEntity.status(HttpStatus.NOT_FOUND)
-                    .body(ApiResponse.failure(e.getMessage(), HttpStatus.NOT_FOUND));
+                    .body(CustomApiResponse.failure(e.getMessage(), HttpStatus.NOT_FOUND));
         } catch (Exception e) {
             return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
-                    .body(ApiResponse.failure("Failed to fetch user by email: " + e.getMessage(), HttpStatus.INTERNAL_SERVER_ERROR));
+                    .body(CustomApiResponse.failure("Failed to fetch user by email: " + e.getMessage(), HttpStatus.INTERNAL_SERVER_ERROR));
         }
     }
 
     @PostMapping("/{userId}/roles/{roleName}")
-    public ResponseEntity<ApiResponse<Void>> assignRole(@PathVariable Long userId, @PathVariable String roleName) {
+    public ResponseEntity<CustomApiResponse<Void>> assignRole(@PathVariable Long userId, @PathVariable String roleName) {
         try {
             userService.assignRoleToUser(userId, roleName);
-            return ResponseEntity.ok(ApiResponse.success("Role assigned successfully", null, HttpStatus.OK));
+            return ResponseEntity.ok(CustomApiResponse.success("Role assigned successfully", null, HttpStatus.OK));
         } catch (RuntimeException e) {
             return ResponseEntity.status(HttpStatus.BAD_REQUEST)
-                    .body(ApiResponse.failure(e.getMessage(), HttpStatus.BAD_REQUEST));
+                    .body(CustomApiResponse.failure(e.getMessage(), HttpStatus.BAD_REQUEST));
         } catch (Exception e) {
             return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
-                    .body(ApiResponse.failure("Failed to assign role: " + e.getMessage(), HttpStatus.INTERNAL_SERVER_ERROR));
+                    .body(CustomApiResponse.failure("Failed to assign role: " + e.getMessage(), HttpStatus.INTERNAL_SERVER_ERROR));
         }
     }
     @GetMapping("/user-from-token")
-    public ResponseEntity<ApiResponse<UserDetailsDto>> getUserFromToken(
+    public ResponseEntity<CustomApiResponse<UserDto>> getUserFromToken(
             @RequestHeader("Authorization") String authorizationHeader) {
     	logger.info("getUserFromToken:::::::::::::::::::::::::::{}",authorizationHeader);
         try {
@@ -166,18 +166,18 @@ public class UserController {
             
             if (token == null || token.isEmpty()) {
                 return ResponseEntity.status(HttpStatus.BAD_REQUEST)
-                        .body(ApiResponse.failure("Authorization token is required", HttpStatus.BAD_REQUEST));
+                        .body(CustomApiResponse.failure("Authorization token is required", HttpStatus.BAD_REQUEST));
             }
 
-            UserDetailsDto userDto = userService.getUserFromToken(token);
-            return ResponseEntity.ok(ApiResponse.success("User retrieved successfully", userDto, HttpStatus.OK));
+            UserDto userDto = userService.getUserFromToken(token);
+            return ResponseEntity.ok(CustomApiResponse.success("User retrieved successfully", userDto, HttpStatus.OK));
             
         } catch (RuntimeException e) {
             return ResponseEntity.status(HttpStatus.UNAUTHORIZED)
-                    .body(ApiResponse.failure(e.getMessage(), HttpStatus.UNAUTHORIZED));
+                    .body(CustomApiResponse.failure(e.getMessage(), HttpStatus.UNAUTHORIZED));
         } catch (Exception e) {
             return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
-                    .body(ApiResponse.failure("Failed to get user from token: " + e.getMessage(), HttpStatus.INTERNAL_SERVER_ERROR));
+                    .body(CustomApiResponse.failure("Failed to get user from token: " + e.getMessage(), HttpStatus.INTERNAL_SERVER_ERROR));
         }
     }
 }

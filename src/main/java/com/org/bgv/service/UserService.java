@@ -1,5 +1,6 @@
 package com.org.bgv.service;
 
+import com.org.bgv.common.ChangePasswordRequest;
 import com.org.bgv.common.ColumnMetadata;
 import com.org.bgv.common.FilterMetadata;
 import com.org.bgv.common.FilterRequest;
@@ -38,6 +39,7 @@ import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.domain.Sort;
 import org.springframework.data.jpa.domain.Specification;
+import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 import org.springframework.util.StringUtils;
 
@@ -57,10 +59,11 @@ public class UserService {
     private final JwtUtil jwtUtil;
     private final ProfileService profileService;
     private final CompanyUserRepository companyUserRepository;
+    private final PasswordEncoder passwordEncoder;
     
     private static final Logger logger = LoggerFactory.getLogger(UserService.class);
 
-    public List<UserDetailsDto> getAll() {
+    public List<UserDto> getAll() {
         try {
             return userRepository.findAll()
                     .stream()
@@ -146,9 +149,9 @@ public class UserService {
         };
     }
 
-    public UserDetailsDto getById(Long id) {
+    public UserDto getById(Long id) {
         try {
-        	UserDetailsDto userDto = userRepository.findById(id)
+        	UserDto userDto = userRepository.findById(id)
                     .map(userMapper::toDto)
                     .orElseThrow(() -> new RuntimeException("User not found with id: " + id));
         	userDto.setRoles(getUserRoles(id));
@@ -159,7 +162,7 @@ public class UserService {
         }
     }
 
-    public UserDetailsDto create(UserDetailsDto userDto) {
+    public UserDto create(UserDto userDto) {
         try {
             // Check if email already exists
             if (userRepository.existsByEmail(userDto.getEmail())) {
@@ -175,7 +178,7 @@ public class UserService {
         }
     }
 
-    public UserDetailsDto update(Long id, UserDetailsDto userDto) {
+    public UserDto update(Long id, UserDetailsDto userDto) {
         try {
             User existingUser = userRepository.findById(id)
                     .orElseThrow(() -> new RuntimeException("User not found with id: " + id));
@@ -214,8 +217,8 @@ public class UserService {
         }
     }
 
-    public UserDetailsDto getUserByEmail(String email) {
-    	UserDetailsDto userDto=null;
+    public UserDto getUserByEmail(String email) {
+    	UserDto userDto=null;
     	try {
         	
     		userDto = userRepository.findByEmail(email)
@@ -296,8 +299,8 @@ public class UserService {
         }
     }
     
-    public UserDetailsDto getUserFromToken(String token) {
-    	UserDetailsDto userDto = null;
+    public UserDto getUserFromToken(String token) {
+    	UserDto userDto = null;
 
         if (jwtUtil.validateToken(token)) {
             String email = jwtUtil.getUsernameFromToken(token);
@@ -322,6 +325,123 @@ public class UserService {
 
         return userDto;
     }
+    
+    public void changePasswordByUser(Long userId, ChangePasswordRequest request) {
+        logger.info("Changing password for user ID: {}", userId);
+
+        // Validate request
+        validateChangePasswordRequest(request);
+
+        // Find user
+        User user = userRepository.findById(userId)
+                .orElseThrow(() -> new RuntimeException("User not found with id: " + userId));
+
+        // Verify current password
+        if (!passwordEncoder.matches(request.getCurrentPassword(), user.getPassword())) {
+            throw new RuntimeException("Current password is incorrect");
+        }
+
+        // Check if new password is same as current password
+        if (passwordEncoder.matches(request.getNewPassword(), user.getPassword())) {
+            throw new RuntimeException("New password cannot be the same as current password");
+        }
+
+        // Update password
+        String encodedNewPassword = passwordEncoder.encode(request.getNewPassword());
+        user.setPassword(encodedNewPassword);
+        
+        // Update timestamps if you have them
+        user.setUpdatedAt(java.time.LocalDateTime.now());
+
+        userRepository.save(user);
+        
+        logger.info("Password changed successfully for user: {}", user.getEmail());
+    }
+    
+    
+    public void changePasswordByAdmin(Long userId, ChangePasswordRequest request) {
+        logger.info("Changing password for user ID: {}", userId);
+
+        // Validate request
+        validateChangePasswordRequest(request);
+
+        // Find user
+        User user = userRepository.findById(userId)
+                .orElseThrow(() -> new RuntimeException("User not found with id: " + userId));
+/*
+        // Verify current password
+        if (!passwordEncoder.matches(request.getCurrentPassword(), user.getPassword())) {
+            throw new RuntimeException("Current password is incorrect");
+        }
+
+        // Check if new password is same as current password
+        if (passwordEncoder.matches(request.getNewPassword(), user.getPassword())) {
+            throw new RuntimeException("New password cannot be the same as current password");
+        }
+*/
+        // Update password
+        String encodedNewPassword = passwordEncoder.encode(request.getNewPassword());
+        user.setPassword(encodedNewPassword);
+        
+        // Update timestamps if you have them
+        user.setUpdatedAt(java.time.LocalDateTime.now());
+
+        userRepository.save(user);
+        
+        logger.info("Password changed successfully for user: {}", user.getEmail());
+    }
+
+    
+    public void resetPassword(Long userId, String newPassword) {
+        User user = userRepository.findById(userId)
+                .orElseThrow(() -> new RuntimeException("User not found with id: " + userId));
+
+        String encodedPassword = passwordEncoder.encode(newPassword);
+        user.setPassword(encodedPassword);
+        user.setUpdatedAt(java.time.LocalDateTime.now());
+
+        userRepository.save(user);
+        
+        logger.info("Password reset successfully for user: {}", user.getEmail());
+    }
+    
+    
+    /**
+     * Validate change password request
+     */
+    private void validateChangePasswordRequest(ChangePasswordRequest request) {
+        if (!request.getNewPassword().equals(request.getConfirmPassword())) {
+            throw new RuntimeException("New password and confirm password do not match");
+        }
+
+        if (request.getNewPassword().length() < 6) {
+            throw new RuntimeException("New password must be at least 6 characters long");
+        }
+
+        // Add more password strength validation if needed
+        if (!isPasswordStrong(request.getNewPassword())) {
+            throw new RuntimeException("Password must contain at least one uppercase letter, one lowercase letter, one number, and one special character");
+        }
+    }
+
+    /**
+     * Password strength validation
+     */
+    private boolean isPasswordStrong(String password) {
+        // At least one uppercase letter
+        boolean hasUpper = !password.equals(password.toLowerCase());
+        // At least one lowercase letter
+        boolean hasLower = !password.equals(password.toUpperCase());
+        // At least one digit
+        boolean hasDigit = password.matches(".*\\d.*");
+        // At least one special character
+        boolean hasSpecial = !password.matches("[A-Za-z0-9]*");
+
+        return hasUpper && hasLower && hasDigit && hasSpecial;
+    }
+
+    
+    
 
     private Pageable createPageable(PageRequestDto pageRequest) {
         Sort sort = Sort.by(

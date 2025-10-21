@@ -2,6 +2,7 @@ package com.org.bgv.mapper;
 
 import com.org.bgv.common.UserDto;
 import com.org.bgv.dto.AddressDTO;
+import com.org.bgv.dto.BasicdetailsDTO;
 import com.org.bgv.dto.UserDetailsDto;
 
 import com.org.bgv.entity.Address;
@@ -12,22 +13,18 @@ import java.util.stream.Collectors;
 import org.springframework.stereotype.Component;
 
 @Component
-public class UserMapper implements BaseMapper<User, UserDetailsDto> {
+public class UserMapper implements BaseMapper<User, UserDto> {
    
 	@Override
-    public UserDetailsDto toDto(User entity) {
-    	UserDetailsDto dto = new UserDetailsDto();
+    public UserDto toDto(User entity) {
+		UserDto dto = new UserDto();
         dto.setUserId(entity.getUserId());
-      //  dto.setFirstName(entity.getFirstName());
-      //  dto.setLastName(entity.getLastName());
+        dto.setFirstName(entity.getFirstName());
+        dto.setLastName(entity.getLastName());
         dto.setEmail(entity.getEmail());
-       // dto.setUserType(entity.getUserType());
-      //  dto.setPhoneNumber(entity.getPhoneNumber());
-		/*
-		 * if (entity.getAddresses() != null && !entity.getAddresses().isEmpty()) {
-		 * dto.setAddresses(entity.getAddresses().stream() .map(this::mapAddressDto)
-		 * .collect(Collectors.toList())); }
-		 */
+        dto.setUserType(entity.getUserType());
+        dto.setPhoneNumber(entity.getPhoneNumber());
+		
 
         return dto;
     }
@@ -57,29 +54,29 @@ public class UserMapper implements BaseMapper<User, UserDetailsDto> {
                 .profilePictureUrl(user.getProfilePictureUrl())
                 .gender(user.getGender())
                 .status(user.getStatus())
-                .dateOfBirth(user.getDateOfBirth() != null ? user.getDateOfBirth().toString() : null)
+                .dateOfBirth(user.getDateOfBirth() != null ? user.getDateOfBirth() : null)
                 .build();
     }
 
 
     @Override
-    public User toEntity(UserDetailsDto dto) {
+    public User toEntity(UserDto dto) {
         User user = new User();
         user.setUserId(dto.getUserId());
         user.setFirstName(dto.getFirstName());
         user.setLastName(dto.getLastName());
         user.setEmail(dto.getEmail());
         user.setPhoneNumber(dto.getPhoneNumber());
-        user.setDateOfBirth(dto.getDateOfBirth());
+       // user.setDateOfBirth(dto.getDateOfBirth());
         user.setUserType(dto.getUserType());
         user.setIsVerified(Boolean.FALSE);
-
+        /*
         if (dto.getAddresses() != null && !dto.getAddresses().isEmpty()) {
             user.setAddresses(dto.getAddresses().stream()
                 .map(addr -> mapAddressToEntity(addr, user))
                 .collect(Collectors.toList()));
         }
-
+         */
         return user;
     }
     
@@ -107,5 +104,20 @@ public class UserMapper implements BaseMapper<User, UserDetailsDto> {
         addrDto.setDefault(address.isDefault());
         addrDto.setAddressType(address.getAddressType());
         return addrDto;
+    }
+    public BasicdetailsDTO mapUserDTOToBasicdetails(UserDto userDto) {
+    	
+    	return BasicdetailsDTO.builder()
+    			.firstName(userDto.getFirstName())
+    			.lastName(userDto.getLastName())
+    			.gender(userDto.getGender())
+    			.phone(userDto.getPhoneNumber())
+    			.dateOfBirth(userDto.getDateOfBirth())
+    			.email(userDto.getEmail())
+    			.user_id(userDto.getUserId())
+    			.build();
+    	
+    	
+    	
     }
 }

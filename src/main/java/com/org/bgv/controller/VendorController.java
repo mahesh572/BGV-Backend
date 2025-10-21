@@ -9,7 +9,7 @@ import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 
-import com.org.bgv.api.response.ApiResponse;
+import com.org.bgv.api.response.CustomApiResponse;
 import com.org.bgv.config.JwtUtil;
 import com.org.bgv.dto.VendorDTO;
 import com.org.bgv.service.UserService;
@@ -26,16 +26,16 @@ public class VendorController {
 	private final VendorService vendorService;
 	
 	@PostMapping
-    public ResponseEntity<ApiResponse<Boolean>> createVendor(
+    public ResponseEntity<CustomApiResponse<Boolean>> createVendor(
             @RequestBody VendorDTO vendorRequestDTO) {
         try {
         	System.out.println("vendorRequestDTO::::::::::::::::::::::{}"+vendorRequestDTO);
             Boolean isSuccess = vendorService.createVendor(vendorRequestDTO);
                         
-            return ResponseEntity.ok(ApiResponse.success("Vendor created successfully", isSuccess, HttpStatus.OK));
+            return ResponseEntity.ok(CustomApiResponse.success("Vendor created successfully", isSuccess, HttpStatus.OK));
         } catch (Exception e) {
         	return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
-                    .body(ApiResponse.failure("Failed to fetch users: " + e.getMessage(), HttpStatus.INTERNAL_SERVER_ERROR));
+                    .body(CustomApiResponse.failure("Failed to fetch users: " + e.getMessage(), HttpStatus.INTERNAL_SERVER_ERROR));
         }
     }
 	

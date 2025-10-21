@@ -29,7 +29,7 @@ public class RoleMapper {
         }
 
         return RoleDto.builder()
-                .id(role.getId())
+                .roleid(role.getId())
                 .name(role.getName())
                 .label(role.getLabel())
                 .type(role.getType())

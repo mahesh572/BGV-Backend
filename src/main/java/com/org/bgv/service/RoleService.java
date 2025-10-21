@@ -1,14 +1,20 @@
 package com.org.bgv.service;
 
+import java.util.ArrayList;
+import java.util.Collections;
 import java.util.List;
 import java.util.Optional;
 import java.util.stream.Collectors;
 
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 
 import com.org.bgv.common.RoleConstants;
+import com.org.bgv.controller.RoleController;
 import com.org.bgv.entity.Role;
+import com.org.bgv.entity.User;
 import com.org.bgv.entity.UserRole;
 import com.org.bgv.mapper.RoleMapper;
 import com.org.bgv.repository.CompanyRepository;
@@ -31,10 +37,12 @@ import lombok.RequiredArgsConstructor;
 @Service
 public class RoleService {
 
+	private static final Logger log = LoggerFactory.getLogger(RoleService.class);
 	
 	private final RoleRepository roleRepository;
     private final UserRoleRepository userRoleRepository;
     private final RoleMapper roleMapper;
+    private final UserRepository userRepository;
 
     
     public RoleDto createRole(RoleCreateRequest request) {
@@ -204,6 +212,107 @@ public class RoleService {
             return RoleConstants.TYPE_VENDOR_LABEL;
         } else {
             return RoleConstants.TYPE_REGULAR_LABEL;
+        }
+    }
+    
+    public List<RoleDto> getUserRoles(Long userId) {
+        try {
+            List<Role> roles = getRolesByUserId(userId);
+            return roles.stream()
+            		 .map(roleMapper::toDto)
+                    .toList();
+        } catch (Exception e) {
+            // Log the error
+            System.err.println("Error fetching roles for user " + userId + ": " + e.getMessage());
+            return Collections.emptyList();
+        }
+    }
+    public List<Role> getRolesByUserId(Long userId) {
+        // Optional: Check if user exists first
+        if (!userRepository.existsById(userId)) {
+            throw new RuntimeException("User not found with id: " + userId);
+        }
+        
+        return roleRepository.findRolesByUserId(userId);
+    }
+    
+    /**
+     * Update user roles by adding new roles and removing specified roles
+     */
+    public void updateUserRoles(Long userId, List<Long> roleIdsToAdd, List<Long> roleIdsToRemove) {
+        log.info("Updating roles for user ID: {}, roles to add: {}, roles to remove: {}", 
+                userId, roleIdsToAdd, roleIdsToRemove);
+
+        // Validate user exists
+        User user = userRepository.findById(userId)
+                .orElseThrow(() -> new RuntimeException("User not found with id: " + userId));
+
+        // Process role additions
+        if (roleIdsToAdd != null && !roleIdsToAdd.isEmpty()) {
+            addRolesToUser(user, roleIdsToAdd);
+        }
+
+        // Process role removals
+        if (roleIdsToRemove != null && !roleIdsToRemove.isEmpty()) {
+            removeRolesFromUser(userId, roleIdsToRemove);
+        }
+
+        log.info("Successfully updated roles for user: {}", user.getEmail());
+    }
+
+    /**
+     * Add roles to user
+     */
+    private void addRolesToUser(User user, List<Long> roleIdsToAdd) {
+        List<Role> rolesToAdd = roleRepository.findAllById(roleIdsToAdd);
+        
+        // Check if all roles exist
+        if (rolesToAdd.size() != roleIdsToAdd.size()) {
+            List<Long> foundRoleIds = rolesToAdd.stream().map(Role::getId).toList();
+            List<Long> missingRoleIds = roleIdsToAdd.stream()
+                    .filter(roleId -> !foundRoleIds.contains(roleId))
+                    .toList();
+            throw new RuntimeException("Roles not found with IDs: " + missingRoleIds);
+        }
+
+        List<UserRole> newUserRoles = new ArrayList<>();
+        for (Role role : rolesToAdd) {
+            // Check if role already assigned using custom query
+            if (!userRoleRepository.existsByUserIdAndRoleId(user.getUserId(), role.getId())) {
+                UserRole userRole = UserRole.builder()
+                        .user(user)
+                        .role(role)
+                        .build();
+                newUserRoles.add(userRole);
+                log.debug("Adding role '{}' to user '{}'", role.getName(), user.getEmail());
+            } else {
+                log.debug("Role '{}' already assigned to user '{}'", role.getName(), user.getEmail());
+            }
+        }
+
+        if (!newUserRoles.isEmpty()) {
+            userRoleRepository.saveAll(newUserRoles);
+            log.info("Added {} roles to user: {}", newUserRoles.size(), user.getEmail());
+        }
+    }
+
+    /**
+     * Remove roles from user
+     */
+    private void removeRolesFromUser(Long userId, List<Long> roleIdsToRemove) {
+        // Use the custom repository method
+        List<UserRole> userRolesToRemove = userRoleRepository.findByUserIdAndRoleIds(userId, roleIdsToRemove);
+        
+        if (!userRolesToRemove.isEmpty()) {
+            userRoleRepository.deleteAll(userRolesToRemove);
+            log.info("Removed {} roles from user ID: {}", userRolesToRemove.size(), userId);
+            
+            // Log the removed roles for auditing
+            userRolesToRemove.forEach(userRole -> 
+                log.debug("Removed role '{}' from user '{}'", 
+                        userRole.getRole().getName(), userRole.getUser().getEmail()));
+        } else {
+            log.debug("No roles to remove for user ID: {}", userId);
         }
     }
 }

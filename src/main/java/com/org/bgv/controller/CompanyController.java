@@ -18,7 +18,7 @@ import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 
-import com.org.bgv.api.response.ApiResponse;
+import com.org.bgv.api.response.CustomApiResponse;
 import com.org.bgv.common.Status;
 import com.org.bgv.company.dto.CompanyRegistrationRequestDTO;
 import com.org.bgv.company.dto.CompanyRegistrationResponse;
@@ -38,14 +38,14 @@ public class CompanyController {
 	private final CompanyService companyService;
 
 	@PostMapping("/register")
-    public ResponseEntity<ApiResponse<CompanyRegistrationResponse>> registerCompany(
+    public ResponseEntity<CustomApiResponse<CompanyRegistrationResponse>> registerCompany(
     		@RequestBody CompanyRegistrationRequestDTO request) {
         
         log.info("Received company registration request for: {}", request.getCompanyName());
         
         try {
             CompanyRegistrationResponse response = companyService.registerCompany(request);
-            return ResponseEntity.ok(ApiResponse.success(
+            return ResponseEntity.ok(CustomApiResponse.success(
                 "Company registered successfully", 
                 response, 
                 HttpStatus.CREATED
@@ -54,12 +54,12 @@ public class CompanyController {
         } catch (IllegalArgumentException e) {
             log.warn("Validation error in company registration: {}", e.getMessage());
             return ResponseEntity.status(HttpStatus.BAD_REQUEST)
-                    .body(ApiResponse.failure(e.getMessage(), HttpStatus.BAD_REQUEST));
+                    .body(CustomApiResponse.failure(e.getMessage(), HttpStatus.BAD_REQUEST));
                     
         } catch (Exception e) {
             log.error("Unexpected error during company registration: {}", e.getMessage(), e);
             return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
-                    .body(ApiResponse.failure(
+                    .body(CustomApiResponse.failure(
                         "Internal server error during registration", 
                         HttpStatus.INTERNAL_SERVER_ERROR
                     ));
@@ -67,7 +67,7 @@ public class CompanyController {
     }
 
     @GetMapping("/check-registration-number")
-    public ResponseEntity<ApiResponse<Map<String, Boolean>>> checkRegistrationNumber(
+    public ResponseEntity<CustomApiResponse<Map<String, Boolean>>> checkRegistrationNumber(
             @RequestParam String registrationNumber) {
         
         try {
@@ -75,12 +75,12 @@ public class CompanyController {
             Map<String, Boolean> response = Map.of("exists", exists);
             String message = exists ? "Registration number already exists" : "Registration number available";
             
-            return ResponseEntity.ok(ApiResponse.success(message, response, HttpStatus.OK));
+            return ResponseEntity.ok(CustomApiResponse.success(message, response, HttpStatus.OK));
             
         } catch (Exception e) {
             log.error("Error checking registration number: {}", e.getMessage(), e);
             return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
-                    .body(ApiResponse.failure(
+                    .body(CustomApiResponse.failure(
                         "Failed to check registration number: " + e.getMessage(), 
                         HttpStatus.INTERNAL_SERVER_ERROR
                     ));
@@ -88,7 +88,7 @@ public class CompanyController {
     }
 
     @GetMapping("/check-admin-email")
-    public ResponseEntity<ApiResponse<Map<String, Boolean>>> checkAdminEmail(
+    public ResponseEntity<CustomApiResponse<Map<String, Boolean>>> checkAdminEmail(
             @RequestParam String email) {
         
         try {
@@ -96,12 +96,12 @@ public class CompanyController {
             Map<String, Boolean> response = Map.of("exists", exists);
             String message = exists ? "Email already exists" : "Email available";
             
-            return ResponseEntity.ok(ApiResponse.success(message, response, HttpStatus.OK));
+            return ResponseEntity.ok(CustomApiResponse.success(message, response, HttpStatus.OK));
             
         } catch (Exception e) {
             log.error("Error checking admin email: {}", e.getMessage(), e);
             return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
-                    .body(ApiResponse.failure(
+                    .body(CustomApiResponse.failure(
                         "Failed to check email: " + e.getMessage(), 
                         HttpStatus.INTERNAL_SERVER_ERROR
                     ));
@@ -109,16 +109,16 @@ public class CompanyController {
     }
 
     @GetMapping("/health")
-    public ResponseEntity<ApiResponse<String>> healthCheck() {
+    public ResponseEntity<CustomApiResponse<String>> healthCheck() {
         try {
-            return ResponseEntity.ok(ApiResponse.success(
+            return ResponseEntity.ok(CustomApiResponse.success(
                 "Company Registration Service is running", 
                 "Service is healthy", 
                 HttpStatus.OK
             ));
         } catch (Exception e) {
             return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
-                    .body(ApiResponse.failure(
+                    .body(CustomApiResponse.failure(
                         "Service health check failed", 
                         HttpStatus.INTERNAL_SERVER_ERROR
                     ));
@@ -127,7 +127,7 @@ public class CompanyController {
     
  // Get all companies with pagination and filtering
     @GetMapping
-    public ResponseEntity<ApiResponse<Map<String, Object>>> getAllCompanies(
+    public ResponseEntity<CustomApiResponse<Map<String, Object>>> getAllCompanies(
             @RequestParam(defaultValue = "0") int page,
             @RequestParam(defaultValue = "10") int size,
             @RequestParam(defaultValue = "companyName") String sortBy,
@@ -145,7 +145,7 @@ public class CompanyController {
             
             Map<String, Object> response = companyService.getAllCompanies(pageable, search, industry, status);
             
-            return ResponseEntity.ok(ApiResponse.success(
+            return ResponseEntity.ok(CustomApiResponse.success(
                 "Companies retrieved successfully", 
                 response, 
                 HttpStatus.OK
@@ -154,7 +154,7 @@ public class CompanyController {
         } catch (Exception e) {
             log.error("Error fetching companies: {}", e.getMessage(), e);
             return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
-                    .body(ApiResponse.failure(
+                    .body(CustomApiResponse.failure(
                         "Failed to fetch companies: " + e.getMessage(), 
                         HttpStatus.INTERNAL_SERVER_ERROR
                     ));
@@ -163,12 +163,12 @@ public class CompanyController {
 
     // Get company by ID
     @GetMapping("/{id}")
-    public ResponseEntity<ApiResponse<Company>> getCompanyById(@PathVariable Long id) {
+    public ResponseEntity<CustomApiResponse<Company>> getCompanyById(@PathVariable Long id) {
         log.info("Fetching company with ID: {}", id);
         
         try {
             Company company = companyService.getCompanyById(id);
-            return ResponseEntity.ok(ApiResponse.success(
+            return ResponseEntity.ok(CustomApiResponse.success(
                 "Company retrieved successfully", 
                 company, 
                 HttpStatus.OK
@@ -176,11 +176,11 @@ public class CompanyController {
         } catch (RuntimeException e) {
             log.warn("Company not found with ID: {}", id);
             return ResponseEntity.status(HttpStatus.NOT_FOUND)
-                    .body(ApiResponse.failure(e.getMessage(), HttpStatus.NOT_FOUND));
+                    .body(CustomApiResponse.failure(e.getMessage(), HttpStatus.NOT_FOUND));
         } catch (Exception e) {
             log.error("Error fetching company with ID {}: {}", id, e.getMessage(), e);
             return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
-                    .body(ApiResponse.failure(
+                    .body(CustomApiResponse.failure(
                         "Failed to fetch company: " + e.getMessage(), 
                         HttpStatus.INTERNAL_SERVER_ERROR
                     ));
@@ -189,12 +189,12 @@ public class CompanyController {
 
     // Get companies count for dashboard
     @GetMapping("/count")
-    public ResponseEntity<ApiResponse<Map<String, Long>>> getCompaniesCount() {
+    public ResponseEntity<CustomApiResponse<Map<String, Long>>> getCompaniesCount() {
         log.info("Fetching companies count");
         
         try {
             Map<String, Long> counts = companyService.getCompaniesCount();
-            return ResponseEntity.ok(ApiResponse.success(
+            return ResponseEntity.ok(CustomApiResponse.success(
                 "Companies count retrieved successfully", 
                 counts, 
                 HttpStatus.OK
@@ -202,7 +202,7 @@ public class CompanyController {
         } catch (Exception e) {
             log.error("Error fetching companies count: {}", e.getMessage(), e);
             return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
-                    .body(ApiResponse.failure(
+                    .body(CustomApiResponse.failure(
                         "Failed to fetch companies count: " + e.getMessage(), 
                         HttpStatus.INTERNAL_SERVER_ERROR
                     ));
@@ -211,7 +211,7 @@ public class CompanyController {
 
     // Update company status
     @PatchMapping("/{id}/status")
-    public ResponseEntity<ApiResponse<Company>> updateCompanyStatus(
+    public ResponseEntity<CustomApiResponse<Company>> updateCompanyStatus(
             @PathVariable Long id, 
             @RequestParam String status) {
         
@@ -219,7 +219,7 @@ public class CompanyController {
         
         try {
             Company company = companyService.updateCompanyStatus(id, status);
-            return ResponseEntity.ok(ApiResponse.success(
+            return ResponseEntity.ok(CustomApiResponse.success(
                 "Company status updated successfully", 
                 company, 
                 HttpStatus.OK
@@ -227,11 +227,11 @@ public class CompanyController {
         } catch (RuntimeException e) {
             log.warn("Company not found with ID: {}", id);
             return ResponseEntity.status(HttpStatus.NOT_FOUND)
-                    .body(ApiResponse.failure(e.getMessage(), HttpStatus.NOT_FOUND));
+                    .body(CustomApiResponse.failure(e.getMessage(), HttpStatus.NOT_FOUND));
         } catch (Exception e) {
             log.error("Error updating company status for ID {}: {}", id, e.getMessage(), e);
             return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
-                    .body(ApiResponse.failure(
+                    .body(CustomApiResponse.failure(
                         "Failed to update company status: " + e.getMessage(), 
                         HttpStatus.INTERNAL_SERVER_ERROR
                     ));
@@ -241,7 +241,7 @@ public class CompanyController {
     // Employee related 
     
     @PostMapping("/{companyId}/employee")
-    public ResponseEntity<ApiResponse<Boolean>> addEmployee(
+    public ResponseEntity<CustomApiResponse<Boolean>> addEmployee(
     		@PathVariable Long companyId,
             @RequestBody PersonDTO employeeDTO,
             @RequestParam(defaultValue = "ACTIVE") String status) {
@@ -251,7 +251,7 @@ public class CompanyController {
         
         try {
             Boolean response = companyService.addPerson(companyId, employeeDTO,Status.USER_TYPE_COMPANY);
-            return ResponseEntity.ok(ApiResponse.success(
+            return ResponseEntity.ok(CustomApiResponse.success(
                 "Employee added successfully", 
                 response, 
                 HttpStatus.CREATED
@@ -260,17 +260,17 @@ public class CompanyController {
         } catch (IllegalArgumentException e) {
             log.warn("Validation error in employee addition: {}", e.getMessage());
             return ResponseEntity.status(HttpStatus.BAD_REQUEST)
-                    .body(ApiResponse.failure(e.getMessage(), HttpStatus.BAD_REQUEST));
+                    .body(CustomApiResponse.failure(e.getMessage(), HttpStatus.BAD_REQUEST));
                     
         } catch (RuntimeException e) {
             log.error("Business logic error during employee addition: {}", e.getMessage());
             return ResponseEntity.status(HttpStatus.CONFLICT)
-                    .body(ApiResponse.failure(e.getMessage(), HttpStatus.CONFLICT));
+                    .body(CustomApiResponse.failure(e.getMessage(), HttpStatus.CONFLICT));
                     
         } catch (Exception e) {
             log.error("Unexpected error during employee addition: {}", e.getMessage(), e);
             return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
-                    .body(ApiResponse.failure(
+                    .body(CustomApiResponse.failure(
                         "Internal server error while adding employee", 
                         HttpStatus.INTERNAL_SERVER_ERROR
                     ));
@@ -278,7 +278,7 @@ public class CompanyController {
     }
 
     @PostMapping("/{companyId}/candidate")
-    public ResponseEntity<ApiResponse<Boolean>> addCandidate(
+    public ResponseEntity<CustomApiResponse<Boolean>> addCandidate(
     		@PathVariable Long companyId,
             @RequestBody PersonDTO candidateDTO
             ) {
@@ -288,7 +288,7 @@ public class CompanyController {
         
         try {
             Boolean response = companyService.addPerson(companyId, candidateDTO,"CANDIDATE");
-            return ResponseEntity.ok(ApiResponse.success(
+            return ResponseEntity.ok(CustomApiResponse.success(
                 "Candidate added successfully", 
                 response, 
                 HttpStatus.CREATED
@@ -297,17 +297,17 @@ public class CompanyController {
         } catch (IllegalArgumentException e) {
             log.warn("Validation error in candidate addition: {}", e.getMessage());
             return ResponseEntity.status(HttpStatus.BAD_REQUEST)
-                    .body(ApiResponse.failure(e.getMessage(), HttpStatus.BAD_REQUEST));
+                    .body(CustomApiResponse.failure(e.getMessage(), HttpStatus.BAD_REQUEST));
                     
         } catch (RuntimeException e) {
             log.error("Business logic error during candidate addition: {}", e.getMessage());
             return ResponseEntity.status(HttpStatus.CONFLICT)
-                    .body(ApiResponse.failure(e.getMessage(), HttpStatus.CONFLICT));
+                    .body(CustomApiResponse.failure(e.getMessage(), HttpStatus.CONFLICT));
                     
         } catch (Exception e) {
             log.error("Unexpected error during candidate addition: {}", e.getMessage(), e);
             return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
-                    .body(ApiResponse.failure(
+                    .body(CustomApiResponse.failure(
                         "Internal server error while adding candidate", 
                         HttpStatus.INTERNAL_SERVER_ERROR
                     ));

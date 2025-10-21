@@ -37,11 +37,16 @@ public class ProfileService {
     private static final Logger logger = LoggerFactory.getLogger(ProfileService.class);
     
     public BasicdetailsDTO createProfile(BasicdetailsDTO profileDTO) {
+    	Profile savedProfile = null;
+    	try {
     	profileDTO.setStatus(Status.PENDING);
         Profile profile = mapToEntity(profileDTO);
         profile.setStatus(ProfileStatus.CREATED.name());
         System.out.println("profile==========="+profile.toString());
-        Profile savedProfile = profileRepository.save(profile);
+        savedProfile = profileRepository.save(profile);
+    	}catch (Exception e) {
+			e.printStackTrace();
+		}
         return mapToBasicdetailsDTO(savedProfile);
     }
     

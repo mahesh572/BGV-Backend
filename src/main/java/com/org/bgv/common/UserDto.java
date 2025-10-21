@@ -1,5 +1,8 @@
 package com.org.bgv.common;
 
+import java.time.LocalDate;
+import java.util.List;
+
 import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Data;
@@ -22,5 +25,9 @@ public class UserDto {
     private String profilePictureUrl;
     private String gender;
     private String status;
-    private String dateOfBirth;
+    private LocalDate dateOfBirth;
+    private Long profileId;
+    private Long companyId;
+    private List<String> roles;
+    
 }
