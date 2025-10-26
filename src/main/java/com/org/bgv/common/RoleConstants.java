@@ -16,8 +16,10 @@ public class RoleConstants {
 
 	public static final String TYPE_VENDOR_LABEL = "Vendor";
 
-		
-
+	public static final String ROLE_CANDIDATE = "Candidate";
+	
+	public static final String ROLE_COMAPNY_ADMINISTRATOR = "Company Administrator";
+	
 	
 
 	

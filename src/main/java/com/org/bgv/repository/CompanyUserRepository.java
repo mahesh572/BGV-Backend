@@ -2,10 +2,12 @@ package com.org.bgv.repository;
 
 import com.org.bgv.entity.CompanyUser;
 import org.springframework.data.jpa.repository.JpaRepository;
+import org.springframework.data.jpa.repository.Modifying;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 import org.springframework.stereotype.Repository;
 
+import java.time.LocalDateTime;
 import java.util.List;
 import java.util.Optional;
 
@@ -35,4 +37,13 @@ public interface CompanyUserRepository extends JpaRepository<CompanyUser, Long> 
     // Find all users for a company
     @Query("SELECT cu FROM CompanyUser cu WHERE cu.company.id = :companyId")
     List<CompanyUser> findCompanyUsers(@Param("companyId") Long companyId);
+    
+    @Modifying
+    @Query(value = "INSERT INTO company_users (company_id, user_id, created_at) " +
+                   "VALUES (:companyId, :userId, :createdAt) " +
+                   "ON CONFLICT (company_id, user_id) DO NOTHING", 
+           nativeQuery = true)
+    void insertCompanyUser(@Param("companyId") Long companyId, 
+                          @Param("userId") Long userId,
+                          @Param("createdAt") LocalDateTime createdAt);
 }

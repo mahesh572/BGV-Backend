@@ -126,6 +126,7 @@ public class CompanyController {
     }
     
  // Get all companies with pagination and filtering
+    /*
     @GetMapping
     public ResponseEntity<CustomApiResponse<Map<String, Object>>> getAllCompanies(
             @RequestParam(defaultValue = "0") int page,
@@ -160,32 +161,9 @@ public class CompanyController {
                     ));
         }
     }
-
+*/
     // Get company by ID
-    @GetMapping("/{id}")
-    public ResponseEntity<CustomApiResponse<Company>> getCompanyById(@PathVariable Long id) {
-        log.info("Fetching company with ID: {}", id);
-        
-        try {
-            Company company = companyService.getCompanyById(id);
-            return ResponseEntity.ok(CustomApiResponse.success(
-                "Company retrieved successfully", 
-                company, 
-                HttpStatus.OK
-            ));
-        } catch (RuntimeException e) {
-            log.warn("Company not found with ID: {}", id);
-            return ResponseEntity.status(HttpStatus.NOT_FOUND)
-                    .body(CustomApiResponse.failure(e.getMessage(), HttpStatus.NOT_FOUND));
-        } catch (Exception e) {
-            log.error("Error fetching company with ID {}: {}", id, e.getMessage(), e);
-            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
-                    .body(CustomApiResponse.failure(
-                        "Failed to fetch company: " + e.getMessage(), 
-                        HttpStatus.INTERNAL_SERVER_ERROR
-                    ));
-        }
-    }
+    
 
     // Get companies count for dashboard
     @GetMapping("/count")
@@ -312,6 +290,14 @@ public class CompanyController {
                         HttpStatus.INTERNAL_SERVER_ERROR
                     ));
         }
+    }
+    
+    @GetMapping("/{companyId}/all")
+    public void getCompanyUsers(@PathVariable Long companyId) {
+    	
+    	
+    	
+    	
     }
     
     

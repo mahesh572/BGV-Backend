@@ -26,7 +26,7 @@ public class JwtUtil {
     @Value("${jwt.expiration}")
     private long jwtExpirationMs;
     
-    private final long expiration = 86400000; // 24 hours
+    private final long refreshTokenExpiration = 7 * 24 * 60 * 60 * 1000; // 7 days
 
     public String extractUsername(String token) {
         return extractClaim(token, Claims::getSubject);
@@ -52,6 +52,22 @@ public class JwtUtil {
     	logger.debug("JwtUtil::::secret:::{}:expiration::::{}",jwtSecret,jwtExpirationMs);
         return Jwts.builder()
                 .setSubject(userDetails.getUsername())
+                .setIssuedAt(new Date())
+                .setExpiration(new Date(System.currentTimeMillis() + jwtExpirationMs))
+                .signWith(Keys.hmacShaKeyFor(jwtSecret.getBytes()), SignatureAlgorithm.HS256)
+                .compact();
+    }
+    public String generateRefreshToken(UserDetails userDetails) {
+        return Jwts.builder()
+                .setSubject(userDetails.getUsername())
+                .setIssuedAt(new Date())
+                .setExpiration(new Date(System.currentTimeMillis() + refreshTokenExpiration))
+                .signWith(Keys.hmacShaKeyFor(jwtSecret.getBytes()), SignatureAlgorithm.HS256)
+                .compact();
+    }
+    public String generateAccessToken(String username) {
+        return Jwts.builder()
+                .setSubject(username)
                 .setIssuedAt(new Date())
                 .setExpiration(new Date(System.currentTimeMillis() + jwtExpirationMs))
                 .signWith(Keys.hmacShaKeyFor(jwtSecret.getBytes()), SignatureAlgorithm.HS256)

@@ -29,7 +29,7 @@ public class UserController {
     
     private static final Logger logger = LoggerFactory.getLogger(UserController.class);
 
-    
+    /*
     @GetMapping
     public ResponseEntity<CustomApiResponse<PaginationResponse<UserDto>>> getAllUsers(
             @RequestParam(defaultValue = "0") int page,
@@ -53,21 +53,7 @@ public class UserController {
         }
     }
     
-    @PostMapping("/admin/users/search")
-    public ResponseEntity<CustomApiResponse<PaginationResponse<UserDto>>> searchUsers(
-            @RequestBody UserSearchRequest searchRequest) {
-    	logger.info("searchUsers::::::::::::::::::::::{}"+searchRequest);
-        try {
-            PaginationResponse<UserDto> response = userService.searchUsers(searchRequest);
-            return ResponseEntity.ok(CustomApiResponse.success("Users retrieved successfully", response, HttpStatus.OK));
-        } catch (RuntimeException e) {
-            return ResponseEntity.status(HttpStatus.BAD_REQUEST)
-                    .body(CustomApiResponse.failure(e.getMessage(), HttpStatus.BAD_REQUEST));
-        } catch (Exception e) {
-            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
-                    .body(CustomApiResponse.failure("Failed to search users: " + e.getMessage(), HttpStatus.INTERNAL_SERVER_ERROR));
-        }
-    }
+    */
     
    
     @GetMapping("/{id}")

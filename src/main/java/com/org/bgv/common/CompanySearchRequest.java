@@ -11,10 +11,8 @@ import lombok.NoArgsConstructor;
 @Builder
 @NoArgsConstructor
 @AllArgsConstructor
-public class UserSearchRequest {
-	private Long companyId;
-	private boolean excludeCompanyUsers = false; 
-    private PaginationRequest pagination;
+public class CompanySearchRequest {
+	private PaginationRequest pagination;
     private SortingRequest sorting;
     private String search;
     private List<FilterRequest> filters;

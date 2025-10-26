@@ -17,18 +17,23 @@ import com.org.bgv.common.UserSearchRequest;
 import com.org.bgv.config.JwtUtil;
 import com.org.bgv.controller.UserController;
 import com.org.bgv.dto.UserDetailsDto;
-
+import com.org.bgv.entity.Company;
 import com.org.bgv.entity.CompanyUser;
 import com.org.bgv.entity.Role;
 import com.org.bgv.entity.User;
 import com.org.bgv.entity.UserRole;
 import com.org.bgv.mapper.UserMapper;
+import com.org.bgv.repository.CompanyRepository;
 import com.org.bgv.repository.CompanyUserRepository;
 import com.org.bgv.repository.RoleRepository;
 import com.org.bgv.repository.UserRepository;
 import com.org.bgv.repository.UserRoleRepository;
 
+import jakarta.persistence.criteria.Join;
+import jakarta.persistence.criteria.JoinType;
 import jakarta.persistence.criteria.Predicate;
+import jakarta.persistence.criteria.Root;
+import jakarta.persistence.criteria.Subquery;
 import jakarta.transaction.Transactional;
 import lombok.RequiredArgsConstructor;
 
@@ -43,6 +48,7 @@ import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 import org.springframework.util.StringUtils;
 
+import java.time.LocalDateTime;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
@@ -60,6 +66,7 @@ public class UserService {
     private final ProfileService profileService;
     private final CompanyUserRepository companyUserRepository;
     private final PasswordEncoder passwordEncoder;
+    private final CompanyRepository companyRepository;
     
     private static final Logger logger = LoggerFactory.getLogger(UserService.class);
 
@@ -73,14 +80,14 @@ public class UserService {
             throw new RuntimeException("Failed to fetch users: " + e.getMessage(), e);
         }
     }
-    
+    /*
     public PaginationResponse<UserDto> getAllUsers(PageRequestDto pageRequest) {
         Pageable pageable = createPageable(pageRequest);
         Page<User> userPage = userRepository.findAll(pageable);
         
         return buildCompletePaginationResponse(userPage, pageRequest);
     }
-   
+   */
     public PaginationResponse<UserDto> searchUsers(UserSearchRequest searchRequest) {
         // Build pageable
         Pageable pageable = createPageable(searchRequest.getPagination(), searchRequest.getSorting());
@@ -92,7 +99,7 @@ public class UserService {
         
         return buildCompletePaginationResponse(userPage, searchRequest);
     }
-
+    
     private Pageable createPageable(PaginationRequest pagination, SortingRequest sorting) {
         if (sorting == null) {
             sorting = SortingRequest.builder()
@@ -112,15 +119,33 @@ public class UserService {
     private Specification<User> buildSearchSpecification(UserSearchRequest searchRequest) {
         return (root, query, criteriaBuilder) -> {
             List<Predicate> predicates = new ArrayList<>();
+
+            // For the modal (when we want to exclude users already in the company)
+            if (searchRequest.getCompanyId() != null && searchRequest.getCompanyId() != 0 && searchRequest.isExcludeCompanyUsers()) {
+                // Create a subquery to find users who are already in this company
+                Subquery<Long> companyUsersSubquery = query.subquery(Long.class);
+                Root<CompanyUser> companyUserRoot = companyUsersSubquery.from(CompanyUser.class);
+                
+                companyUsersSubquery.select(companyUserRoot.get("userId"))
+                        .where(criteriaBuilder.equal(companyUserRoot.get("companyId"), searchRequest.getCompanyId()));
+                
+                // Exclude users who are already in the company
+                predicates.add(criteriaBuilder.not(root.get("userId").in(companyUsersSubquery)));
+            }
+            // For the company users list (when we want to show only users in the company)
+            else if (searchRequest.getCompanyId() != null && searchRequest.getCompanyId() != 0) {
+                Join<User, CompanyUser> companyUserJoin = root.join("companyUsers", JoinType.INNER);
+                predicates.add(criteriaBuilder.equal(companyUserJoin.get("companyId"), searchRequest.getCompanyId()));
+            }
             
             // Search term
             if (StringUtils.hasText(searchRequest.getSearch())) {
                 String searchTerm = "%" + searchRequest.getSearch().toLowerCase() + "%";
-                Predicate namePredicate = criteriaBuilder.like(criteriaBuilder.lower(root.get("firstName")), searchTerm);
-                Predicate emailPredicate = criteriaBuilder.like(criteriaBuilder.lower(root.get("email")), searchTerm);
                 Predicate firstNamePredicate = criteriaBuilder.like(criteriaBuilder.lower(root.get("firstName")), searchTerm);
                 Predicate lastNamePredicate = criteriaBuilder.like(criteriaBuilder.lower(root.get("lastName")), searchTerm);
-                predicates.add(criteriaBuilder.or(namePredicate, emailPredicate, firstNamePredicate, lastNamePredicate));
+                Predicate emailPredicate = criteriaBuilder.like(criteriaBuilder.lower(root.get("email")), searchTerm);
+                Predicate phonePredicate = criteriaBuilder.like(criteriaBuilder.lower(root.get("phoneNumber")), searchTerm);
+                predicates.add(criteriaBuilder.or(firstNamePredicate, lastNamePredicate, emailPredicate, phonePredicate));
             }
             
             // Filters
@@ -136,7 +161,7 @@ public class UserService {
                             predicates.add(criteriaBuilder.equal(root.get(filter.getField()), filter.getSelectedValue()));
                         } else if (filter.getField().equals("createdDate")) {
                             // Handle date range - you might want to implement proper date range logic
-                            predicates.add(criteriaBuilder.equal(root.get(filter.getField()), filter.getSelectedValue()));
+                            predicates.add(criteriaBuilder.equal(root.get("createdAt"), filter.getSelectedValue()));
                         } else {
                             // Handle other string fields
                             predicates.add(criteriaBuilder.equal(root.get(filter.getField()), filter.getSelectedValue()));
@@ -440,6 +465,36 @@ public class UserService {
         return hasUpper && hasLower && hasDigit && hasSpecial;
     }
 
+    @Transactional
+    public void assignUsersToCompany(List<Long> userIds, Long companyId) {
+    	 // Validate company exists
+    	try {
+        Company company = companyRepository.findById(companyId)
+            .orElseThrow(() -> new RuntimeException("Company not found with id: " + companyId));
+        
+        // Validate users exist
+        List<User> users = userRepository.findAllById(userIds);
+        if (users.size() != userIds.size()) {
+            throw new RuntimeException("One or more users not found");
+        }
+        
+        // Assign users to company (avoid duplicates)
+        LocalDateTime now = LocalDateTime.now();
+        for (Long userId : userIds) {
+            if (!companyUserRepository.existsByCompanyIdAndUserId(companyId, userId)) {
+            	 User user = userRepository.findById(userId)
+                         .orElseThrow(() -> new RuntimeException("User not found with id: " + userId));
+              //  companyUserRepository.insertCompanyUser(companyId, userId, now);
+            	CompanyUser companyUser = new CompanyUser();
+            	companyUser.setCompany(company);
+            	companyUser.setUser(user);
+            	companyUserRepository.save(companyUser);
+            }
+        }
+    }catch (Exception e) {
+		e.printStackTrace();
+	}
+    }
     
     
 
@@ -484,7 +539,17 @@ public class UserService {
         List<FilterMetadata> filters = getAvailableFilters(searchRequest);
 
         // Build columns metadata
-        List<ColumnMetadata> columns = getColumnMetadata();
+        List<ColumnMetadata> columns = null;
+        
+        if (searchRequest.getCompanyId() != null && searchRequest.getCompanyId() != 0 && searchRequest.isExcludeCompanyUsers()) {
+        	columns = getColumnMetadataToAssignToCompany();
+        }
+        // For the company users list (when we want to show only users in the company)
+        else if (searchRequest.getCompanyId() != null && searchRequest.getCompanyId() != 0) {
+        	columns = getColumnMetadata();
+        }else {
+        	columns = getColumnMetadata();
+        }
 
         return PaginationResponse.<UserDto>builder()
                 .content(userDtos)
@@ -496,6 +561,7 @@ public class UserService {
     }
 
     // Original method for PageRequestDto
+    /*
     private PaginationResponse<UserDto> buildCompletePaginationResponse(Page<User> userPage, PageRequestDto pageRequest) {
         List<UserDto> userDtos = userPage.getContent()
                 .stream()
@@ -528,6 +594,8 @@ public class UserService {
 
         // Build columns metadata
         List<ColumnMetadata> columns = getColumnMetadata();
+        
+        zz
 
         return PaginationResponse.<UserDto>builder()
                 .content(userDtos)
@@ -537,7 +605,7 @@ public class UserService {
                 .columns(columns)
                 .build();
     }
-
+*/
     private List<SortField> getSortableFields() {
         return Arrays.asList(
             SortField.builder().field("userId").displayName("User ID").build(),
@@ -643,6 +711,14 @@ public class UserService {
             ColumnMetadata.builder().field("gender").displayName("Gender").visible(true).build(),
             ColumnMetadata.builder().field("dateOfBirth").displayName("Date of Birth").visible(false).build(),
             ColumnMetadata.builder().field("profilePictureUrl").displayName("Profile Picture").visible(false).build()
+        );
+    }
+    private List<ColumnMetadata> getColumnMetadataToAssignToCompany() {
+        return Arrays.asList(
+           
+            ColumnMetadata.builder().field("name").displayName("Name").visible(true).build(),
+            ColumnMetadata.builder().field("email").displayName("Email").visible(true).build()
+           
         );
     }
 

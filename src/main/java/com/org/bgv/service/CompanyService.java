@@ -2,24 +2,44 @@ package com.org.bgv.service;
 
 import java.time.LocalDateTime;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
 import java.util.UUID;
+import java.util.stream.Collectors;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.data.domain.Page;
+import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
+import org.springframework.data.domain.Sort;
 import org.springframework.data.jpa.domain.Specification;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+import org.springframework.util.StringUtils;
 
+import com.org.bgv.common.ColumnMetadata;
+import com.org.bgv.common.CompanySearchRequest;
+import com.org.bgv.common.FilterMetadata;
+import com.org.bgv.common.FilterRequest;
+import com.org.bgv.common.Option;
+import com.org.bgv.common.PaginationMetadata;
+import com.org.bgv.common.PaginationRequest;
+import com.org.bgv.common.PaginationResponse;
+import com.org.bgv.common.SortField;
+import com.org.bgv.common.SortingMetadata;
+import com.org.bgv.common.SortingRequest;
 import com.org.bgv.common.Status;
+import com.org.bgv.common.UserDto;
+import com.org.bgv.common.UserSearchRequest;
+import com.org.bgv.company.dto.CompanyDetailsDTO;
 import com.org.bgv.company.dto.CompanyRegistrationRequestDTO;
 import com.org.bgv.company.dto.CompanyRegistrationResponse;
+import com.org.bgv.company.dto.EmployerDTO;
 import com.org.bgv.company.dto.PersonDTO;
 import com.org.bgv.dto.BasicdetailsDTO;
 import com.org.bgv.entity.Company;
@@ -57,68 +77,27 @@ public class CompanyService {
 	    private final ProfileRepository profileRepository;
 	   
 	    
-	    private final String FILE_UPLOAD_DIR = "uploads/profile-pictures/";
+	  //  private final String FILE_UPLOAD_DIR = "uploads/profile-pictures/";
 
 	    @Transactional
 	    public CompanyRegistrationResponse registerCompany(CompanyRegistrationRequestDTO request) {
 	        try {
 	            log.info("Starting company registration for: {}", request.getCompanyName());
-	            
-	            // Validate passwords match
-	            if (!request.getAdminPassword().equals(request.getAdminConfirmPassword())) {
-	                throw new IllegalArgumentException("Passwords do not match");
-	            }
 
 	            // Check if company already exists
 	            if (companyRepository.findByRegistrationNumber(request.getRegistrationNumber()).isPresent()) {
 	                throw new IllegalArgumentException("Company with registration number " + request.getRegistrationNumber() + " already exists");
 	            }
 
-	            // Check if admin user already exists
-	            if (userRepository.findByEmail(request.getAdminEmail()).isPresent()) {
-	                throw new IllegalArgumentException("User with email " + request.getAdminEmail() + " already exists");
-	            }
-/*
-	            // Handle file upload
-	            String profilePicturePath = null;
-	            if (request.getAdminProfilePicture() != null && !request.getAdminProfilePicture().isEmpty()) {
-	                profilePicturePath = saveProfilePicture(request.getAdminProfilePicture());
-	            }
-*/
 	            // Create and save Company
 	            Company company = createCompanyFromRequest(request);
 	            company = companyRepository.save(company);
 	            log.info("Company created with ID: {}", company.getId());
-
-	            // Create and save Admin User
-	            User adminUser = createAdminUserFromRequest(request);
-	            adminUser = userRepository.save(adminUser);
-	            
-	            Role companyAdmin = roleRepository.findByName(Status.ROLE_COMPANY_ADMIN)
-	                    .orElseThrow(() -> new RuntimeException("ROLE_ADMIN not found"));
-	            
-	            UserRole userRole = UserRole.builder()
-	                    .user(adminUser)
-	                    .role(companyAdmin)
-	                    .build();
-	            
-	            userRoleRepository.save(userRole);
-	            
-	            
-	            log.info("Admin user created with ID: {}", adminUser.getUserId());
-
-	            // Create Company-User association
-	            CompanyUser companyUser = new CompanyUser();
-	            companyUser.setCompany(company);
-	            companyUser.setUser(adminUser);
-	            companyUserRepository.save(companyUser);
-	            log.info("Company-User association created");
-
 	            return CompanyRegistrationResponse.builder()
 	                   // .success(true)
 	                  //  .message("Company registered successfully")
 	                    .companyId(company.getId())
-	                    .adminUserId(adminUser.getUserId())
+	                   // .adminUserId(adminUser.getUserId())
 	                    .companyName(company.getCompanyName())
 	                    .build();
 
@@ -127,79 +106,41 @@ public class CompanyService {
 	            throw new RuntimeException("Company registration failed: " + e.getMessage());
 	        }
 	    }
+	    @Transactional
+	    public CompanyRegistrationResponse updateCompany(CompanyRegistrationRequestDTO request) {
+	        try {
+	            log.info("Starting company updating for: {}", request);
 
-	    
-	    /**
-	     * Get all companies with pagination, sorting, and filtering
-	     */
-	    @Transactional(readOnly = true)
-	    public Map<String, Object> getAllCompanies(Pageable pageable, String search, String industry, String status) {
-	        log.info("Fetching companies with filters - search: {}, industry: {}, status: {}", 
-	                search, industry, status);
+	            Company existingCompany = companyRepository.findById(request.getId())
+	                    .orElseThrow(() -> new IllegalArgumentException("Company with ID " + request.getId() + " not found"));
+	         
+	           
 
-	        // Create specification for filtering
-	        Specification<Company> spec = buildSpecification(search, industry, status);
+	            // Create and save Company
+	            existingCompany = updateCompanyFromRequest(existingCompany, request);
+	            existingCompany = companyRepository.save(existingCompany);
+	            log.info("Company created with ID: {}", existingCompany.getId());
+	            return CompanyRegistrationResponse.builder()
+	                   // .success(true)
+	                  //  .message("Company registered successfully")
+	                    .companyId(existingCompany.getId())
+	                   // .adminUserId(adminUser.getUserId())
+	                    .companyName(existingCompany.getCompanyName())
+	                    .build();
 
-	        // Fetch paginated companies
-	        Page<Company> companyPage = companyRepository.findAll(spec, pageable);
-
-	        // Build response
-	        Map<String, Object> response = new HashMap();
-	        response.put("companies", companyPage.getContent());
-	        response.put("currentPage", companyPage.getNumber());
-	        response.put("totalItems", companyPage.getTotalElements());
-	        response.put("totalPages", companyPage.getTotalPages());
-	        response.put("hasNext", companyPage.hasNext());
-	        response.put("hasPrevious", companyPage.hasPrevious());
-
-	        log.info("Retrieved {} companies out of {} total", 
-	                companyPage.getNumberOfElements(), companyPage.getTotalElements());
-
-	        return response;
+	        } catch (Exception e) {
+	            log.error("Error during company registration: {}", e.getMessage(), e);
+	            throw new RuntimeException("Company registration failed: " + e.getMessage());
+	        }
 	    }
 	    
-	    
-	    /**
-	     * Build dynamic query specification based on filters
-	     */
-	    private Specification<Company> buildSpecification(String search, String industry, String status) {
-	        return (root, query, criteriaBuilder) -> {
-	            List<Predicate> predicates = new ArrayList<>();
-
-	            // Search filter (company name, registration number, contact email, contact person)
-	            if (search != null && !search.trim().isEmpty()) {
-	                String searchPattern = "%" + search.toLowerCase() + "%";
-	                Predicate searchPredicate = criteriaBuilder.or(
-	                    criteriaBuilder.like(criteriaBuilder.lower(root.get("companyName")), searchPattern),
-	                    criteriaBuilder.like(criteriaBuilder.lower(root.get("registrationNumber")), searchPattern),
-	                    criteriaBuilder.like(criteriaBuilder.lower(root.get("contactEmail")), searchPattern),
-	                    criteriaBuilder.like(criteriaBuilder.lower(root.get("contactPersonName")), searchPattern)
-	                );
-	                predicates.add(searchPredicate);
-	            }
-
-	            // Industry filter
-	            if (industry != null && !industry.trim().isEmpty()) {
-	                predicates.add(criteriaBuilder.equal(root.get("industry"), industry));
-	            }
-
-	            // Status filter
-	            if (status != null && !status.trim().isEmpty()) {
-	                predicates.add(criteriaBuilder.equal(root.get("status"), status.toUpperCase()));
-	            }
-
-	            // Only return non-deleted companies (if you have soft delete)
-	            // predicates.add(criteriaBuilder.isNull(root.get("deletedAt")));
-
-	            return criteriaBuilder.and(predicates.toArray(new Predicate[0]));
-	        };
-	    }
+	   
 
 	    /**
 	     * Get company by ID
 	     */
 	    @Transactional(readOnly = true)
-	    public Company getCompanyById(Long id) {
+	    public CompanyDetailsDTO getCompanyById(Long id) {
 	        log.info("Fetching company by ID: {}", id);
 	        
 	        Optional<Company> company = companyRepository.findById(id);
@@ -207,8 +148,8 @@ public class CompanyService {
 	        if (company.isEmpty()) {
 	            throw new RuntimeException("Company not found with ID: " + id);
 	        }
-	        
-	        return company.get();
+	        return convertToCompanyDetailsDTO(company.get());
+	       
 	    }
 
 	    /**
@@ -561,54 +502,288 @@ public class CompanyService {
 	        
 	        return company;
 	    }
-
-	    private User createAdminUserFromRequest(CompanyRegistrationRequestDTO request) {
-	        return User.builder()
-	                .firstName(request.getAdminFirstName())
-	                .lastName(request.getAdminLastName())
-	                .email(request.getAdminEmail())
-	                .phoneNumber(request.getAdminPhone())
-	                .password(passwordEncoder.encode(request.getAdminPassword()))
-	                .userType(Status.USER_TYPE_COMPANY)
-	                .isActive(true)
-	                .isVerified(false) // Email verification can be done later
-	               // .profilePictureUrl(profilePicturePath)
-	                .createdAt(LocalDateTime.now())
-	                .updatedAt(LocalDateTime.now())
-	                .build();
+	    private Company updateCompanyFromRequest(Company company, CompanyRegistrationRequestDTO request) {
+	        // Update company fields
+	        company.setCompanyName(request.getCompanyName());
+	        company.setCompanyType(request.getCompanyType());
+	        company.setRegistrationNumber(request.getRegistrationNumber());
+	        company.setTaxId(request.getTaxId());
+	        company.setIncorporationDate(request.getIncorporationDate());
+	        company.setIndustry(request.getIndustry());
+	        company.setCompanySize(request.getCompanySize());
+	        company.setWebsite(request.getWebsite());
+	        company.setDescription(request.getDescription());
+	        
+	        // Update contact information
+	        company.setContactPersonName(request.getContactPersonName());
+	        company.setContactPersonTitle(request.getContactPersonTitle());
+	        company.setContactEmail(request.getContactEmail());
+	        company.setContactPhone(request.getContactPhone());
+	        
+	        // Update address information
+	        company.setAddressLine1(request.getAddressLine1());
+	        company.setAddressLine2(request.getAddressLine2());
+	        company.setCity(request.getCity());
+	        company.setState(request.getState());
+	        company.setCountry(request.getCountry());
+	        company.setZipCode(request.getZipCode());
+	        
+	        // Update additional information
+	        company.setLinkedinProfile(request.getLinkedinProfile());
+	        company.setStatus(request.getStatus());
+	        
+	        // Set updated timestamp
+	        company.setUpdatedAt(LocalDateTime.now());
+			return company;
 	    }
-/*
-	    private String saveProfilePicture(MultipartFile file) {
-	        try {
-	            // Create upload directory if it doesn't exist
-	            Path uploadPath = Paths.get(FILE_UPLOAD_DIR);
-	            if (!Files.exists(uploadPath)) {
-	                Files.createDirectories(uploadPath);
-	            }
+	    
 
-	            // Generate unique filename
-	            String originalFileName = file.getOriginalFilename();
-	            String fileExtension = originalFileName != null ? 
-	                originalFileName.substring(originalFileName.lastIndexOf(".")) : ".jpg";
-	            String fileName = UUID.randomUUID().toString() + fileExtension;
-
-	            // Save file
-	            Path filePath = uploadPath.resolve(fileName);
-	            Files.copy(file.getInputStream(), filePath);
-
-	            return FILE_UPLOAD_DIR + fileName;
-
-	        } catch (IOException e) {
-	            log.error("Failed to save profile picture: {}", e.getMessage());
-	            throw new RuntimeException("Failed to save profile picture");
-	        }
-	    }
-*/
 	    public boolean isRegistrationNumberExists(String registrationNumber) {
 	        return companyRepository.findByRegistrationNumber(registrationNumber).isPresent();
 	    }
 
 	    public boolean isAdminEmailExists(String email) {
 	        return userRepository.findByEmail(email).isPresent();
+	    }
+	    
+	    public PaginationResponse<EmployerDTO> searchUsers(CompanySearchRequest searchRequest) {
+	        // Build pageable
+	    	 log.info("Company service:::::::before ::createPageable:::");
+	        Pageable pageable = createPageable(searchRequest.getPagination(), searchRequest.getSorting());
+	        log.info("Company service:::::::after ::createPageable:::pageable{}",pageable);
+	        // Build specification for filtering
+	        Specification<Company> spec = buildSearchSpecification(searchRequest);
+	        
+	        Page<Company> companyPage = companyRepository.findAll(spec, pageable);
+	        
+	        return buildCompletePaginationResponse(companyPage, searchRequest);
+	    }
+	    
+	    private PaginationResponse<EmployerDTO> buildCompletePaginationResponse(Page<Company> companyPage, CompanySearchRequest searchRequest) {
+	        List<EmployerDTO> employerDtos = companyPage.getContent()
+	                .stream()
+	                .map(m -> mapToEmployerDtoFromEntity(m))
+	                .collect(Collectors.toList());
+
+	        // Build pagination metadata
+	        PaginationMetadata paginationMetadata = PaginationMetadata.builder()
+	                .currentPage(companyPage.getNumber())
+	                .pageSize(companyPage.getSize())
+	                .totalElements(companyPage.getTotalElements())
+	                .totalPages(companyPage.getTotalPages())
+	                .hasNext(companyPage.hasNext())
+	                .hasPrevious(companyPage.hasPrevious())
+	                .allowedPageSizes(Arrays.asList(10, 25, 50, 100))
+	                .build();
+
+	        // Build sorting metadata
+	        SortingMetadata sortingMetadata = SortingMetadata.builder()
+	                .currentSort(SortField.builder()
+	                        .field(searchRequest.getSorting().getSortBy())
+	                        .displayName(getDisplayNameForField(searchRequest.getSorting().getSortBy()))
+	                        .direction(searchRequest.getSorting().getSortDirection())
+	                        .build())
+	                .sortableFields(getSortableFields())
+	                .build();
+
+	        // Build filters metadata with selected values
+	        List<FilterMetadata> filters = getAvailableFilters(searchRequest);
+
+	        // Build columns metadata
+	        List<ColumnMetadata> columns = getColumnMetadata();
+
+	        return PaginationResponse.<EmployerDTO>builder()
+	                .content(employerDtos)
+	                .pagination(paginationMetadata)
+	                .sorting(sortingMetadata)
+	                .filters(filters)
+	                .columns(columns)
+	                .build();
+	    }
+	    private String getDisplayNameForField(String field) {
+	        switch (field) {
+	            case "companyName": return "Company Name";
+	            default: return field;
+	        }
+	    }
+	    private Specification<Company> buildSearchSpecification(CompanySearchRequest searchRequest) {
+	        return (root, query, criteriaBuilder) -> {
+	            List<Predicate> predicates = new ArrayList<>();
+	            
+	            // Search term
+	            if (StringUtils.hasText(searchRequest.getSearch())) {
+	            	log.info("StringUtils.hasText(searchRequest.getSearch())::::::{}",StringUtils.hasText(searchRequest.getSearch()));
+	                String searchTerm = "%" + searchRequest.getSearch().toLowerCase() + "%";
+	                Predicate searchPredicate = criteriaBuilder.or(
+		                    criteriaBuilder.like(criteriaBuilder.lower(root.get("companyName")), searchTerm),
+		                    criteriaBuilder.like(criteriaBuilder.lower(root.get("registrationNumber")), searchTerm),
+		                    criteriaBuilder.like(criteriaBuilder.lower(root.get("contactEmail")), searchTerm),
+		                    criteriaBuilder.like(criteriaBuilder.lower(root.get("contactPersonName")), searchTerm)
+		                );
+		                predicates.add(searchPredicate);
+	            }
+	            	            
+	            // Filters
+	            
+	            return criteriaBuilder.and(predicates.toArray(new Predicate[0]));
+	        };
+	    }
+	    
+	    private List<ColumnMetadata> getColumnMetadata() {
+	        return Arrays.asList(
+	            ColumnMetadata.builder().field("Company").displayName("Company").visible(false).build(),
+	            ColumnMetadata.builder().field("Contact").displayName("Contact").visible(true).build(),
+	            ColumnMetadata.builder().field("Industry").displayName("Industry").visible(true).build(),
+	            ColumnMetadata.builder().field("Size").displayName("Size").visible(true).build(),
+	            ColumnMetadata.builder().field("Status").displayName("Status").visible(true).build()
+	           
+	        );
+	    }
+	    
+	    private Pageable createPageable(PaginationRequest pagination, SortingRequest sorting) {
+	    	
+	    	if (sorting == null) {
+	            sorting = SortingRequest.builder()
+	                    .sortBy("companyName")
+	                    .sortDirection("asc")
+	                    .build();
+	        }
+	        log.info("Company sevice:::::createPageable:::::{}",sorting);
+	        Sort sort = Sort.by(
+	            sorting.getSortDirection().equalsIgnoreCase("desc") ? 
+	            Sort.Direction.DESC : Sort.Direction.ASC, 
+	            sorting.getSortBy()
+	        );
+	        
+	        log.info("Company sevice:::::createPageable::sort::pagination:{}",pagination);
+	        return PageRequest.of(pagination.getPage(), pagination.getSize(), sort);
+	    }
+	    
+	    private List<FilterMetadata> getAvailableFilters(CompanySearchRequest searchRequest) {
+	        List<FilterMetadata> filters = new ArrayList<>();
+	        
+	        /*
+	        // User Type filter
+	        FilterMetadata userTypeFilter = FilterMetadata.builder()
+	                .field("companyName")
+	                .displayName("Company Name")
+	                .type("dropdown")
+	                .options(Arrays.asList(
+	                    Option.builder().label("Admin").value("ADMIN").build(),
+	                    Option.builder().label("Vendor").value("VENDOR").build(),
+	                    Option.builder().label("Company").value("COMPANY").build(),
+	                    Option.builder().label("Employee").value("EMPLOYEE").build()
+	                ))
+	                .build();
+
+	        // Status filter
+	        FilterMetadata statusFilter = FilterMetadata.builder()
+	                .field("isActive")
+	                .displayName("Status")
+	                .type("dropdown")
+	                .options(Arrays.asList(
+	                    Option.builder().label("Active").value("true").build(),
+	                    Option.builder().label("Inactive").value("false").build()
+	                ))
+	                .build();
+
+	        // Verification status filter
+	        FilterMetadata verificationFilter = FilterMetadata.builder()
+	                .field("isVerified")
+	                .displayName("Verification Status")
+	                .type("dropdown")
+	                .options(Arrays.asList(
+	                    Option.builder().label("Verified").value("true").build(),
+	                    Option.builder().label("Not Verified").value("false").build()
+	                ))
+	                .build();
+
+	        // Date range filter
+	        FilterMetadata dateFilter = FilterMetadata.builder()
+	                .field("createdDate")
+	                .displayName("Created Date Range")
+	                .type("dateRange")
+	                .build();
+
+	        // Set selected values if any
+	        if (searchRequest.getFilters() != null) {
+	            for (FilterRequest filter : searchRequest.getFilters()) {
+	                if (filter.getIsSelected() != null && filter.getIsSelected()) {
+	                    switch (filter.getField()) {
+	                        case "userType":
+	                            userTypeFilter.setSelectedValue(filter.getSelectedValue());
+	                            break;
+	                        case "isActive":
+	                            statusFilter.setSelectedValue(filter.getSelectedValue());
+	                            break;
+	                        case "isVerified":
+	                            verificationFilter.setSelectedValue(filter.getSelectedValue());
+	                            break;
+	                        case "createdDate":
+	                            dateFilter.setSelectedValue(filter.getSelectedValue());
+	                            break;
+	                    }
+	                }
+	            }
+	        }
+
+	        filters.add(userTypeFilter);
+	        filters.add(statusFilter);
+	        filters.add(verificationFilter);
+	        filters.add(dateFilter);
+*/
+	        return filters;
+	    }
+	    private List<SortField> getSortableFields() {
+	        return Arrays.asList(
+	            SortField.builder().field("companyName").displayName("Company Name").build()
+	           
+	        );
+	    }
+	    
+	    private EmployerDTO mapToEmployerDtoFromEntity(Company company) {
+	    	log.info("mapToEmployerDtoFromEntity::::::::::::::");
+	    	return EmployerDTO.builder()
+	    			.id(company.getId())
+	    	.companyname(company.getCompanyName())
+	    	.companySize(company.getCompanySize())
+	    	.status(company.getStatus())
+	    	.industry(company.getIndustry())
+	    	.companyType(company.getCompanyType())
+	    	.build();
+	    	
+	    }
+	    
+	    private CompanyDetailsDTO convertToCompanyDetailsDTO(Company company) {
+	        return CompanyDetailsDTO.builder()
+	                // Company Information
+	                .companyName(company.getCompanyName())
+	                .companyType(company.getCompanyType())
+	                .registrationNumber(company.getRegistrationNumber())
+	                .taxId(company.getTaxId())
+	                .incorporationDate(company.getIncorporationDate())
+	                .industry(company.getIndustry())
+	                .companySize(company.getCompanySize())
+	                .website(company.getWebsite())
+	                .description(company.getDescription())
+	                
+	                // Contact Information
+	                .contactPersonName(company.getContactPersonName())
+	                .contactPersonTitle(company.getContactPersonTitle())
+	                .contactEmail(company.getContactEmail())
+	                .contactPhone(company.getContactPhone())
+	                
+	                // Address Information
+	                .addressLine1(company.getAddressLine1())
+	                .addressLine2(company.getAddressLine2())
+	                .city(company.getCity())
+	                .state(company.getState())
+	                .country(company.getCountry())
+	                .zipCode(company.getZipCode())
+	                
+	                // Additional Information
+	                .linkedinProfile(company.getLinkedinProfile())
+	                .status(company.getStatus())
+	                .build();
 	    }
 }

@@ -1,14 +1,14 @@
 package com.org.bgv.company.dto;
 
-import lombok.Data;
-import org.springframework.web.multipart.MultipartFile;
-
 import java.time.LocalDate;
 
+import lombok.Builder;
+import lombok.Data;
+
 @Data
-public class CompanyRegistrationRequestDTO {
-    
-    // Company Information
+@Builder
+public class CompanyDetailsDTO {
+	// Company Information
     private String companyName;
     private String companyType;
     private String registrationNumber;
@@ -36,7 +36,5 @@ public class CompanyRegistrationRequestDTO {
     // Additional Information
     private String linkedinProfile;
     private String status;
-    private Long id;
     
-   
 }

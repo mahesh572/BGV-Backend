@@ -12,11 +12,15 @@ import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 
 import com.org.bgv.common.RoleConstants;
+import com.org.bgv.constants.CandidateStatus;
+import com.org.bgv.constants.Constants;
 import com.org.bgv.controller.RoleController;
+import com.org.bgv.entity.Candidate;
 import com.org.bgv.entity.Role;
 import com.org.bgv.entity.User;
 import com.org.bgv.entity.UserRole;
 import com.org.bgv.mapper.RoleMapper;
+import com.org.bgv.repository.CandidateRepository;
 import com.org.bgv.repository.CompanyRepository;
 import com.org.bgv.repository.CompanyUserRepository;
 import com.org.bgv.repository.ProfileRepository;
@@ -43,6 +47,7 @@ public class RoleService {
     private final UserRoleRepository userRoleRepository;
     private final RoleMapper roleMapper;
     private final UserRepository userRepository;
+    private final CandidateRepository candidateRepository;
 
     
     public RoleDto createRole(RoleCreateRequest request) {
@@ -284,6 +289,18 @@ public class RoleService {
                         .role(role)
                         .build();
                 newUserRoles.add(userRole);
+                // if role is candidate then create candidate object
+                if(role.getName().contains(RoleConstants.ROLE_CANDIDATE)) {
+                	Candidate candidate = Candidate.builder()
+                	.user(user)
+                	//.createdAt(new Localdatet)
+                	.isActive(Boolean.FALSE)
+                	.isVerified(Boolean.FALSE)
+                	.sourceType(Constants.CANDIDATE_SOURCE_ADMIN)
+                	.build();
+                	candidateRepository.save(candidate);
+                	
+                }
                 log.debug("Adding role '{}' to user '{}'", role.getName(), user.getEmail());
             } else {
                 log.debug("Role '{}' already assigned to user '{}'", role.getName(), user.getEmail());
