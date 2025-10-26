@@ -49,18 +49,25 @@ public class ProfileAddressService {
                 .collect(Collectors.toList());
     }
 
-    public ProfileAddressDTO updateProfileAddress(Long id, ProfileAddressDTO profileAddressDTO) {
-        Profile_Address existingAddress = profileAddressRepository.findById(id)
-                .orElseThrow(() -> new RuntimeException("Profile address not found with id: " + id));
-
+    public ProfileAddressDTO updateProfileAddress(ProfileAddressDTO profileAddressDTO,Long profileId) {
+    	Profile profile = profileRepository.findById(profileId)
+                .orElseThrow(() -> new RuntimeException("Profile not found: " + profileId));
+    	Profile_Address existingAddress = null;
+    	if(profileAddressDTO.getId()==null || profileAddressDTO.getId()==0) {
+    		existingAddress = new Profile_Address();
+    	}else {
+         existingAddress = profileAddressRepository.findById(profileAddressDTO.getId())
+                .orElseThrow(() -> new RuntimeException("Profile address not found with id: " + profileAddressDTO.getId()));
+    	}
+    	existingAddress.setProfile(profile);
         existingAddress.setAddress_line1(profileAddressDTO.getAddressLine1());
         existingAddress.setCity(profileAddressDTO.getCity());
         existingAddress.setState(profileAddressDTO.getState());
         existingAddress.setCountry(profileAddressDTO.getCountry());
         existingAddress.setZip_code(profileAddressDTO.getZipCode());
-        existingAddress.setCur_residing(profileAddressDTO.getCurResiding());
-        existingAddress.setCur_residing_from(profileAddressDTO.getCurResidingFrom());
-        existingAddress.setIs_permenet_address(profileAddressDTO.getIsPermanentAddress());
+        existingAddress.setCur_residing(profileAddressDTO.isCurrentlyResidingAtThisAddress());
+        existingAddress.setCur_residing_from(profileAddressDTO.getCurrentlyResidingFrom());
+        existingAddress.setIs_permenet_address(profileAddressDTO.getIsMyPermanentAddress());
 
         Profile_Address updatedAddress = profileAddressRepository.save(existingAddress);
         return mapToDTO(updatedAddress);
@@ -72,12 +79,13 @@ public class ProfileAddressService {
     	List<ProfileAddressDTO> addressList = new ArrayList<>();
     	
     	for(ProfileAddressDTO addressDTO :addressDTOs) {
-    		ProfileAddressDTO profileAddressDTO = updateProfileAddress(addressDTO.getProfileAddressId(), addressDTO);
+    		
+    		ProfileAddressDTO profileAddressDTO = updateProfileAddress(addressDTO,profileId);
     		addressList.add(profileAddressDTO);
     	}
     	return addressList;
     }
-    public void deleteProfileAddress(Long id) {
+    public void deleteProfileAddress(Long id,Long profileId) {
         Profile_Address profileAddress = profileAddressRepository.findById(id)
                 .orElseThrow(() -> new RuntimeException("Profile address not found with id: " + id));
         profileAddressRepository.delete(profileAddress);
@@ -107,24 +115,24 @@ public class ProfileAddressService {
                 .state(dto.getState())
                 .country(dto.getCountry())
                 .zip_code(dto.getZipCode())
-                .cur_residing(dto.getCurResiding())
-                .cur_residing_from(dto.getCurResidingFrom())
-                .is_permenet_address(dto.getIsPermanentAddress())
+                .cur_residing(dto.isCurrentlyResidingAtThisAddress())
+                .cur_residing_from(dto.getCurrentlyResidingFrom())
+                .is_permenet_address(dto.getIsMyPermanentAddress())
                 .build();
     }
 
     private ProfileAddressDTO mapToDTO(Profile_Address entity) {
         return ProfileAddressDTO.builder()
-                .profileAddressId(entity.getProfile_address_id())
-                .profile_id(entity.getProfile() != null ? entity.getProfile().getProfileId() : null)
+                .id(entity.getProfile_address_id())
+               // .profile_id(entity.getProfile() != null ? entity.getProfile().getProfileId() : null)
                 .addressLine1(entity.getAddress_line1())
                 .city(entity.getCity())
                 .state(entity.getState())
                 .country(entity.getCountry())
                 .zipCode(entity.getZip_code())
-                .curResiding(entity.getCur_residing())
-                .curResidingFrom(entity.getCur_residing_from())
-                .isPermanentAddress(entity.getIs_permenet_address())
+                .currentlyResidingAtThisAddress(entity.getCur_residing())
+                .currentlyResidingFrom(entity.getCur_residing_from())
+                .isMyPermanentAddress(entity.getIs_permenet_address())
                 .build();
     }
     public void deleteProfileAddressByProfileId(Long profileId) {

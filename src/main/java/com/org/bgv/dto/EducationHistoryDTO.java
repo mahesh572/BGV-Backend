@@ -17,14 +17,14 @@ import java.util.List;
 @Builder
 public class EducationHistoryDTO {
 
-    private Long edu_id;
+    private Long id;
 
     // Instead of mapping full DegreeType entity, use degreeId and optionally degreeName
-    private Long degreeId;
+    private Long qualificationType;
     private String degreeName;  // optional
 
     // Instead of mapping full FieldOfStudy entity, use fieldId and optionally fieldName
-    private Long fieldId;
+    private Long fieldOfStudy;
     private String fieldName;  // optional
     
     private String grade;
@@ -37,7 +37,7 @@ public class EducationHistoryDTO {
     private String toMonth;
     private Integer toYear;
 
-    private String instituteName;
+    private String institutionName;
     private String universityName;
     private String city;
     private String state;

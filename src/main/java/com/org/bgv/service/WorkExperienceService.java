@@ -7,6 +7,7 @@ import com.org.bgv.dto.DocumentSummary;
 import com.org.bgv.dto.WorkExperienceDTO;
 import com.org.bgv.dto.WorkExperienceResponse;
 import com.org.bgv.entity.BaseDocument;
+import com.org.bgv.entity.EducationHistory;
 import com.org.bgv.entity.ProfessionalDocuments;
 import com.org.bgv.entity.Profile;
 import com.org.bgv.entity.WorkExperience;
@@ -27,6 +28,7 @@ import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
 import java.util.Map;
+import java.util.Optional;
 import java.util.function.Function;
 import java.util.stream.Collectors;
 
@@ -108,18 +110,33 @@ public class WorkExperienceService {
 	private WorkExperience mapToEntity(WorkExperienceDTO dto, Profile profile) {
 		return WorkExperience.builder().profile(profile).company_name(dto.getCompanyName()).position(dto.getPosition())
 				.start_date(dto.getStartDate()).end_date(dto.getEndDate()).reason(dto.getReasonForLeaving())
-				.employee_id(dto.getEmployeeId()).manager_email_id(dto.getManagerEmailId())
-				.hr_email_id(dto.getHrEmailId()).address(dto.getAddress()).build();
+				.employee_id(dto.getEmployeeId()).manager_email_id(dto.getManagerEmail())
+				.hr_email_id(dto.getHrEmail()).address(dto.getCompanyAddress())
+				.city(dto.getCity())
+				.state(dto.getState())
+				.country(dto.getCountry())
+				.currentlyWorking(dto.getCurrentlyWorking())
+				.noticePeriod(dto.getNoticePeriod())
+				.employmentType(dto.getEmploymentType())
+				.build();
 	}
 
 	private WorkExperienceDTO mapToDTO(WorkExperience entity) {
-		return WorkExperienceDTO.builder().experienceId(entity.getExperienceId())
+		return WorkExperienceDTO.builder().id(entity.getExperienceId())
 				// .profileId(entity.getProfile() != null ? entity.getProfile().getProfileId() :
 				// null)
 				.companyName(entity.getCompany_name()).position(entity.getPosition()).startDate(entity.getStart_date())
 				.endDate(entity.getEnd_date()).reasonForLeaving(entity.getReason()).employeeId(entity.getEmployee_id())
-				.managerEmailId(entity.getManager_email_id()).hrEmailId(entity.getHr_email_id())
-				.address(entity.getAddress()).build();
+				.managerEmail(entity.getManager_email_id()).hrEmail(entity.getHr_email_id())
+				.companyAddress(entity.getAddress())
+				
+				.city(entity.getCity())
+				.state(entity.getState())
+				.country(entity.getCountry())
+				.currentlyWorking(entity.getCurrentlyWorking())
+				.noticePeriod(entity.getNoticePeriod())
+				.employmentType(entity.getEmploymentType())
+				.build();
 	}
 
 	private WorkExperienceDTO convertToWorkExperienceDetail(WorkExperience experience,
@@ -131,11 +148,11 @@ public class WorkExperienceService {
 
 		DocumentStats stats = calculateDocumentStats(documentResponses);
 
-		return WorkExperienceDTO.builder().experienceId(experience.getExperienceId())
+		return WorkExperienceDTO.builder().id(experience.getExperienceId())
 				.companyName(experience.getCompany_name()).position(experience.getPosition())
 				.startDate(experience.getStart_date()).endDate(experience.getEnd_date())
-				.employeeId(experience.getEmployee_id()).managerEmailId(experience.getManager_email_id())
-				.hrEmailId(experience.getHr_email_id()).address(experience.getAddress())
+				.employeeId(experience.getEmployee_id()).managerEmail(experience.getManager_email_id())
+				.hrEmail(experience.getHr_email_id()).companyAddress(experience.getAddress())
 				.reasonForLeaving(experience.getReason()).documents(documentResponses)
 				// .documentStats(stats)
 				.build();
@@ -143,11 +160,11 @@ public class WorkExperienceService {
 
 	private DocumentResponse convertToDocumentResponse(ProfessionalDocuments document) {
 
-		return DocumentResponse.builder().doc_id(document.getDoc_id())
+		return DocumentResponse.builder().doc_id(document.getDocId())
 				.category_id(document.getCategory().getCategoryId()).category_name(document.getCategory().getName())
-				.doc_type_id(document.getType_id().getDoc_type_id()).document_type_name(document.getType_id().getName())
-				.file_url(document.getFile_url()).file_size(document.getFile_size())
-				.file_name(extractFileName(document.getFile_url())).file_type(extractFileType(document.getFile_url()))
+				.doc_type_id(document.getDocTypeId().getDocTypeId()).document_type_name(document.getDocTypeId().getName())
+				.file_url(document.getFileUrl()).file_size(document.getFileSize())
+				.file_name(extractFileName(document.getFileUrl())).file_type(extractFileType(document.getFileUrl()))
 				.status(document.getStatus()).uploadedAt(document.getUploadedAt()).verifiedAt(document.getVerifiedAt())
 				.comments(document.getComments()).awsDocKey(document.getAwsDocKey()).build();
 	}
@@ -201,6 +218,18 @@ public class WorkExperienceService {
 		
 	}
 	
+	public void deleteWorkExperience(Long profileId, Long experienceId) {
+	    workExperienceRepository.findByProfile_ProfileIdAndExperienceId(profileId, experienceId)
+	            .ifPresentOrElse(
+	                    workExperienceRepository::delete,
+	                    () -> {
+	                        throw new EntityNotFoundException(
+	                            "Work experience not found for profileId: " + profileId + " and experienceId: " + experienceId
+	                        );
+	                    }
+	            );
+	}
+	
 	public List<WorkExperienceDTO> updateWorkExperiences(List<WorkExperienceDTO> workExperienceDTOs, Long profileId) {
         // Validate profile exists
 		List<WorkExperienceDTO> workList = new ArrayList<>();
@@ -212,23 +241,47 @@ public class WorkExperienceService {
             throw new IllegalArgumentException("Work experiences list cannot be empty");
         }
         
-        for(WorkExperienceDTO workExperienceDTO:workExperienceDTOs) {
-        	
-        	 List<WorkExperience> workExperiences = workExperienceRepository.findByExperienceId(workExperienceDTO.getExperienceId());
-        	 WorkExperience workExperience = workExperiences.get(0);
-        	 workExperience.setProfile(profile);
-        	 workExperience.setAddress(workExperienceDTO.getAddress());
-        	 workExperience.setCompany_name(workExperienceDTO.getCompanyName());
-        	 workExperience.setEmployee_id(workExperienceDTO.getEmployeeId());
-        	 workExperience.setEnd_date(workExperienceDTO.getEndDate());
-        	 workExperience.setHr_email_id(workExperienceDTO.getHrEmailId());
-        	 workExperience.setManager_email_id(workExperienceDTO.getManagerEmailId());
-        	 workExperience.setReason(workExperienceDTO.getReasonForLeaving());
-        	 workExperience.setStart_date(workExperienceDTO.getStartDate());
-        	 workExperience = workExperienceRepository.save(workExperience);
-        	 
-        	 WorkExperienceDTO workDto = mapToDTO(workExperience);
-        	 workList.add(workDto);
+        for(WorkExperienceDTO workExperienceDTO : workExperienceDTOs) {
+            try {
+            	 WorkExperience workExperience = null;
+            	
+             	if(workExperienceDTO.getId()!=null) {
+             		workExperience = workExperienceRepository.findByProfile_ProfileIdAndExperienceId(profileId, workExperienceDTO.getId())
+                             .orElseThrow(() -> new RuntimeException("Work experience history not found: " + workExperienceDTO.getId()));
+             	}else {
+             		workExperience = new WorkExperience();
+             	}
+            	
+                                          
+                   
+                    workExperience.setProfile(profile);
+                    workExperience.setAddress(workExperienceDTO.getCompanyAddress());
+                    workExperience.setCompany_name(workExperienceDTO.getCompanyName());
+                    workExperience.setEmployee_id(workExperienceDTO.getEmployeeId());
+                    workExperience.setEnd_date(workExperienceDTO.getEndDate());
+                    workExperience.setHr_email_id(workExperienceDTO.getHrEmail());
+                    workExperience.setManager_email_id(workExperienceDTO.getManagerEmail());
+                    workExperience.setReason(workExperienceDTO.getReasonForLeaving());
+                    workExperience.setStart_date(workExperienceDTO.getStartDate());
+                    
+                    // Set other fields that might be missing
+                    workExperience.setPosition(workExperienceDTO.getPosition());
+                    workExperience.setEmploymentType(workExperienceDTO.getEmploymentType());
+                    workExperience.setCurrentlyWorking(workExperienceDTO.getCurrentlyWorking());
+                    workExperience.setNoticePeriod(workExperienceDTO.getNoticePeriod());
+                    workExperience.setCity(workExperienceDTO.getCity());
+                    workExperience.setState(workExperienceDTO.getState());
+                    workExperience.setCountry(workExperienceDTO.getCountry());
+                    
+                    workExperience = workExperienceRepository.save(workExperience);
+                    WorkExperienceDTO workDto = mapToDTO(workExperience);
+                    workList.add(workDto);
+                
+            } catch (Exception e) {
+                // Log the error and handle appropriately
+                System.err.println("Error updating work experience: " + e.getMessage());
+                throw e; // or handle differently based on your requirements
+            }
         }
         return workList;
         

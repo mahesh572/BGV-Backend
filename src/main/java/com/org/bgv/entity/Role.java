@@ -41,5 +41,6 @@ public class Role {
     private List<RolePermission> permissions;
     
     private String label; 
+    private Long type;
 }
 

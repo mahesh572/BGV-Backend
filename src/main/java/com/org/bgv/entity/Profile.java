@@ -20,28 +20,33 @@ public class Profile {
     @Column(name = "profile_id")
     private Long profileId;
     
-    private String first_name;
-    private String last_name;
+    @Column(name = "first_name")
+    private String firstName;
+    
+    @Column(name = "last_name")
+    private String lastName;
+    
+    @Column(name = "nationality")
     private String nationality;
-
 
     @Column(name = "gender")
     private String gender;
     
-    @Column(name = "dob", updatable = false)
-    private LocalDate date_of_birth;
+    @Column(name = "date_of_birth")
+    private LocalDate dateOfBirth;
     
-    @Column(name = "phone_number", nullable = false, unique = true)
+    @Column(name = "phone_number", unique = true)
     private String phoneNumber;
     
-    @Column(name = "marital_status", updatable = false)
-    private String marital_status;
+    @Column(name = "marital_status")
+    private String maritalStatus;
     
-    @Column(name = "email_address", updatable = false)
-    private String email_address;
+    @Column(name = "email_address")
+    private String emailAddress;
 
-    @Column(name = "user_id", nullable = false)
-    private Long userId;
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "user_id")
+    private User user;
 
     @Column(name = "created_by")
     private String createdBy;
@@ -58,15 +63,21 @@ public class Profile {
     @Column(name = "updated_at")
     private LocalDateTime updatedAt;
     
-    @Column(name = "work_experience")
-    private Boolean has_work_experience;
+    @Column(name = "has_work_experience")
+    private Boolean hasWorkExperience;
     
     @Column(name = "verification_status")
     private String verificationStatus;
+    
+    @Column(name = "linkedin_url")
+    private String linkedinUrl;
 
     @PrePersist
     protected void onCreate() {
         this.createdAt = LocalDateTime.now();
+        if (this.status == null) {
+            this.status = "ACTIVE";
+        }
     }
 
     @PreUpdate

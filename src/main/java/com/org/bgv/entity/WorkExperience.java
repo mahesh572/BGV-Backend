@@ -45,6 +45,13 @@ public class WorkExperience {
     private String manager_email_id;
     private String hr_email_id;
     private String address;
+    
+    private Boolean currentlyWorking;
+    private String city;
+    private String country;
+    private String state;
+    private String noticePeriod;
+    private String employmentType;
 
     // getters and setters
 }

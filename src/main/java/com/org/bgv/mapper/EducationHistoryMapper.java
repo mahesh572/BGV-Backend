@@ -19,10 +19,10 @@ public class EducationHistoryMapper {
         }
 
         return EducationHistoryDTO.builder()
-                .edu_id(entity.getId())
-                .degreeId(entity.getDegree() != null ? entity.getDegree().getDegreeId() : null)
+                .id(entity.getId())
+                .qualificationType(entity.getDegree() != null ? entity.getDegree().getDegreeId() : null)
                 .degreeName(entity.getDegree() != null ? entity.getDegree().getName() : null)
-                .fieldId(entity.getField() != null ? entity.getField().getFieldId() : null)
+                .fieldOfStudy(entity.getField() != null ? entity.getField().getFieldId() : null)
                 .fieldName(entity.getField() != null ? entity.getField().getName() : null)
                 .grade(entity.getGrade())
                 .gpa(entity.getGpa())
@@ -31,7 +31,7 @@ public class EducationHistoryMapper {
                 .fromYear(entity.getFromDate() != null ? entity.getFromDate().getYear() : null)
                 .toMonth(entity.getToDate() != null ? getMonthName(entity.getToDate()) : null)
                 .toYear(entity.getToDate() != null ? entity.getToDate().getYear() : null)
-                .instituteName(entity.getInstitute_name())
+                .institutionName(entity.getInstitute_name())
                 .universityName(entity.getUniversity_name())
                 .city(entity.getCity())
                 .state(entity.getState())
@@ -47,10 +47,10 @@ public class EducationHistoryMapper {
         }
 
         return EducationHistory.builder()
-                .id(dto.getEdu_id())
+                .id(dto.getId())
                 .grade(dto.getGrade())
                 .gpa(dto.getGpa())
-                .institute_name(dto.getInstituteName())
+                .institute_name(dto.getInstitutionName())
                 .university_name(dto.getUniversityName())
                 .city(dto.getCity())
                 .state(dto.getState())
@@ -71,7 +71,7 @@ public class EducationHistoryMapper {
 
         entity.setGrade(dto.getGrade());
         entity.setGpa(dto.getGpa());
-        entity.setInstitute_name(dto.getInstituteName());
+        entity.setInstitute_name(dto.getInstitutionName());
         entity.setUniversity_name(dto.getUniversityName());
         entity.setCity(dto.getCity());
         entity.setState(dto.getState());

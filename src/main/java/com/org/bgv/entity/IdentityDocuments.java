@@ -24,29 +24,45 @@ import lombok.Setter;
 @AllArgsConstructor
 @Builder
 public class IdentityDocuments implements BaseDocument{
+	
 	@Id
-    @GeneratedValue(strategy = GenerationType.IDENTITY)
-    private Long doc_id;
-
+	@GeneratedValue(strategy = GenerationType.IDENTITY)
+	@Column(name = "doc_id")
+    private Long docId;
+	
     @ManyToOne
     @JoinColumn(name = "category_id")
     private DocumentCategory category;
 
     @ManyToOne
     @JoinColumn(name = "doc_type_id")
-    private DocumentType type_id;
+    private DocumentType docTypeId;
 
     @ManyToOne
     @JoinColumn(name = "profile_id")
     private Profile profile;
 
-    private String file_url;
-    private Long file_size;
+    @Column(name = "file_url")
+    private String fileUrl;
+
+    @Column(name = "file_size")
+    private Long fileSize;
+
+    @Column(name = "status")
     private String status;
+
+    @Column(name = "uploaded_at")
     private LocalDateTime uploadedAt;
+
+    @Column(name = "verified_at")
     private LocalDateTime verifiedAt;
+
+    @Column(name = "comments")
     private String comments;
+
+    @Column(name = "aws_doc_key")
     private String awsDocKey;
+
     @Column(name = "object_id")
-    private Long objectId; // Changed from object_id to objectId
+    private Long objectId;
 }
