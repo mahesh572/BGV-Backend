@@ -9,6 +9,7 @@ import org.springframework.data.domain.Pageable;
 import org.springframework.data.domain.Sort;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
+import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PatchMapping;
 import org.springframework.web.bind.annotation.PathVariable;
@@ -19,6 +20,8 @@ import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 
 import com.org.bgv.api.response.CustomApiResponse;
+import com.org.bgv.common.RemoveUsersRequest;
+import com.org.bgv.common.RoleConstants;
 import com.org.bgv.common.Status;
 import com.org.bgv.company.dto.CompanyRegistrationRequestDTO;
 import com.org.bgv.company.dto.CompanyRegistrationResponse;
@@ -26,6 +29,7 @@ import com.org.bgv.company.dto.PersonDTO;
 import com.org.bgv.entity.Company;
 import com.org.bgv.service.CompanyService;
 
+import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 
 @RestController
@@ -265,7 +269,7 @@ public class CompanyController {
                  companyId, candidateDTO.getEmail());
         
         try {
-            Boolean response = companyService.addPerson(companyId, candidateDTO,"CANDIDATE");
+            Boolean response = companyService.addPerson(companyId, candidateDTO,RoleConstants.ROLE_CANDIDATE);
             return ResponseEntity.ok(CustomApiResponse.success(
                 "Candidate added successfully", 
                 response, 
@@ -292,13 +296,29 @@ public class CompanyController {
         }
     }
     
-    @GetMapping("/{companyId}/all")
-    public void getCompanyUsers(@PathVariable Long companyId) {
-    	
-    	
-    	
-    	
+    @PostMapping("/{companyId}/users")
+    public ResponseEntity<CustomApiResponse<String>> removeUsersFromCompany(
+            @PathVariable Long companyId,
+            @Valid @RequestBody RemoveUsersRequest request) {
+        
+        log.info("Removing users from company {}: {}", companyId, request.getUserIds());
+        
+        try {
+        	companyService.removeUserFromCompany(request.getUserIds(), companyId);
+            
+            return ResponseEntity.ok(
+            		CustomApiResponse.success(
+                    String.format("Successfully removed %d users from company", request.getUserIds().size()),
+                    "",
+                    HttpStatus.OK
+                )
+            );
+            
+        } catch (RuntimeException e) {
+            log.error("Error removing users from company {}: {}", companyId, e.getMessage());
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
+                .body(CustomApiResponse.failure(e.getMessage(),HttpStatus.INTERNAL_SERVER_ERROR));
+        }
     }
-    
     
 }

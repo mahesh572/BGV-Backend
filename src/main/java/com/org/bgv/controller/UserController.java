@@ -29,32 +29,6 @@ public class UserController {
     
     private static final Logger logger = LoggerFactory.getLogger(UserController.class);
 
-    /*
-    @GetMapping
-    public ResponseEntity<CustomApiResponse<PaginationResponse<UserDto>>> getAllUsers(
-            @RequestParam(defaultValue = "0") int page,
-            @RequestParam(defaultValue = "10") int size,
-            @RequestParam(defaultValue = "userId") String sortBy,
-            @RequestParam(defaultValue = "asc") String sortDirection) {
-        
-        try {
-            PageRequestDto pageRequest = PageRequestDto.builder()
-                    .page(page)
-                    .size(size)
-                    .sortBy(sortBy)
-                    .sortDirection(sortDirection)
-                    .build();
-            
-            PaginationResponse<UserDto> response = userService.getAllUsers(pageRequest);
-            return ResponseEntity.ok(CustomApiResponse.success("Users retrieved successfully", response, HttpStatus.OK));
-        } catch (Exception e) {
-            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
-                    .body(CustomApiResponse.failure("Failed to fetch users: " + e.getMessage(), HttpStatus.INTERNAL_SERVER_ERROR));
-        }
-    }
-    
-    */
-    
    
     @GetMapping("/{id}")
     public ResponseEntity<CustomApiResponse<UserDto>> getById(@PathVariable Long id) {

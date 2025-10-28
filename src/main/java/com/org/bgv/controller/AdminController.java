@@ -17,12 +17,14 @@ import com.org.bgv.common.AssignUsersRequest;
 import com.org.bgv.common.ChangePasswordRequest;
 import com.org.bgv.common.CompanySearchRequest;
 import com.org.bgv.common.PaginationResponse;
+import com.org.bgv.common.RoleConstants;
 import com.org.bgv.common.UserDto;
 import com.org.bgv.common.UserSearchRequest;
 import com.org.bgv.company.dto.CompanyDetailsDTO;
 import com.org.bgv.company.dto.CompanyRegistrationRequestDTO;
 import com.org.bgv.company.dto.CompanyRegistrationResponse;
 import com.org.bgv.company.dto.EmployerDTO;
+import com.org.bgv.config.SecurityUtils;
 import com.org.bgv.dto.BasicdetailsDTO;
 import com.org.bgv.dto.UserDetailsDto;
 import com.org.bgv.entity.Company;
@@ -102,6 +104,15 @@ public class AdminController {
 	            @RequestBody UserSearchRequest searchRequest) {
 	    	logger.info("searchUsers::::::::::::::::::::::{}"+searchRequest);
 	        try {
+	        	
+	        	if(SecurityUtils.hasRole(RoleConstants.ROLE_COMAPNY_ADMINISTRATOR)) {
+	        		logger.info("RoleConstants.ROLE_COMAPNY_ADMINISTRATOR::::::::::::::");
+	        		Long companyId = SecurityUtils.getCurrentUserCompanyId();
+	        		logger.info("RoleConstants.ROLE_COMAPNY_ADMINISTRATOR::::::::::companyId::::{}",companyId);
+	        		searchRequest.setCompanyId(companyId);
+	        	}
+	        	
+	        	
 	            PaginationResponse<UserDto> response = userService.searchUsers(searchRequest);
 	            return ResponseEntity.ok(CustomApiResponse.success("Users retrieved successfully", response, HttpStatus.OK));
 	        } catch (RuntimeException e) {

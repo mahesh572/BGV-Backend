@@ -463,7 +463,24 @@ public class CompanyService {
 	        return true;
 	    }
 	    
-	    
+	    @Transactional
+	    public void removeUserFromCompany(List<Long> userIds, Long companyId) {
+	        if (userIds == null || userIds.isEmpty()) {
+	            return; // Or throw exception: throw new IllegalArgumentException("User IDs list cannot be null or empty");
+	        }
+	        
+	        for (Long userId : userIds) {
+	            CompanyUser companyUser = companyUserRepository.findByCompanyIdAndUserId(companyId, userId)
+	                .orElseThrow(() -> new RuntimeException(
+	                    String.format("User with ID %d not found in company with ID %d", userId, companyId)
+	                ));
+	            
+	            companyUserRepository.delete(companyUser);
+	        }
+	        
+	        // Optional: Log the operation
+	        log.info("Removed {} users from company {}", userIds.size(), companyId);
+	    }
 	    
 	    
 	    

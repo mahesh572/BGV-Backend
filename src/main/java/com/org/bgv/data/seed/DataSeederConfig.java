@@ -3,6 +3,8 @@ package com.org.bgv.data.seed;
 import com.org.bgv.common.RoleConstants;
 import com.org.bgv.entity.BGVCategory;
 import com.org.bgv.entity.CheckType;
+import com.org.bgv.entity.Company;
+import com.org.bgv.entity.CompanyUser;
 import com.org.bgv.entity.DegreeType;
 import com.org.bgv.entity.DocumentCategory;
 import com.org.bgv.entity.DocumentType;
@@ -15,6 +17,8 @@ import com.org.bgv.entity.User;
 import com.org.bgv.entity.UserRole;
 import com.org.bgv.repository.BGVCategoryRepository;
 import com.org.bgv.repository.CheckTypeRepository;
+import com.org.bgv.repository.CompanyRepository;
+import com.org.bgv.repository.CompanyUserRepository;
 import com.org.bgv.repository.DegreeTypeRepository;
 import com.org.bgv.repository.DocumentCategoryRepository;
 import com.org.bgv.repository.DocumentTypeRepository;
@@ -32,6 +36,7 @@ import org.springframework.boot.CommandLineRunner;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Component;
 
+import java.time.LocalDate;
 import java.util.Arrays;
 import java.util.List;
 import java.util.Map;
@@ -54,6 +59,8 @@ public class DataSeederConfig implements CommandLineRunner {
     private final PasswordEncoder passwordEncoder;
     private final BGVCategoryRepository bgvCategoryRepository;
     private final CheckTypeRepository checkTypeJPARepository;
+    private final CompanyRepository companyRepository;
+    private final CompanyUserRepository companyUserRepository;
 
     @Override
     public void run(String... args) {
@@ -83,15 +90,22 @@ public class DataSeederConfig implements CommandLineRunner {
             User savedAdmin = userRepository.save(adminUser);
             
             // Assign ROLE_ADMIN to the admin user
-            Role adminRole = roleRepository.findByName("ROLE_ADMIN")
-                    .orElseThrow(() -> new RuntimeException("ROLE_ADMIN not found"));
+            Role adminRole = roleRepository.findByName("Administrator")
+                    .orElseThrow(() -> new RuntimeException("Administrator not found"));
             
             UserRole userRole = UserRole.builder()
                     .user(savedAdmin)
                     .role(adminRole)
                     .build();
-            
             userRoleRepository.save(userRole);
+            Boolean isExisted =companyRepository.existsByCompanyName("default");
+            if(!isExisted) {
+            	 Company defaultCompany = createDefaultCompany();
+                 Company savedCompany = companyRepository.save(defaultCompany);
+                 CompanyUser companyUser = createCompanyUser(savedCompany, savedAdmin);
+                 companyUserRepository.save(companyUser);
+            }
+            
             System.out.println("Default admin user created successfully");
         }
     }
@@ -461,6 +475,46 @@ public class DataSeederConfig implements CommandLineRunner {
         });
 
         System.out.println("✅ BGV Categories and Check Types seeded successfully");
+    }
+    
+    private Company createDefaultCompany() {
+        Company company = new Company();
+        company.setCompanyName("default");
+        company.setCompanyType("default");
+      //  company.setRegistrationNumber("BGV-ADMIN-001");
+      //  company.setTaxId("TAX-ADMIN-001");
+      //  company.setIncorporationDate(LocalDate.now());
+      //  company.setIndustry("");
+       // company.setCompanySize("1-10");
+        company.setWebsite("https://bgventures.com");
+        company.setDescription("Default administration company ");
+        
+        // Contact Information
+        company.setContactPersonName("System Administrator");
+        company.setContactPersonTitle("Administrator");
+        company.setContactEmail("admin@example.com");
+        company.setContactPhone("");
+       /* 
+        // Address Information
+        company.setAddressLine1("123 Administration Street");
+        company.setCity("Tech City");
+        company.setState("California");
+        company.setCountry("United States");
+        company.setZipCode("90001");
+        company.setStatus("ACTIVE");
+        
+        // Additional Information
+        company.setLinkedinProfile("https://linkedin.com/company/bgventures");
+        */
+        return company;
+    }
+    private CompanyUser createCompanyUser(Company company, User user) {
+        CompanyUser companyUser = new CompanyUser();
+        companyUser.setCompany(company);
+        companyUser.setUser(user);
+        companyUser.setCompanyId(company.getId());
+        companyUser.setUserId(user.getUserId());
+        return companyUser;
     }
 
 }

@@ -12,6 +12,7 @@ import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 
 import com.org.bgv.common.RoleConstants;
+import com.org.bgv.config.SecurityUtils;
 import com.org.bgv.constants.CandidateStatus;
 import com.org.bgv.constants.Constants;
 import com.org.bgv.controller.RoleController;
@@ -101,8 +102,17 @@ public class RoleService {
     }
 
     public List<RoleResponse> getAllRolesGroupedByType() {
-        // Get all roles
-        List<Role> allRoles = roleRepository.findAll();
+    	
+    	List<Role> allRoles = null;
+    	
+    	if (SecurityUtils.hasRole("Administrator")) {
+    		 
+    		allRoles = roleRepository.findAll();
+    	 }else if(SecurityUtils.hasRole("Company Administrator")) {
+    		 allRoles = roleRepository.findByType(RoleConstants.TYPE_COMPANY);
+    	 }
+    	
+        
         
         // Group roles by type and convert to RoleTypeGroupDto
         List<RoleResponse> roleGroups = allRoles.stream()

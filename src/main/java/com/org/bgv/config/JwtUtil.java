@@ -48,8 +48,8 @@ public class JwtUtil {
         }
     }
 
-    public String generateToken(UserDetails userDetails) {
-    	logger.debug("JwtUtil::::secret:::{}:expiration::::{}",jwtSecret,jwtExpirationMs);
+    public String generateToken(CustomUserDetails userDetails) {
+    	logger.debug("JwtUtil::::userDetails::::{}",userDetails);
         return Jwts.builder()
                 .setSubject(userDetails.getUsername())
                 .setIssuedAt(new Date())
@@ -57,7 +57,7 @@ public class JwtUtil {
                 .signWith(Keys.hmacShaKeyFor(jwtSecret.getBytes()), SignatureAlgorithm.HS256)
                 .compact();
     }
-    public String generateRefreshToken(UserDetails userDetails) {
+    public String generateRefreshToken(CustomUserDetails userDetails) {
         return Jwts.builder()
                 .setSubject(userDetails.getUsername())
                 .setIssuedAt(new Date())
@@ -65,6 +65,7 @@ public class JwtUtil {
                 .signWith(Keys.hmacShaKeyFor(jwtSecret.getBytes()), SignatureAlgorithm.HS256)
                 .compact();
     }
+    
     public String generateAccessToken(String username) {
         return Jwts.builder()
                 .setSubject(username)

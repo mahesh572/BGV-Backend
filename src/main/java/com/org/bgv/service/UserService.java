@@ -89,7 +89,7 @@ public class UserService {
     }
    */
     public PaginationResponse<UserDto> searchUsers(UserSearchRequest searchRequest) {
-        // Build pageable
+        
         Pageable pageable = createPageable(searchRequest.getPagination(), searchRequest.getSorting());
         
         // Build specification for filtering

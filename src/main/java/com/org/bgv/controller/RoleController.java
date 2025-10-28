@@ -65,7 +65,7 @@ public class RoleController {
         @ApiResponse(responseCode = "500", description = "Internal server error")
     })
     public ResponseEntity<CustomApiResponse<RoleDto>> getRoleByName(
-            @Parameter(description = "Name of the role to retrieve", required = true, example = "ROLE_ADMIN")
+            @Parameter(description = "Name of the role to retrieve", required = true, example = "Administrator")
             @RequestParam String name) {
         try {
             RoleDto role = roleService.getRoleByName(name)
@@ -81,6 +81,22 @@ public class RoleController {
     }
 
     @GetMapping
+    @Operation(summary = "Get all roles", description = "Retrieves all roles grouped by type")
+    @ApiResponses({
+        @ApiResponse(responseCode = "200", description = "Roles retrieved successfully"),
+        @ApiResponse(responseCode = "500", description = "Internal server error")
+    })
+    public ResponseEntity<CustomApiResponse<List<RoleDto>>> getAllRoleswithoutGroup() {
+        try {
+            List<RoleDto> roles = roleService.getAllRoles();
+            String message = roles.isEmpty() ? "No roles found" : "Roles retrieved successfully";
+            return ResponseEntity.ok(CustomApiResponse.success(message, roles, HttpStatus.OK));
+        } catch (Exception e) {
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
+                    .body(CustomApiResponse.failure("Failed to fetch roles: " + e.getMessage(), HttpStatus.INTERNAL_SERVER_ERROR));
+        }
+    }
+    @GetMapping("/group")
     @Operation(summary = "Get all roles", description = "Retrieves all roles grouped by type")
     @ApiResponses({
         @ApiResponse(responseCode = "200", description = "Roles retrieved successfully"),
