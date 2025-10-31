@@ -11,19 +11,19 @@ import org.springframework.stereotype.Repository;
 import com.org.bgv.entity.NavigationMenu;
 
 @Repository
-public interface NavigationMenuRepository extends JpaRepository<NavigationMenu, String> {
+public interface NavigationMenuRepository extends JpaRepository<NavigationMenu, Long> {
     
     List<NavigationMenu> findByParentIsNullOrderByOrderAsc();
     
     List<NavigationMenu> findByIsActiveTrueAndParentIsNullOrderByOrderAsc();
     
-    List<NavigationMenu> findByParentIdOrderByOrderAsc(String parentId);
+    List<NavigationMenu> findByParentIdOrderByOrderAsc(Long parentId);
     
-    List<NavigationMenu> findByIsActiveTrueAndParentIdOrderByOrderAsc(String parentId);
+    List<NavigationMenu> findByIsActiveTrueAndParentIdOrderByOrderAsc(Long parentId);
     
     Optional<NavigationMenu> findByName(String name);
     
-    boolean existsByNameAndParentId(String name, String parentId);
+    boolean existsByNameAndParentId(String name, Long parentId);
     
     @Query("SELECT m FROM NavigationMenu m WHERE m.isActive = true AND :role MEMBER OF m.permissions ORDER BY m.order ASC")
     List<NavigationMenu> findActiveByRole(@Param("role") String role);

@@ -52,7 +52,7 @@ public class NavigationMenuController {
         } catch (Exception e) {
             logger.error("navigation/getAllNavigationMenus::::::ERROR - {}", e.getMessage());
             return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
-                    .body(CustomApiResponse.failure("Failed to retrieve navigation menus: " + e.getMessage(), HttpStatus.INTERNAL_SERVER_ERROR));
+                    .body(CustomApiResponse.failure("Failed to retrieve navigation menus:: " + e.getMessage(), HttpStatus.INTERNAL_SERVER_ERROR));
         }
     }
 
@@ -95,7 +95,7 @@ public class NavigationMenuController {
     }
 
     @GetMapping("/{id}")
-    public ResponseEntity<CustomApiResponse<NavigationResponseDto>> getNavigationMenuById(@PathVariable String id) {
+    public ResponseEntity<CustomApiResponse<NavigationResponseDto>> getNavigationMenuById(@PathVariable Long id) {
         try {
             logger.info("navigation/getNavigationMenuById::::::START - ID: {}", id);
             NavigationResponseDto menu = navigationMenuService.getNavigationMenuById(id);
@@ -135,7 +135,7 @@ public class NavigationMenuController {
 
     @PutMapping("/{id}")
     public ResponseEntity<CustomApiResponse<NavigationResponseDto>> updateNavigationMenu(
-            @PathVariable String id,
+            @PathVariable Long id,
             @Valid @RequestBody UpdateNavigationMenuDto updateDto) {
         try {
             logger.info("navigation/updateNavigationMenu::::::ID: {}, UpdateDTO: {}", id, updateDto);
@@ -155,7 +155,7 @@ public class NavigationMenuController {
     }
 
     @DeleteMapping("/{id}")
-    public ResponseEntity<CustomApiResponse<Void>> deleteNavigationMenu(@PathVariable String id) {
+    public ResponseEntity<CustomApiResponse<Void>> deleteNavigationMenu(@PathVariable Long id) {
         try {
             logger.info("navigation/deleteNavigationMenu::::::START - ID: {}", id);
             navigationMenuService.deleteNavigationMenu(id);
@@ -174,7 +174,7 @@ public class NavigationMenuController {
     }
 
     @PatchMapping("/{id}/toggle-status")
-    public ResponseEntity<CustomApiResponse<Void>> toggleNavigationMenuStatus(@PathVariable String id) {
+    public ResponseEntity<CustomApiResponse<Void>> toggleNavigationMenuStatus(@PathVariable Long id) {
         try {
             logger.info("navigation/toggleNavigationMenuStatus::::::START - ID: {}", id);
             navigationMenuService.toggleNavigationMenuStatus(id);

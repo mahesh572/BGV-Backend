@@ -27,7 +27,7 @@ public class CreateNavigationMenuDto {
     
     private String color;
     
-   
+    private String label;
     private String type;
     
     private List<String> permissions;
@@ -36,7 +36,7 @@ public class CreateNavigationMenuDto {
     
     private Boolean isActive = true;
     
-    private String parentId;
+    private Long parentId;
     
     private List<CreateNavigationMenuDto> children;
     

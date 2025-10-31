@@ -39,8 +39,8 @@ public class NavigationMenu {
  
 
  @Id
- @GeneratedValue(strategy = GenerationType.UUID)
- private String id;
+ @GeneratedValue(strategy = GenerationType.IDENTITY)
+ private Long id;
 
  @Column(name = "name", nullable = false, length = 100)
  private String name;
@@ -54,6 +54,8 @@ public class NavigationMenu {
  @Column(name = "color", length = 50)
  private String color;
 
+ @Column(name = "label", nullable = false)
+ private String label;
  
  @Column(name = "type", nullable = false)
  private String type;

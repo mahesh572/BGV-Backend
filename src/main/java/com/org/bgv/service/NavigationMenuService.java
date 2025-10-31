@@ -43,7 +43,7 @@ public class NavigationMenuService {
                 .collect(Collectors.toList());
     }
 
-    public NavigationResponseDto getNavigationMenuById(String id) {
+    public NavigationResponseDto getNavigationMenuById(Long id) {
         NavigationMenu menu = navigationMenuRepository.findById(id)
                 .orElseThrow(() -> new EntityNotFoundException("Navigation menu not found with id: " + id));
         return new NavigationResponseDto(menu);
@@ -55,11 +55,12 @@ public class NavigationMenuService {
             throw new IllegalArgumentException("Navigation menu with name '" + createDto.getName() + "' already exists");
         }
 
+        
         NavigationMenu menu = new NavigationMenu();
         mapCreateDtoToEntity(createDto, menu);
 
         // Set parent if provided
-        if (createDto.getParentId() != null) {
+        if (createDto.getParentId() != null && createDto.getParentId() !=0) {
             NavigationMenu parent = navigationMenuRepository.findById(createDto.getParentId())
                     .orElseThrow(() -> new EntityNotFoundException("Parent menu not found with id: " + createDto.getParentId()));
             menu.setParent(parent);
@@ -78,7 +79,7 @@ public class NavigationMenuService {
         return new NavigationResponseDto(savedMenu);
     }
 
-    public NavigationResponseDto updateNavigationMenu(String id, UpdateNavigationMenuDto updateDto) {
+    public NavigationResponseDto updateNavigationMenu(Long id, UpdateNavigationMenuDto updateDto) {
         NavigationMenu menu = navigationMenuRepository.findById(id)
                 .orElseThrow(() -> new EntityNotFoundException("Navigation menu not found with id: " + id));
 
@@ -102,7 +103,7 @@ public class NavigationMenuService {
         return new NavigationResponseDto(updatedMenu);
     }
 
-    public void deleteNavigationMenu(String id) {
+    public void deleteNavigationMenu(Long id) {
         NavigationMenu menu = navigationMenuRepository.findById(id)
                 .orElseThrow(() -> new EntityNotFoundException("Navigation menu not found with id: " + id));
         
@@ -114,7 +115,7 @@ public class NavigationMenuService {
         navigationMenuRepository.delete(menu);
     }
 
-    public void toggleNavigationMenuStatus(String id) {
+    public void toggleNavigationMenuStatus(Long id) {
         NavigationMenu menu = navigationMenuRepository.findById(id)
                 .orElseThrow(() -> new EntityNotFoundException("Navigation menu not found with id: " + id));
         
@@ -128,6 +129,7 @@ public class NavigationMenuService {
         entity.setIcon(dto.getIcon());
         entity.setColor(dto.getColor());
         entity.setType(dto.getType().toUpperCase());
+        entity.setLabel(dto.getLabel());
         entity.setPermissions(dto.getPermissions());
         entity.setOrder(dto.getOrder());
         entity.setIsActive(dto.getIsActive());

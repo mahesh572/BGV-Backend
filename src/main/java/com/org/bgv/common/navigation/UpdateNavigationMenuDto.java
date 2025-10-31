@@ -29,7 +29,7 @@ public class UpdateNavigationMenuDto {
     
     private Boolean isActive;
     
-    private String parentId;
+    private Long parentId;
 
     
 }
