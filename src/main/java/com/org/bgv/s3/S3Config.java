@@ -19,8 +19,8 @@ public class S3Config {
                 .credentialsProvider(
                         StaticCredentialsProvider.create(
                                 AwsBasicCredentials.create(
-                                        "AKIAVY2PHCGUJF7BDZLW",
-                                        "UXRA+LLeN5Gh3XZfZEdV2FYLLEChE2W3FRtXIAmH"
+                                        "AKIA2NRTDUBEW4DDJOM6",
+                                        "J3GR4meXj+F9vF4rGYjb0XzKMBpGHyo5hgrmw5M0"
                                 )
                         )
                 )

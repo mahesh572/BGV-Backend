@@ -46,7 +46,7 @@ public class ProfileController {
     }
     
  // Get all profiles
-    @GetMapping
+    @GetMapping("/all")
     public ResponseEntity<CustomApiResponse<List<ProfileDTO>>> getAllProfiles() {
         try {
             List<ProfileDTO> profiles = profileService.getAllProfiles();

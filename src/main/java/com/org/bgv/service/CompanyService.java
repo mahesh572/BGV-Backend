@@ -627,20 +627,25 @@ public class CompanyService {
 	        return (root, query, criteriaBuilder) -> {
 	            List<Predicate> predicates = new ArrayList<>();
 	            
+	            // Exclude default company
+	            Predicate notDefaultCompany = criteriaBuilder.notEqual(root.get("companyName"), "default");
+	            predicates.add(notDefaultCompany);
+	            
 	            // Search term
 	            if (StringUtils.hasText(searchRequest.getSearch())) {
-	            	log.info("StringUtils.hasText(searchRequest.getSearch())::::::{}",StringUtils.hasText(searchRequest.getSearch()));
+	                log.info("StringUtils.hasText(searchRequest.getSearch())::::::{}", StringUtils.hasText(searchRequest.getSearch()));
 	                String searchTerm = "%" + searchRequest.getSearch().toLowerCase() + "%";
 	                Predicate searchPredicate = criteriaBuilder.or(
-		                    criteriaBuilder.like(criteriaBuilder.lower(root.get("companyName")), searchTerm),
-		                    criteriaBuilder.like(criteriaBuilder.lower(root.get("registrationNumber")), searchTerm),
-		                    criteriaBuilder.like(criteriaBuilder.lower(root.get("contactEmail")), searchTerm),
-		                    criteriaBuilder.like(criteriaBuilder.lower(root.get("contactPersonName")), searchTerm)
-		                );
-		                predicates.add(searchPredicate);
+	                    criteriaBuilder.like(criteriaBuilder.lower(root.get("companyName")), searchTerm),
+	                    criteriaBuilder.like(criteriaBuilder.lower(root.get("registrationNumber")), searchTerm),
+	                    criteriaBuilder.like(criteriaBuilder.lower(root.get("contactEmail")), searchTerm),
+	                    criteriaBuilder.like(criteriaBuilder.lower(root.get("contactPersonName")), searchTerm)
+	                );
+	                predicates.add(searchPredicate);
 	            }
-	            	            
+	            
 	            // Filters
+	            // Add your other filters here if needed
 	            
 	            return criteriaBuilder.and(predicates.toArray(new Predicate[0]));
 	        };

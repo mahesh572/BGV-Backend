@@ -20,13 +20,17 @@ import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 
 import com.org.bgv.api.response.CustomApiResponse;
+import com.org.bgv.common.CandidateDTO;
 import com.org.bgv.common.RemoveUsersRequest;
 import com.org.bgv.common.RoleConstants;
 import com.org.bgv.common.Status;
 import com.org.bgv.company.dto.CompanyRegistrationRequestDTO;
 import com.org.bgv.company.dto.CompanyRegistrationResponse;
 import com.org.bgv.company.dto.PersonDTO;
+import com.org.bgv.config.SecurityUtils;
+import com.org.bgv.constants.Constants;
 import com.org.bgv.entity.Company;
+import com.org.bgv.service.CandidateService;
 import com.org.bgv.service.CompanyService;
 
 import jakarta.validation.Valid;
@@ -40,6 +44,7 @@ public class CompanyController {
 	private static final Logger log = LoggerFactory.getLogger(CompanyController.class);
 	
 	private final CompanyService companyService;
+	private final CandidateService candidateService;
 
 	@PostMapping("/register")
     public ResponseEntity<CustomApiResponse<CompanyRegistrationResponse>> registerCompany(
@@ -262,14 +267,17 @@ public class CompanyController {
     @PostMapping("/{companyId}/candidate")
     public ResponseEntity<CustomApiResponse<Boolean>> addCandidate(
     		@PathVariable Long companyId,
-            @RequestBody PersonDTO candidateDTO
+            @RequestBody CandidateDTO candidateDTO
             ) {
         
         log.info("Received Candidate addition request for company ID: {}, Candidate: {}", 
                  companyId, candidateDTO.getEmail());
         
         try {
-            Boolean response = companyService.addPerson(companyId, candidateDTO,RoleConstants.ROLE_CANDIDATE);
+        	candidateDTO.setCompanyId(companyId);
+        	candidateDTO.setSourceType(Constants.CANDIDATE_SOURCE_EMPLOYER);
+            
+            Boolean response = candidateService.addCandidate(candidateDTO);
             return ResponseEntity.ok(CustomApiResponse.success(
                 "Candidate added successfully", 
                 response, 

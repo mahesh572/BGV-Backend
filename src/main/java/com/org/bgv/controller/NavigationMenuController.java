@@ -41,7 +41,7 @@ public class NavigationMenuController {
     public ResponseEntity<CustomApiResponse<List<NavigationResponseDto>>> getAllNavigationMenus() {
         try {
             logger.info("navigation/getAllNavigationMenus::::::START");
-            List<NavigationResponseDto> menus = navigationMenuService.getAllNavigationMenus();
+            List<NavigationResponseDto> menus = navigationMenuService.getAllNavigationMenus("");
             logger.info("navigation/getAllNavigationMenus::::::SUCCESS - Found {} menus", menus.size());
             return ResponseEntity.ok()
                     .body(CustomApiResponse.success("Navigation menus retrieved successfully", menus, HttpStatus.OK));
@@ -51,6 +51,24 @@ public class NavigationMenuController {
                     .body(CustomApiResponse.failure(e.getMessage(), HttpStatus.BAD_REQUEST));
         } catch (Exception e) {
             logger.error("navigation/getAllNavigationMenus::::::ERROR - {}", e.getMessage());
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
+                    .body(CustomApiResponse.failure("Failed to retrieve navigation menus:: " + e.getMessage(), HttpStatus.INTERNAL_SERVER_ERROR));
+        }
+    }
+    @GetMapping("/getAll")
+    public ResponseEntity<CustomApiResponse<List<NavigationResponseDto>>> getAllNavigationMenusForAdmin() {
+        try {
+            logger.info("navigation/getAllNavigationMenusForAdmin::::::START");
+            List<NavigationResponseDto> menus = navigationMenuService.getAllNavigationMenus("ALL");
+            logger.info("navigation/getAllNavigationMenusForAdmin::::::SUCCESS - Found {} menus", menus.size());
+            return ResponseEntity.ok()
+                    .body(CustomApiResponse.success("Navigation menus retrieved successfully", menus, HttpStatus.OK));
+        } catch (RuntimeException e) {
+            logger.error("navigation/getAllNavigationMenusForAdmin::::::ERROR - {}", e.getMessage());
+            return ResponseEntity.status(HttpStatus.BAD_REQUEST)
+                    .body(CustomApiResponse.failure(e.getMessage(), HttpStatus.BAD_REQUEST));
+        } catch (Exception e) {
+            logger.error("navigation/getAllNavigationMenusForAdmin::::::ERROR - {}", e.getMessage());
             return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
                     .body(CustomApiResponse.failure("Failed to retrieve navigation menus:: " + e.getMessage(), HttpStatus.INTERNAL_SERVER_ERROR));
         }

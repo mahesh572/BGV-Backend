@@ -1,6 +1,7 @@
 package com.org.bgv.service;
 
 import java.util.List;
+import java.util.Objects;
 import java.util.stream.Collectors;
 
 import org.springframework.beans.factory.annotation.Autowired;
@@ -9,6 +10,7 @@ import org.springframework.stereotype.Service;
 import com.org.bgv.common.navigation.CreateNavigationMenuDto;
 import com.org.bgv.common.navigation.NavigationResponseDto;
 import com.org.bgv.common.navigation.UpdateNavigationMenuDto;
+import com.org.bgv.config.SecurityUtils;
 import com.org.bgv.entity.NavigationMenu;
 import com.org.bgv.repository.NavigationMenuRepository;
 
@@ -22,12 +24,31 @@ public class NavigationMenuService {
     @Autowired
     private NavigationMenuRepository navigationMenuRepository;
 
-    public List<NavigationResponseDto> getAllNavigationMenus() {
+    public List<NavigationResponseDto> getAllNavigationMenus(String action) {
+        // Fetch all root menus
         List<NavigationMenu> rootMenus = navigationMenuRepository.findByParentIsNullOrderByOrderAsc();
-        return rootMenus.stream()
+
+        List<NavigationMenu> resultMenus;
+
+        if ("ALL".equalsIgnoreCase(action)) {
+            // 🔹 If action = ALL, return all menus (no permission filtering)
+            resultMenus = rootMenus;
+        } else {
+            // 🔹 Otherwise, filter based on user authorities
+            List<String> authorities = SecurityUtils.getCurrentUserAuthorities();
+
+            resultMenus = rootMenus.stream()
+                    .map(menu -> filterMenuByPermissions(menu, authorities))
+                    .filter(Objects::nonNull)
+                    .collect(Collectors.toList());
+        }
+
+        // Convert to DTOs
+        return resultMenus.stream()
                 .map(NavigationResponseDto::new)
                 .collect(Collectors.toList());
     }
+
 
     public List<NavigationResponseDto> getActiveNavigationMenus() {
         List<NavigationMenu> rootMenus = navigationMenuRepository.findByIsActiveTrueAndParentIsNullOrderByOrderAsc();
@@ -144,5 +165,36 @@ public class NavigationMenuService {
         if (dto.getPermissions() != null) entity.setPermissions(dto.getPermissions());
         if (dto.getOrder() != null) entity.setOrder(dto.getOrder());
         if (dto.getIsActive() != null) entity.setIsActive(dto.getIsActive());
+    }
+    
+    private NavigationMenu filterMenuByPermissions(NavigationMenu menu, List<String> authorities) {
+        // Check if this menu is allowed
+        boolean hasAccess = menu.getPermissions().isEmpty() ||
+                menu.getPermissions().stream().anyMatch(authorities::contains);
+
+        // Recursively filter children
+        List<NavigationMenu> filteredChildren = menu.getChildren().stream()
+                .map(child -> filterMenuByPermissions(child, authorities))
+                .filter(Objects::nonNull)
+                .collect(Collectors.toList());
+
+        // If menu has access or has accessible children, include it
+        if (hasAccess || !filteredChildren.isEmpty()) {
+            NavigationMenu filtered = new NavigationMenu();
+            filtered.setId(menu.getId());
+            filtered.setName(menu.getName());
+            filtered.setHref(menu.getHref());
+            filtered.setIcon(menu.getIcon());
+            filtered.setColor(menu.getColor());
+            filtered.setLabel(menu.getLabel());
+            filtered.setType(menu.getType());
+            filtered.setOrder(menu.getOrder());
+            filtered.setIsActive(menu.getIsActive());
+            filtered.setPermissions(menu.getPermissions());
+            filtered.setChildren(filteredChildren);
+            return filtered;
+        }
+
+        return null;
     }
 }

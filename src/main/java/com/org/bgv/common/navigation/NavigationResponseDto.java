@@ -25,6 +25,7 @@ public class NavigationResponseDto {
     private List<String> permissions;
     private Integer order;
     private Boolean isActive;
+    private String label;
     private List<NavigationResponseDto> children;
 
     
@@ -35,6 +36,7 @@ public class NavigationResponseDto {
         this.icon = menu.getIcon();
         this.color = menu.getColor();
         this.type = menu.getType();
+        this.label = menu.getLabel();
         this.permissions = menu.getPermissions();
         this.order = menu.getOrder();
         this.isActive = menu.getIsActive();

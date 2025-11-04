@@ -15,7 +15,7 @@ import java.util.UUID;
 public class S3StorageService {
 
     private final S3Client s3Client;
-    private final String bucketName = "bgv-doc"; // 🔁 Replace this
+    private final String bucketName = "bgv-doc-mahesh"; // 🔁 Replace this
 
     public S3StorageService(S3Client s3Client) {
         this.s3Client = s3Client;

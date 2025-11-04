@@ -1,6 +1,8 @@
 package com.org.bgv.data.seed;
 
 import com.org.bgv.common.RoleConstants;
+import com.org.bgv.common.navigation.CreateNavigationMenuDto;
+import com.org.bgv.common.navigation.NavigationResponseDto;
 import com.org.bgv.entity.BGVCategory;
 import com.org.bgv.entity.CheckType;
 import com.org.bgv.entity.Company;
@@ -23,12 +25,15 @@ import com.org.bgv.repository.DegreeTypeRepository;
 import com.org.bgv.repository.DocumentCategoryRepository;
 import com.org.bgv.repository.DocumentTypeRepository;
 import com.org.bgv.repository.FieldOfStudyRepository;
+import com.org.bgv.repository.NavigationMenuRepository;
 import com.org.bgv.repository.OtherRepository;
 import com.org.bgv.repository.PermissionRepository;
 import com.org.bgv.repository.RolePermissionRepository;
 import com.org.bgv.repository.RoleRepository;
 import com.org.bgv.repository.UserRepository;
 import com.org.bgv.repository.UserRoleRepository;
+import com.org.bgv.service.EmailService;
+import com.org.bgv.service.NavigationMenuService;
 
 import lombok.RequiredArgsConstructor;
 
@@ -37,6 +42,7 @@ import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Component;
 
 import java.time.LocalDate;
+import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
 import java.util.Map;
@@ -61,6 +67,9 @@ public class DataSeederConfig implements CommandLineRunner {
     private final CheckTypeRepository checkTypeJPARepository;
     private final CompanyRepository companyRepository;
     private final CompanyUserRepository companyUserRepository;
+    private final NavigationMenuService navigationMenuService;
+    private final NavigationMenuRepository navigationMenuRepository;
+    private final EmailService emailTemplateService;
 
     @Override
     public void run(String... args) {
@@ -73,6 +82,9 @@ public class DataSeederConfig implements CommandLineRunner {
         seedSingleOtherRecord();
         seedDefaultAdminUser(); 
         seedBGVCategoriesAndCheckTypes();
+        setdefaultnavigationSeed();
+        emailTemplateService.initializeTemplatesFromFiles();
+
     }
     
     private void seedDefaultAdminUser() {
@@ -516,5 +528,39 @@ public class DataSeederConfig implements CommandLineRunner {
         companyUser.setUserId(user.getUserId());
         return companyUser;
     }
+    
+    private void setdefaultnavigationSeed() {
+    	
+    	List<String> permissions = new ArrayList<>();
+    	permissions.add("Administrator");
+    	
+    	if (navigationMenuRepository.existsByNameAndParentId("Settings", null)) {
+           // throw new IllegalArgumentException("Navigation menu with name  already exists");
+        }else {
+    	CreateNavigationMenuDto  createNavigationMenuDto = createDefaultNavigation("Settings", "Settings", "/admin/settings/", "Settings", "Section", permissions, true, null,0L);
+    	NavigationResponseDto createdMenu = navigationMenuService.createNavigationMenu(createNavigationMenuDto);
+    	
+    	navigationMenuService.createNavigationMenu(createDefaultNavigation("Create Page", "Create Page", "/admin/settings/pages/new", "FileText", "Link", permissions, true, createdMenu.getId(),0L));
+    	navigationMenuService.createNavigationMenu(createDefaultNavigation("Email Templates", "Email Templates", "/admin/settings/email-templates", "Mail", "Link", permissions, true, createdMenu.getId(),0L));
+        }
+        }
+    private CreateNavigationMenuDto createDefaultNavigation(String name,String label,String href,String icon,String type,List<String> permissions,Boolean isActive,Long parentId,Long menuOrder) {
+    	return CreateNavigationMenuDto.builder()
+    	.name(name)
+    	.type(type)
+    	.label(label)
+    	.href(href)
+    	.icon(icon)
+    	.permissions(permissions)
+    	.parentId(parentId)
+    	.isActive(isActive)
+    	.order(0)
+    	.build();
+    	
+    	
+    	
+    }
+    
+   
 
 }
