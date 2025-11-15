@@ -34,7 +34,13 @@ public class DocumentType {
     @JoinColumn(name = "category_id")
     private DocumentCategory category;
     
+    @Column(name = "label")
     private String label;
+    
+    @Column(name = "isRequired")
+    private boolean isRequired;
+    
+    private String upload;
 
     // getters and setters
 }

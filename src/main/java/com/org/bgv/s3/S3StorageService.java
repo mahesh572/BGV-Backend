@@ -3,6 +3,8 @@ package com.org.bgv.s3;
 import org.springframework.data.util.Pair;
 import org.springframework.stereotype.Service;
 import org.springframework.web.multipart.MultipartFile;
+
+import lombok.extern.slf4j.Slf4j;
 import software.amazon.awssdk.core.sync.RequestBody;
 import software.amazon.awssdk.services.s3.S3Client;
 import software.amazon.awssdk.services.s3.model.PutObjectRequest;
@@ -12,6 +14,7 @@ import java.time.Instant;
 import java.util.UUID;
 
 @Service
+@Slf4j
 public class S3StorageService {
 
     private final S3Client s3Client;
@@ -35,6 +38,7 @@ public class S3StorageService {
             String url = "https://" + bucketName + ".s3.ap-south-1.amazonaws.com/" + key;
             return Pair.of(url, key);
         } catch (IOException e) {
+        	log.error("error in :::S3StorageService:"+e.getMessage());
             throw new RuntimeException("Failed to upload to S3", e);
         }
     }

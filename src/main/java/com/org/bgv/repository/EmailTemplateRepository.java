@@ -21,4 +21,8 @@ public interface EmailTemplateRepository extends JpaRepository<EmailTemplate, Lo
     
     @Query("SELECT e FROM EmailTemplate e WHERE e.isActive = true ORDER BY e.name ASC")
     List<EmailTemplate> findAllActiveOrderByName();
+    
+    boolean existsByTypeAndName(String type, String name);
+    
+    Optional<EmailTemplate> findByTypeAndName(String type, String name);
 }

@@ -1,6 +1,7 @@
 package com.org.bgv.controller;
 
 import com.org.bgv.api.response.CustomApiResponse;
+import com.org.bgv.common.ChangePasswordRequest;
 import com.org.bgv.common.PageRequestDto;
 import com.org.bgv.common.PaginationResponse;
 import com.org.bgv.common.UserDto;
@@ -10,6 +11,12 @@ import com.org.bgv.constants.Constants;
 import com.org.bgv.constants.UserStatus;
 import com.org.bgv.dto.UserDetailsDto;
 import com.org.bgv.service.UserService;
+
+import io.swagger.v3.oas.annotations.Operation;
+import io.swagger.v3.oas.annotations.Parameter;
+import io.swagger.v3.oas.annotations.responses.ApiResponse;
+import io.swagger.v3.oas.annotations.responses.ApiResponses;
+import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 
 import org.slf4j.Logger;
@@ -140,4 +147,31 @@ public class UserController {
                     .body(CustomApiResponse.failure("Failed to get user from token: " + e.getMessage(), HttpStatus.INTERNAL_SERVER_ERROR));
         }
     }
+    
+    @PostMapping("/{userId}/change-password")
+    @Operation(summary = "Change user password", description = "Change password for a specific user")
+    @ApiResponses({
+        @ApiResponse(responseCode = "200", description = "Password changed successfully"),
+        @ApiResponse(responseCode = "400", description = "Invalid input or current password incorrect"),
+        @ApiResponse(responseCode = "404", description = "User not found"),
+        @ApiResponse(responseCode = "500", description = "Internal server error")
+    })
+    public ResponseEntity<CustomApiResponse<Void>> changePassword(
+            @Parameter(description = "ID of the user", required = true, example = "123")
+            @PathVariable Long userId,
+            @Valid @RequestBody ChangePasswordRequest request) {
+        try {
+            userService.changePasswordByAdmin(userId, request);
+            return ResponseEntity.ok(CustomApiResponse.success("Password changed successfully", null, HttpStatus.OK));
+        } catch (RuntimeException e) {
+            return ResponseEntity.status(HttpStatus.BAD_REQUEST)
+                    .body(CustomApiResponse.failure(e.getMessage(), HttpStatus.BAD_REQUEST));
+        } catch (Exception e) {
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
+                    .body(CustomApiResponse.failure("Failed to change password: " + e.getMessage(), HttpStatus.INTERNAL_SERVER_ERROR));
+        }
+    }
+    
+    
+    
 }

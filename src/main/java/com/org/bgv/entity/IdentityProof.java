@@ -4,6 +4,7 @@ import jakarta.persistence.*;
 import lombok.*;
 
 import java.time.LocalDateTime;
+import java.util.Date;
 
 @Entity
 @Table(name = "identity_proofs")
@@ -23,11 +24,19 @@ public class IdentityProof {
     private LocalDateTime uploadedAt;
 
     @ManyToOne
+    @JoinColumn(name = "candidate_id")
+    private Candidate candidate;
+    
+    @ManyToOne
     @JoinColumn(name = "profile_id")
     private Profile profile;
+    
 
     @Column(name = "document_number", length = 100)
     private String documentNumber;
+    
+    private Date issueDate;
+    private Date expiryDate;
 
     
     @Column(name = "status", length = 50)

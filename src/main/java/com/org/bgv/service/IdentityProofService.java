@@ -2,11 +2,17 @@ package com.org.bgv.service;
 
 import com.org.bgv.dto.DocumentResponse;
 import com.org.bgv.dto.DocumentStats;
+import com.org.bgv.dto.DocumentUploadRequest;
+import com.org.bgv.dto.FieldDTO;
 import com.org.bgv.dto.IdentityProofDTO;
 import com.org.bgv.dto.IdentityProofResponse;
+import com.org.bgv.dto.IdentitySectionRequest;
+import com.org.bgv.dto.UploadRuleDTO;
+import com.org.bgv.entity.DocumentCategory;
 import com.org.bgv.entity.IdentityDocuments;
 import com.org.bgv.entity.IdentityProof;
 import com.org.bgv.entity.Profile;
+import com.org.bgv.repository.DocumentCategoryRepository;
 import com.org.bgv.repository.IdentityDocumentsRepository;
 import com.org.bgv.repository.IdentityProofRepository;
 import com.org.bgv.repository.ProfileRepository;
@@ -20,6 +26,7 @@ import org.springframework.transaction.annotation.Transactional;
 
 import java.util.Collections;
 import java.util.List;
+import java.util.Optional;
 import java.util.stream.Collectors;
 
 @Service
@@ -31,6 +38,7 @@ public class IdentityProofService {
     private final IdentityDocumentsRepository identityDocumentsRepository;
     private final ProfileRepository profileRepository;
     private final S3StorageService s3StorageService;
+    private final DocumentCategoryRepository documentCategoryRepository;
     /**
      * Fetch all identity proofs with their related documents for a given profile.
      */
@@ -145,4 +153,145 @@ public class IdentityProofService {
     	identityProofRepository.deleteByProfile_ProfileId(profileId);
     	
     }
+    
+    
+    
+    public IdentitySectionRequest createIdentitySectionResponse(Long candidateId) {
+    	
+    	String section = "IDENTITY_PROOF";
+    	
+    	 Optional<DocumentCategory> documentCategoryOpt = documentCategoryRepository.findByNameIgnoreCase(section);
+         
+         if (documentCategoryOpt.isEmpty()) {
+             throw new RuntimeException("Section not found: " + section);
+         }
+    	
+    	
+    	
+        return IdentitySectionRequest.builder()
+                .section("Identity")
+                .label("Identity")
+                .documents(createIdentityDocuments(candidateId))
+                .build();
+    }
+    
+    private static List<DocumentUploadRequest> createIdentityDocuments(Long candidateId) {
+        return List.of(
+            createAadharDocument(candidateId),
+            createPanCardDocument(),
+            createPassportDocument()
+        );
+    }
+    
+    private static DocumentUploadRequest createAadharDocument(Long candidateId) {
+        return DocumentUploadRequest.builder()
+                .type("AADHAR")
+                .label("Aadhar Card")
+                .fields(createAadharFields())
+                .upload(UploadRuleDTO.builder()
+                        .multiple(true)
+                        .required(true)
+                        .build())
+                .savedDocuments(List.of()) // Empty for new uploads
+                .filesToAdd(null) // Will be set during file upload
+                .filesToDelete(List.of()) // No files to delete initially
+                .build();
+    }
+    
+    private static List<FieldDTO> createAadharFields() {
+        return List.of(
+            FieldDTO.builder()
+                    .name("documentNumber")
+                    .label("Aadhar Number")
+                    .type("text")
+                    .required(true)
+                    .value("") // Empty for new entry
+                    .build(),
+            FieldDTO.builder()
+                    .name("issueDate")
+                    .label("Issue Date")
+                    .type("date")
+                    .required(false)
+                    .value("")
+                    .build()
+        );
+    }
+    
+    private static DocumentUploadRequest createPanCardDocument() {
+        return DocumentUploadRequest.builder()
+                .type("PAN")
+                .label("PAN Card")
+                .fields(createPanFields())
+                .upload(UploadRuleDTO.builder()
+                        .multiple(false)
+                        .required(true)
+                        .build())
+                .savedDocuments(List.of())
+                .filesToAdd(null)
+                .filesToDelete(List.of())
+                .build();
+    }
+    
+    private static List<FieldDTO> createPanFields() {
+        return List.of(
+            FieldDTO.builder()
+                    .name("documentNumber")
+                    .label("PAN Number")
+                    .type("text")
+                    .required(true)
+                    .value("")
+                    .build(),
+            FieldDTO.builder()
+                    .name("issueDate")
+                    .label("Issue Date")
+                    .type("date")
+                    .required(false)
+                    .value("")
+                    .build()
+        );
+    }
+    
+    private static DocumentUploadRequest createPassportDocument() {
+        return DocumentUploadRequest.builder()
+                .type("PASSPORT")
+                .label("Passport")
+                .fields(createPassportFields())
+                .upload(UploadRuleDTO.builder()
+                        .multiple(false)
+                        .required(false)
+                        .build())
+                .savedDocuments(List.of())
+                .filesToAdd(null)
+                .filesToDelete(List.of())
+                .build();
+    }
+    
+    private static List<FieldDTO> createPassportFields() {
+        return List.of(
+            FieldDTO.builder()
+                    .name("documentNumber")
+                    .label("Passport Number")
+                    .type("text")
+                    .required(true)
+                    .value("")
+                    .build(),
+            FieldDTO.builder()
+                    .name("issueDate")
+                    .label("Issue Date")
+                    .type("date")
+                    .required(true)
+                    .value("")
+                    .build(),
+            FieldDTO.builder()
+                    .name("expiryDate")
+                    .label("Expiry Date")
+                    .type("date")
+                    .required(true)
+                    .value("")
+                    .build()
+        );
+    }
+    
+    
+    
 }

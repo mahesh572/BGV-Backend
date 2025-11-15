@@ -65,6 +65,9 @@ public class Candidate {
     @Column(name = "job_search_status")
     private String jobSearchStatus; // ACTIVE, PASSIVE, NOT_LOOKING
     
+    @Column(name = "isConsentProvided")
+    private Boolean isConsentProvided;
+    
     // One-to-Many with Applications
     @OneToMany(mappedBy = "candidate", cascade = CascadeType.ALL, fetch = FetchType.LAZY)
     private List<JobApplication> jobApplications = new ArrayList();

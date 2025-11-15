@@ -24,7 +24,7 @@ public class UserMapper implements BaseMapper<User, UserDto> {
         dto.setEmail(entity.getEmail());
         dto.setUserType(entity.getUserType());
         dto.setPhoneNumber(entity.getPhoneNumber());
-		
+        dto.setPasswordResetrequired(entity.getPasswordResetrequired()==null?Boolean.FALSE:entity.getPasswordResetrequired());
 
         return dto;
     }

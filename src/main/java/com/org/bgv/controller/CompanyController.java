@@ -26,6 +26,7 @@ import com.org.bgv.common.RoleConstants;
 import com.org.bgv.common.Status;
 import com.org.bgv.company.dto.CompanyRegistrationRequestDTO;
 import com.org.bgv.company.dto.CompanyRegistrationResponse;
+import com.org.bgv.company.dto.EmployeeDTO;
 import com.org.bgv.company.dto.PersonDTO;
 import com.org.bgv.config.SecurityUtils;
 import com.org.bgv.constants.Constants;
@@ -230,14 +231,14 @@ public class CompanyController {
     @PostMapping("/{companyId}/employee")
     public ResponseEntity<CustomApiResponse<Boolean>> addEmployee(
     		@PathVariable Long companyId,
-            @RequestBody PersonDTO employeeDTO,
+            @RequestBody EmployeeDTO employeeDTO,
             @RequestParam(defaultValue = "ACTIVE") String status) {
         
         log.info("Received employee addition request for company ID: {}, employee: {}", 
                  companyId, employeeDTO.getEmail());
         
         try {
-            Boolean response = companyService.addPerson(companyId, employeeDTO,Status.USER_TYPE_COMPANY);
+            Boolean response = companyService.addEmployee(companyId, employeeDTO,Status.USER_TYPE_COMPANY);
             return ResponseEntity.ok(CustomApiResponse.success(
                 "Employee added successfully", 
                 response, 

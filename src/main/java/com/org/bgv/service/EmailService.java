@@ -1,18 +1,32 @@
 package com.org.bgv.service;
 
+import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Optional;
 import java.util.stream.Collectors;
 
+import org.apache.catalina.security.SecurityUtil;
+import org.apache.commons.text.StringSubstitutor;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.springframework.mail.SimpleMailMessage;
+import org.springframework.mail.javamail.JavaMailSender;
+import org.springframework.mail.javamail.MimeMessageHelper;
 import org.springframework.stereotype.Service;
 
 import com.org.bgv.common.EmailTemplateDTO;
+import com.org.bgv.company.dto.EmployeeDTO;
+import com.org.bgv.config.SecurityUtils;
+import com.org.bgv.entity.Company;
 import com.org.bgv.entity.Email;
 import com.org.bgv.entity.EmailTemplate;
+import com.org.bgv.entity.User;
+import com.org.bgv.repository.CompanyRepository;
 import com.org.bgv.repository.EmailTemplateRepository;
 
+import jakarta.mail.MessagingException;
+import jakarta.mail.internet.MimeMessage;
 import jakarta.persistence.EntityNotFoundException;
 import lombok.RequiredArgsConstructor;
 
@@ -25,6 +39,11 @@ public class EmailService {
 	private final EmailTemplateRepository emailTemplateRepository;
 	
 	private final FileReaderService fileReaderService;
+	
+	private final JavaMailSender mailSender;
+	
+	// private final StringSubstitutor stringSubstitutor;
+	 private final CompanyRepository companyRepository;
 	
 	private final Map<String, TemplateConfig> templateConfigs = Map.of(
 	        "account_creation", new TemplateConfig("Welcome New User", "templates/email/account-creation.html", "templates/email/account-creation.txt"),
@@ -184,7 +203,7 @@ public class EmailService {
      */
     public EmailTemplateDTO createTemplate(EmailTemplateDTO templateDTO) throws Exception {
         // Check if template type already exists
-        if (emailTemplateRepository.existsByType(templateDTO.getType())) {
+        if (emailTemplateRepository.existsByTypeAndName(templateDTO.getType(),templateDTO.getName())) {
             throw new Exception("Template with type '" + templateDTO.getType() + "' already exists");
         }
 
@@ -299,4 +318,98 @@ public class EmailService {
         public String getHtmlFilePath() { return htmlFilePath; }
         public String getTextFilePath() { return textFilePath; }
     }
+    
+    
+    // type: account_creation, placeholder,
+    
+    public void sendSimpleMail(String[] to, String subject, String text) {
+        SimpleMailMessage message = new SimpleMailMessage();
+        message.setTo(to);
+        message.setSubject(subject);
+        message.setText(text);
+        mailSender.send(message);
+    }
+    
+    
+    public String processTemplate(String template, Map<String, Object> variables) {
+    	
+    	StringSubstitutor stringSubstitutor = new StringSubstitutor(new HashMap<>(), "{", "}"); 
+        return stringSubstitutor.replace(template, variables);
+    }
+    
+    // Method with custom prefix/suffix
+    public String processTemplateWithCustomDelimiters(String template, 
+                                                     Map<String, Object> variables, 
+                                                     String prefix, 
+                                                     String suffix) {
+        StringSubstitutor customSubstitutor = new StringSubstitutor(variables, prefix, suffix);
+        return customSubstitutor.replace(template);
+    }
+    
+    public void sendEmailToEmployeeRegistrationSuccess(User user,String tempPassword) {
+    	
+    	Long companyId = SecurityUtils.getCurrentUserCompanyId();
+    	Company company = companyRepository.findById(companyId)
+                .orElseThrow(() -> new RuntimeException("Company not found with ID: " + companyId));
+    	
+	        String from =company.getContactEmail();
+	        String to = user.getEmail();
+	     
+	        EmailTemplate emailTemplate = getEmailTemplate("employee_account_creation", "Employee Registration");
+	        
+	        // Prepare variables
+	        Map<String, Object> variables = new HashMap();
+	        variables.put("company", company.getCompanyName());
+	        variables.put("name", user.getFirstName()+user.getLastName());
+	        variables.put("email", user.getEmail());
+	        variables.put("password", tempPassword);
+	        variables.put("portalUrl", "https://localhost:5173/login");
+	        
+	        // from,to,placeholder,html body
+	        
+	        	        
+	        String subject = processTemplate(emailTemplate.getSubject(), variables);
+	        
+	     // Process template
+	        String processedHtml = processTemplate(emailTemplate.getBodyHtml(), variables);
+	        sendEmail(from,to, subject, processedHtml);
+    }
+    
+    public void sendEmailResetPasswordSuccessfull(User user) {
+    	
+    	EmailTemplate emailTemplate = getEmailTemplate("PASSWORD_RESET_SUCCESS", "Password Reset Successful");
+    	// Prepare variables
+        Map<String, Object> variables = new HashMap();
+       
+        variables.put("firstName", user.getFirstName());
+        variables.put("loginLink", "https://localhost:5173/login");
+        String processedHtml = processTemplate(emailTemplate.getBodyHtml(), variables);
+        
+        sendEmail("contact@bgv.com",user.getEmail(), emailTemplate.getSubject(), processedHtml);
+        
+    }
+    
+    
+    private EmailTemplate getEmailTemplate(String type, String name) {
+        return emailTemplateRepository.findByTypeAndName(type, name)
+                .orElseThrow(() -> new EntityNotFoundException(
+                    String.format("Email template not found for type: '%s' and name: '%s'", type, name))
+                );
+    }
+    private void sendEmail(String from,String to, String subject, String htmlContent) {
+        MimeMessage message = mailSender.createMimeMessage();
+        
+        try {
+            MimeMessageHelper helper = new MimeMessageHelper(message, true, "UTF-8");
+            helper.setTo(to);
+            helper.setSubject(subject);
+            helper.setText(htmlContent, true); // true = isHTML
+            
+            mailSender.send(message);
+        } catch (MessagingException e) {
+            throw new RuntimeException("Failed to send email", e);
+        }
+    }
+    
+    
 }

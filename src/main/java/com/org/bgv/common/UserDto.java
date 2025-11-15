@@ -29,5 +29,8 @@ public class UserDto {
     private Long profileId;
     private Long companyId;
     private List<String> roles;
+    private Boolean hasConsentProvided;
+    private Long candidateId;
+    private Boolean passwordResetrequired;
     
 }

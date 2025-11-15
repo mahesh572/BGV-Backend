@@ -9,6 +9,7 @@ import com.org.bgv.common.PageRequestDto;
 import com.org.bgv.common.PaginationMetadata;
 import com.org.bgv.common.PaginationRequest;
 import com.org.bgv.common.PaginationResponse;
+import com.org.bgv.common.RoleConstants;
 import com.org.bgv.common.SortField;
 import com.org.bgv.common.SortingMetadata;
 import com.org.bgv.common.SortingRequest;
@@ -17,6 +18,7 @@ import com.org.bgv.common.UserSearchRequest;
 import com.org.bgv.config.JwtUtil;
 import com.org.bgv.controller.UserController;
 import com.org.bgv.dto.UserDetailsDto;
+import com.org.bgv.entity.Candidate;
 import com.org.bgv.entity.Company;
 import com.org.bgv.entity.CompanyUser;
 import com.org.bgv.entity.Role;
@@ -67,6 +69,8 @@ public class UserService {
     private final CompanyUserRepository companyUserRepository;
     private final PasswordEncoder passwordEncoder;
     private final CompanyRepository companyRepository;
+    private final CandidateService candidateService;
+    private final EmailService emailService;
     
     private static final Logger logger = LoggerFactory.getLogger(UserService.class);
 
@@ -250,6 +254,7 @@ public class UserService {
                     .map(userMapper::toDto)
                     .orElseThrow(() -> new RuntimeException("User not found with email: " + email));
             userDto.setRoles(getUserRoles(userDto.getUserId()));
+            
             return userDto;
         } catch (Exception e) {
             throw new RuntimeException("Failed to fetch user by email: " + e.getMessage(), e);
@@ -346,6 +351,16 @@ public class UserService {
             if (companyUsers != null && !companyUsers.isEmpty()) {
                 userDto.setCompanyId(companyUsers.get(0).getCompanyId());
             }
+            if(userDto.getRoles().contains(RoleConstants.ROLE_CANDIDATE)) {
+            	Candidate candidate = candidateService.getCandidateByUserId(userDto.getUserId());
+            	if(candidate!=null) {
+            		userDto.setHasConsentProvided(candidate.getIsConsentProvided()==null?Boolean.FALSE:candidate.getIsConsentProvided());
+            		userDto.setCandidateId(candidate.getCandidateId());
+            	}
+            }else {
+            	userDto.setHasConsentProvided(Boolean.TRUE);
+            	
+            }
         }
 
         return userDto;
@@ -417,15 +432,18 @@ public class UserService {
     }
 
     
-    public void resetPassword(Long userId, String newPassword) {
+    public void resetPassword(Long userId, ChangePasswordRequest request) {
+    	logger.info("resetPassword:::::::::::::::::::::::::::::::");
         User user = userRepository.findById(userId)
                 .orElseThrow(() -> new RuntimeException("User not found with id: " + userId));
 
-        String encodedPassword = passwordEncoder.encode(newPassword);
+        String encodedPassword = passwordEncoder.encode(request.getNewPassword());
         user.setPassword(encodedPassword);
         user.setUpdatedAt(java.time.LocalDateTime.now());
+        user.setPasswordResetrequired(Boolean.FALSE);
 
         userRepository.save(user);
+        emailService.sendEmailResetPasswordSuccessfull(user);
         
         logger.info("Password reset successfully for user: {}", user.getEmail());
     }

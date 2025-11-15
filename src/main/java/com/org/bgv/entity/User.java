@@ -63,6 +63,12 @@ public class User {
     @Column(name = "date_of_birth")
     private LocalDate dateOfBirth;
     
+    @Column(name = "passwordResetrequired",
+    		nullable = false, 
+            columnDefinition = "boolean default false"
+    		)
+    private Boolean passwordResetrequired;
+    
     
     
     @OneToMany(mappedBy = "user", cascade = CascadeType.ALL, fetch = FetchType.LAZY)

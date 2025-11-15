@@ -12,18 +12,27 @@ import org.springframework.security.authentication.UsernamePasswordAuthenticatio
 import org.springframework.security.core.Authentication;
 import org.springframework.security.core.AuthenticationException;
 import org.springframework.web.bind.annotation.CookieValue;
+import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 
+import com.org.bgv.api.response.CustomApiResponse;
+import com.org.bgv.common.ChangePasswordRequest;
 import com.org.bgv.config.CustomUserDetails;
 import com.org.bgv.config.JwtUtil;
 import com.org.bgv.dto.AuthRequest;
 import com.org.bgv.dto.AuthResponse;
 import com.org.bgv.service.CompanyService;
+import com.org.bgv.service.UserService;
 
+import io.swagger.v3.oas.annotations.Operation;
+import io.swagger.v3.oas.annotations.Parameter;
+import io.swagger.v3.oas.annotations.responses.ApiResponse;
+import io.swagger.v3.oas.annotations.responses.ApiResponses;
 import jakarta.servlet.http.HttpServletResponse;
+import jakarta.validation.Valid;
 
 @RestController
 @RequestMapping("/auth")
@@ -32,6 +41,8 @@ public class AuthController {
 
     @Autowired 
     private AuthenticationManager authenticationManager;
+    @Autowired 
+    private UserService userService;
     
     @Autowired 
     private JwtUtil jwtUtil;
@@ -118,33 +129,28 @@ public class AuthController {
         return ResponseEntity.ok("Logged out successfully");
     }
 
-    /**
-     * Get the company ID for the user
-     * For admin users, return the default admin company ID
-     * For regular users, return their assigned company ID
-     */
-    /*
-    private Long getUserCompanyId(Long userId) {
+    @PostMapping("/{userId}/reset-password")
+    @Operation(summary = "Change user password", description = "Change password for a specific user")
+    @ApiResponses({
+        @ApiResponse(responseCode = "200", description = "Password changed successfully"),
+        @ApiResponse(responseCode = "400", description = "Invalid input or current password incorrect"),
+        @ApiResponse(responseCode = "404", description = "User not found"),
+        @ApiResponse(responseCode = "500", description = "Internal server error")
+    })
+    public ResponseEntity<CustomApiResponse<Void>> changePassword(
+            @Parameter(description = "ID of the user", required = true, example = "123")
+            @PathVariable Long userId,
+            @Valid @RequestBody ChangePasswordRequest request) {
         try {
-            // Get user's companies
-            var userCompanies = companyService.getCompaniesByUser(userId);
-            
-            if (userCompanies.isEmpty()) {
-                logger.warn("⚠️ No company found for user ID: {}, using default admin company", userId);
-                // Return default admin company if no company assigned
-                return companyService.getDefaultAdminCompany()
-                        .orElseThrow(() -> new RuntimeException("Default admin company not found"))
-                        .getId();
-            }
-            
-            // For now, return the first company
-            // You might want to implement company selection logic here
-            return userCompanies.get(0).getCompany().getId();
-            
+        	logger.info("reset-password controller:::::::{}",userId);
+            userService.resetPassword(userId, request);
+            return ResponseEntity.ok(CustomApiResponse.success("Password Reset successfully", null, HttpStatus.OK));
+        } catch (RuntimeException e) {
+            return ResponseEntity.status(HttpStatus.BAD_REQUEST)
+                    .body(CustomApiResponse.failure(e.getMessage(), HttpStatus.BAD_REQUEST));
         } catch (Exception e) {
-            logger.error("❌ Error getting company for user ID {}: {}", userId, e.getMessage());
-            throw new RuntimeException("Unable to determine user's company");
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
+                    .body(CustomApiResponse.failure("Failed to Reset password: " + e.getMessage(), HttpStatus.INTERNAL_SERVER_ERROR));
         }
     }
-    */
 }

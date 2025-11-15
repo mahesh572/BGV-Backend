@@ -12,6 +12,8 @@ public class Constants {
 	 public static final String CANDIDATE_SOURCE_EMPLOYER = "COMPANY";
 	 public static final String CANDIDATE_SOURCE_ADMIN = "ADMIN";
 	 
+	 public static final String USER_STATUS_ACTIVE = "ACTIVE";
+	 
 	// Candidate record is just created in the system but no background verification has started.
 	 public static final String CANDIDATE_STATUS_CREATED = "CREATED";
 	 

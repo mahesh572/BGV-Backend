@@ -23,6 +23,7 @@ import org.springframework.transaction.annotation.Transactional;
 import org.springframework.util.StringUtils;
 
 import com.org.bgv.common.ColumnMetadata;
+import com.org.bgv.common.CommonUtils;
 import com.org.bgv.common.CompanySearchRequest;
 import com.org.bgv.common.FilterMetadata;
 import com.org.bgv.common.FilterRequest;
@@ -39,17 +40,20 @@ import com.org.bgv.common.UserSearchRequest;
 import com.org.bgv.company.dto.CompanyDetailsDTO;
 import com.org.bgv.company.dto.CompanyRegistrationRequestDTO;
 import com.org.bgv.company.dto.CompanyRegistrationResponse;
+import com.org.bgv.company.dto.EmployeeDTO;
 import com.org.bgv.company.dto.EmployerDTO;
 import com.org.bgv.company.dto.PersonDTO;
 import com.org.bgv.dto.BasicdetailsDTO;
 import com.org.bgv.entity.Company;
 import com.org.bgv.entity.CompanyUser;
+import com.org.bgv.entity.EmailTemplate;
 import com.org.bgv.entity.Profile;
 import com.org.bgv.entity.Role;
 import com.org.bgv.entity.User;
 import com.org.bgv.entity.UserRole;
 import com.org.bgv.repository.CompanyRepository;
 import com.org.bgv.repository.CompanyUserRepository;
+import com.org.bgv.repository.EmailTemplateRepository;
 import com.org.bgv.repository.ProfileRepository;
 import com.org.bgv.repository.RoleRepository;
 import com.org.bgv.repository.UserRepository;
@@ -75,6 +79,8 @@ public class CompanyService {
 	    private final UserRoleRepository userRoleRepository;
 	    private final ProfileService profileService;
 	    private final ProfileRepository profileRepository;
+	    private final EmailTemplateRepository emailTemplateRepository;
+	    private final EmailService emailService;
 	   
 	    
 	  //  private final String FILE_UPLOAD_DIR = "uploads/profile-pictures/";
@@ -202,133 +208,52 @@ public class CompanyService {
 	        return updatedCompany;
 	    }
 	    
-	    public Boolean addPerson(Long companyId, PersonDTO employeeDTO,String type) {
-	    	log.info("addPerson::::::::::::::::::::::STARTED");
-	    	
-	    	String roleName=Status.ROLE_CANDIDATE;
-	    	if(type!=null && type.contains("COMPANY")) {
-	    		roleName = Status.ROLE_COMPANY_EMPLOYEE;
-	    		
-	    	}
-	    	
-	    	if(employeeDTO.getStatus().equalsIgnoreCase("ACTIVE")) {
-	    		log.info("addPerson::::::::::::employeeDTO.getStatus()::::::::::{}",employeeDTO.getStatus());
-	    		if(employeeDTO.getId()==null) {
-	    			log.info("addPerson::::::::::::employeeDTO.getId()::::::::::{}",employeeDTO.getId());
-	    			 // Create new User entity from DTO
-	    	        User user = User.builder()
-	    	                .firstName(employeeDTO.getFirstName())
-	    	                .lastName(employeeDTO.getLastName())
-	    	                .phoneNumber(employeeDTO.getMobileNo())
-	    	                .email(employeeDTO.getEmail())
-	    	                .gender(employeeDTO.getGender())
-	    	               // .password(UUID.randomUUID().toString())
-	    	                .password(passwordEncoder.encode("123456"))
-	    	                .userType(type)
-	    	                .status(employeeDTO.getStatus())
-	    	                .build();
+	    public Boolean addEmployee(Long companyId, EmployeeDTO employeeDTO,String type) {
+	    	log.info("addEmployee::::::::::::::::::::::STARTED");
+	    	   	    		    	
+	    	String tempPassword = CommonUtils.generateTempPassword();
+	    	User user = User.builder()
+	                .firstName(employeeDTO.getFirstName())
+	                .lastName(employeeDTO.getLastName())
+	                .phoneNumber(employeeDTO.getMobileNo())
+	                .email(employeeDTO.getEmail())
+	                .gender(employeeDTO.getGender())
+	               // .password(UUID.randomUUID().toString())
+	                .password(passwordEncoder.encode(tempPassword))
+	                .userType(type)
+	                .passwordResetrequired(Boolean.TRUE)
+	                .status(employeeDTO.getStatus())
+	                .build();
 
-	    	        // Save user first (if User is a new entity)
-	    	        userRepository.save(user);
+	        // Save user first (if User is a new entity)
+	        userRepository.save(user);
+	        // Find Company
+	        Company company = companyRepository.findById(companyId)
+	                .orElseThrow(() -> new RuntimeException("Company not found with ID: " + companyId));
 
-	    	        // Find Role
-	    	        Role companyRole = roleRepository.findByName(roleName)
-	    	                .orElseThrow(() -> new RuntimeException(employeeDTO.getRole() + " not found"));
+	        // Create CompanyUser mapping
+	        CompanyUser companyUser = new CompanyUser();
+	        companyUser.setCompany(company);
+	        companyUser.setUser(user);
 
-	    	        // Create UserRole mapping
-	    	        UserRole userRole = UserRole.builder()
-	    	                .user(user)
-	    	                .role(companyRole)
-	    	                .build();
+	        companyUserRepository.save(companyUser);
 
-	    	        userRoleRepository.save(userRole);
-
-	    	        // Find Company
-	    	        Company company = companyRepository.findById(companyId)
-	    	                .orElseThrow(() -> new RuntimeException("Company not found with ID: " + companyId));
-
-	    	        // Create CompanyUser mapping
-	    	        CompanyUser companyUser = new CompanyUser();
-	    	        companyUser.setCompany(company);
-	    	        companyUser.setUser(user);
-
-	    	        companyUserRepository.save(companyUser);
-	    	        
-	    	        Profile profile =  Profile.builder()
-	                //  .profileId(dto.getBasicDetails().getProfileId())
-	                  .firstName(employeeDTO.getFirstName())
-	                  .lastName(employeeDTO.getLastName())
-	                  .emailAddress(employeeDTO.getEmail())
-	                  .phoneNumber(employeeDTO.getMobileNo())
-	                 // .dateOfBirth(employeeDTO.getDateOfBirth())
-	                  .gender(employeeDTO.getGender())
-	                 // .userId(dto.getUser_id())
-	                  .user(user)
-	                  .status(employeeDTO.getStatus())
-	                  .build();
-	    			
-	    	        profileRepository.save(profile);
-	    		}else {
-	    			
-	    			 User user = userRepository.findById(employeeDTO.getId())
-	    	                 .orElseThrow(() -> new RuntimeException("User not found: " + employeeDTO.getId()));
-	    			
-	    			 Profile profile=Profile.builder()
-		                //  .profileId(dto.getBasicDetails().getProfileId())
-		                  .firstName(employeeDTO.getFirstName())
-		                  .lastName(employeeDTO.getLastName())
-		                  .emailAddress(employeeDTO.getEmail())
-		                  .phoneNumber(employeeDTO.getMobileNo())
-		                 // .dateOfBirth(employeeDTO.getDateOfBirth())
-		                  .gender(employeeDTO.getGender())
-		                 // .userId(dto.getUser_id())
-		                  .user(user)
-		                  .status(employeeDTO.getStatus())
-		                  .build();
-	    			 profileRepository.save(profile);
-	    		}
-	    		
-	    	}else {
-	    		 // Create new User entity from DTO
-    	        User user = User.builder()
-    	                .firstName(employeeDTO.getFirstName())
-    	                .lastName(employeeDTO.getLastName())
-    	                .phoneNumber(employeeDTO.getMobileNo())
-    	                .email(employeeDTO.getEmail())
-    	                .gender(employeeDTO.getGender())
-    	               // .password(UUID.randomUUID().toString())
-    	                .password(passwordEncoder.encode("123456"))
-    	                .userType(type)
-    	                .status(employeeDTO.getStatus())
-    	                .build();
-
-    	        // Save user first (if User is a new entity)
-    	        userRepository.save(user);
-
-    	        // Find Role
-    	        Role companyRole = roleRepository.findByName(roleName)
-    	                .orElseThrow(() -> new RuntimeException(employeeDTO.getRole() + " not found"));
-
-    	        // Create UserRole mapping
-    	        UserRole userRole = UserRole.builder()
-    	                .user(user)
-    	                .role(companyRole)
-    	                .build();
-
-    	        userRoleRepository.save(userRole);
-
-    	        // Find Company
-    	        Company company = companyRepository.findById(companyId)
-    	                .orElseThrow(() -> new RuntimeException("Company not found with ID: " + companyId));
-
-    	        // Create CompanyUser mapping
-    	        CompanyUser companyUser = new CompanyUser();
-    	        companyUser.setCompany(company);
-    	        companyUser.setUser(user);
-
-    	        companyUserRepository.save(companyUser);
-	    		
-	    	}
+	        Profile profile =  Profile.builder()
+            //  .profileId(dto.getBasicDetails().getProfileId())
+              .firstName(employeeDTO.getFirstName())
+              .lastName(employeeDTO.getLastName())
+              .emailAddress(employeeDTO.getEmail())
+              .phoneNumber(employeeDTO.getMobileNo())
+             // .dateOfBirth(employeeDTO.getDateOfBirth())
+              .gender(employeeDTO.getGender())
+             // .userId(dto.getUser_id())
+              .user(user)
+              .status(employeeDTO.getStatus())
+              .build();
+			
+	        profileRepository.save(profile);
+	        
+	        emailService.sendEmailToEmployeeRegistrationSuccess(user,tempPassword);
 
 	        return true;
 	    }
