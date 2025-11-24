@@ -7,7 +7,8 @@ import com.org.bgv.dto.FieldOfStudyResponse;
 import com.org.bgv.entity.EducationHistory;
 import com.org.bgv.entity.Profile;
 import com.org.bgv.entity.DegreeType;
-import com.org.bgv.entity.EducationDocuments;
+
+//import com.org.bgv.entity.EducationDocuments;
 import com.org.bgv.entity.FieldOfStudy;
 import com.org.bgv.repository.EducationHistoryRepository;
 import com.org.bgv.repository.ProfileRepository;
@@ -16,7 +17,6 @@ import com.org.bgv.s3.S3StorageService;
 import jakarta.persistence.EntityNotFoundException;
 
 import com.org.bgv.repository.DegreeTypeRepository;
-import com.org.bgv.repository.EducationDocumentsRepository;
 import com.org.bgv.repository.FieldOfStudyRepository;
 import lombok.RequiredArgsConstructor;
 
@@ -44,7 +44,7 @@ public class EducationService {
     private final ProfileRepository profileRepository;
     private final DegreeTypeRepository degreeTypeRepository;
     private final FieldOfStudyRepository fieldOfStudyRepository;
-    private final EducationDocumentsRepository educationDocumentsRepository;
+   // private final EducationDocumentsRepository educationDocumentsRepository;
     private final S3StorageService s3StorageService;
 
     private static final Logger logger = LoggerFactory.getLogger(EducationService.class);
@@ -71,10 +71,8 @@ public class EducationService {
                 .map(EducationHistory::getId)
                 .collect(Collectors.toList());
 
-        List<EducationDocuments> eduDocuments = educationDocumentsRepository.findByProfile_ProfileIdAndObjectIdIn(profileId, eduIds);
-
         return educationHistories.stream()
-                .map(education -> convertEducationDetails(education, eduDocuments))
+                .map(education -> convertEducationDetails(education))
                 .collect(Collectors.toList());
     }
 
@@ -221,14 +219,15 @@ public class EducationService {
     }
 
     public void deleteAllEducationByProfile(Long profileId) {
-    	
+    	/*
     	 List<EducationDocuments> allDocuments = educationDocumentsRepository.findByProfile_ProfileId(profileId);
     	 for (EducationDocuments document : allDocuments) {
              if (document.getAwsDocKey() != null) {
                  s3StorageService.deleteFile(document.getAwsDocKey());
              }
          }
-    	educationDocumentsRepository.deleteByProfile_ProfileId(profileId);
+         */
+    	// educationDocumentsRepository.deleteByProfile_ProfileId(profileId);
         educationHistoryRepository.deleteByProfile_ProfileId(profileId);
     }
 
@@ -262,12 +261,14 @@ public class EducationService {
                 .build();
     }
 
-    private EducationHistoryDTO convertEducationDetails(EducationHistory educationHistory, List<EducationDocuments> eduDocuments) {
-        List<DocumentResponse> documentResponses = eduDocuments.stream()
+    private EducationHistoryDTO convertEducationDetails(EducationHistory educationHistory) {
+       
+    	/*
+    	List<DocumentResponse> documentResponses = eduDocuments.stream()
                 .filter(doc -> doc.getObjectId() != null && doc.getObjectId().equals(educationHistory.getId()))
                 .map(this::convertToDocumentResponse)
                 .collect(Collectors.toList());
-
+       */
         return EducationHistoryDTO.builder()
                 .id(educationHistory.getId())
                 .qualificationType(educationHistory.getDegree() != null ? educationHistory.getDegree().getDegreeId() : null)
@@ -288,10 +289,11 @@ public class EducationService {
                 .country(educationHistory.getCountry())
                 .yearOfPassing(educationHistory.getYearOfPassing())
                 .typeOfEducation(educationHistory.getTypeOfEducation())
-                .documents(documentResponses) // include filtered documents
+              //  .documents(documentResponses) // include filtered documents
                 .build();
     }
-
+    
+/*
     private DocumentResponse convertToDocumentResponse(EducationDocuments document) {
         return DocumentResponse.builder()
                 .doc_id(document.getDocId())
@@ -310,7 +312,7 @@ public class EducationService {
                 .awsDocKey(document.getAwsDocKey())
                 .build();
     }
-
+*/
     private String extractFileName(String fileUrl) {
         if (fileUrl == null) return null;
         return fileUrl.substring(fileUrl.lastIndexOf("/") + 1);

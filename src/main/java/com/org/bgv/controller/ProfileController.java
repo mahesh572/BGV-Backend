@@ -153,6 +153,7 @@ public class ProfileController {
                     .body(CustomApiResponse.failure("Failed to update education history: " + e.getMessage(), HttpStatus.INTERNAL_SERVER_ERROR));
         }
     }
+    
     @GetMapping("/{profileId}/education")
     public ResponseEntity<CustomApiResponse<List<EducationHistoryDTO>>> getEducationHistory(@PathVariable Long profileId) {
         try {
@@ -166,6 +167,7 @@ public class ProfileController {
                     .body(CustomApiResponse.failure("Failed to retrieve education history: " + e.getMessage(), HttpStatus.INTERNAL_SERVER_ERROR));
         }
     }
+    
     @DeleteMapping("/{profileId}/education/{educationId}")
     public ResponseEntity<CustomApiResponse<Void>> deleteEducationHistory(@PathVariable Long profileId,
             @PathVariable Long educationId) {

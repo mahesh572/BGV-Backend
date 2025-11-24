@@ -32,7 +32,7 @@ public class DocumentType {
 
     @ManyToOne
     @JoinColumn(name = "category_id")
-    private DocumentCategory category;
+    private CheckCategory category;
     
     @Column(name = "label")
     private String label;
@@ -41,6 +41,8 @@ public class DocumentType {
     private boolean isRequired;
     
     private String upload;
+    
+    private String code;
 
     // getters and setters
 }

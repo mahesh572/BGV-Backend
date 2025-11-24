@@ -14,13 +14,14 @@ public class DocumentUploadRequest {
 	
 	    private String type;  // AADHAR
         private String label; // display name
+        private Long typeId;
 	    private List<FieldDTO> fields;
 
-	    private UploadRuleDTO upload;
+	   // private UploadRuleDTO upload;
 
-	    private List<SavedDocumentDTO> savedDocuments;
+	   // private List<SavedDocumentDTO> savedDocuments;
 
-	    private List<MultipartFile> filesToAdd;
+	   // private List<MultipartFile> filesToAdd;
 
-	    private List<FileToDeleteDTO> filesToDelete;
+	  //  private List<FileToDeleteDTO> filesToDelete;
 }

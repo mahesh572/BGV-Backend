@@ -4,7 +4,7 @@ import java.time.LocalDateTime;
 
 public interface BaseDocument {
 	Long getDocId();
-    DocumentCategory getCategory();
+    CheckCategory getCategory();
     DocumentType getDocTypeId();
     String getFileUrl();
     Long getFileSize();

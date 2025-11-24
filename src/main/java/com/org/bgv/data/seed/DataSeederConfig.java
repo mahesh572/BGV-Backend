@@ -4,11 +4,11 @@ import com.org.bgv.common.RoleConstants;
 import com.org.bgv.common.navigation.CreateNavigationMenuDto;
 import com.org.bgv.common.navigation.NavigationResponseDto;
 import com.org.bgv.entity.BGVCategory;
+import com.org.bgv.entity.CheckCategory;
 import com.org.bgv.entity.CheckType;
 import com.org.bgv.entity.Company;
 import com.org.bgv.entity.CompanyUser;
 import com.org.bgv.entity.DegreeType;
-import com.org.bgv.entity.DocumentCategory;
 import com.org.bgv.entity.DocumentType;
 import com.org.bgv.entity.FieldOfStudy;
 import com.org.bgv.entity.Other;
@@ -18,11 +18,11 @@ import com.org.bgv.entity.RolePermission;
 import com.org.bgv.entity.User;
 import com.org.bgv.entity.UserRole;
 import com.org.bgv.repository.BGVCategoryRepository;
+import com.org.bgv.repository.CheckCategoryRepository;
 import com.org.bgv.repository.CheckTypeRepository;
 import com.org.bgv.repository.CompanyRepository;
 import com.org.bgv.repository.CompanyUserRepository;
 import com.org.bgv.repository.DegreeTypeRepository;
-import com.org.bgv.repository.DocumentCategoryRepository;
 import com.org.bgv.repository.DocumentTypeRepository;
 import com.org.bgv.repository.FieldOfStudyRepository;
 import com.org.bgv.repository.NavigationMenuRepository;
@@ -52,7 +52,7 @@ import java.util.Optional;
 @RequiredArgsConstructor
 public class DataSeederConfig implements CommandLineRunner {
 
-    private final DocumentCategoryRepository categoryRepo;
+    private final CheckCategoryRepository categoryRepo;
     private final DocumentTypeRepository docTypeRepo;
     private final PermissionRepository permissionRepository;
     private final RolePermissionRepository rolePermissionRepository;
@@ -133,33 +133,36 @@ public class DataSeederConfig implements CommandLineRunner {
     
     private void seedDocumentCategoriesAndTypes() {
         // Prepare category objects with labels
-        List<DocumentCategory> categories = Arrays.asList(
-            createCategory("IDENTITY_PROOF", "Identity Proof"),
-            createCategory("EDUCATION", "Education"),
-            createCategory("WORK_EXPERIENCE", "Professional/Work Experience"),
-            createCategory("OTHER", "Other")
+        List<CheckCategory> categories = Arrays.asList(
+            createCategory("IDENTITY_PROOF", "Identity Proof","IDENTITY"),
+            createCategory("EDUCATION", "Education","EDUCATION"),
+            createCategory("WORK_EXPERIENCE", "Professional/Work Experience","WORK"),
+            createCategory("OTHER", "Other","OTHER"),
+            createCategory("ADDRESS", "Address","ADDRESS"),
+            createCategory("COURT", "Court","COURT")
         );
         
         // Save categories and prepare document types
-        for (DocumentCategory category : categories) {
-            DocumentCategory savedCategory = saveCategoryIfNotExists(category);
+        for (CheckCategory category : categories) {
+        	CheckCategory savedCategory = saveCategoryIfNotExists(category);
             seedDocumentTypesForCategory(savedCategory);
         }
     }
     
-    private DocumentCategory createCategory(String name, String label) {
-        return DocumentCategory.builder()
+    private CheckCategory createCategory(String name, String label,String code) {
+        return CheckCategory.builder()
                 .name(name)
                 .label(label)
+                .code(code)
                 .build();
     }
     
-    private DocumentCategory saveCategoryIfNotExists(DocumentCategory category) {
-        Optional<DocumentCategory> existingCategory = categoryRepo.findByName(category.getName());
+    private CheckCategory saveCategoryIfNotExists(CheckCategory category) {
+        Optional<CheckCategory> existingCategory = categoryRepo.findByName(category.getName());
         return existingCategory.orElseGet(() -> categoryRepo.save(category));
     }
     
-    private void seedDocumentTypesForCategory(DocumentCategory category) {
+    private void seedDocumentTypesForCategory(CheckCategory category) {
         List<DocumentType> documentTypes = getDocumentTypesForCategory(category);
         
         for (DocumentType documentType : documentTypes) {
@@ -167,49 +170,56 @@ public class DataSeederConfig implements CommandLineRunner {
         }
     }
     
-    private List<DocumentType> getDocumentTypesForCategory(DocumentCategory category) {
+    private List<DocumentType> getDocumentTypesForCategory(CheckCategory category) {
         switch (category.getName().toUpperCase()) {
             case "IDENTITY_PROOF":
                 return Arrays.asList(
-                    createDocumentType("AADHAR", "Aadhar Card", category),
-                    createDocumentType("PANCARD", "PAN Card", category),
-                    createDocumentType("PASSPORT", "Passport", category),
-                    createDocumentType("VOTER_ID", "Voter ID", category),
-                    createDocumentType("DRIVING_LICENCE", "Driving Licence", category)
+                    createDocumentType("AADHAR", "Aadhar Card", category,"AADHAAR"),
+                    createDocumentType("PANCARD", "PAN Card", category,"PAN"),
+                    createDocumentType("PASSPORT", "Passport", category,"PASSPORT"),
+                    createDocumentType("VOTER_ID", "Voter ID", category,"VOTER"),
+                    createDocumentType("DRIVING_LICENCE", "Driving Licence", category,"DL")
                 );
             case "EDUCATION":
                 return Arrays.asList(
-                    createDocumentType("SSC_MARKSHEET", "SSC Marksheet", category),
-                    createDocumentType("HSC_MARKSHEET", "HSC Marksheet", category),
-                    createDocumentType("GRADUATION_CERTIFICATE", "Graduation Certificate", category),
-                    createDocumentType("POST_GRADUATION_CERTIFICATE", "Post Graduation Certificate", category)
+                    createDocumentType("SSC_MARKSHEET", "SSC Marksheet", category,"SSC_MARKSHEET"),
+                    createDocumentType("HSC_MARKSHEET", "HSC Marksheet", category,"HSC_MARKSHEET"),
+                    createDocumentType("GRADUATION_CERTIFICATE", "Graduation Certificate", category,"GRADUATION_CERTIFICATE"),
+                    createDocumentType("POST_GRADUATION_CERTIFICATE", "Post Graduation Certificate", category,"POST_GRADUATION_CERTIFICATE")
                 );
             case "WORK_EXPERIENCE":
                 return Arrays.asList(
-                    createDocumentType("EXPERIENCE_LETTER", "Experience Letter", category),
-                    createDocumentType("OFFER_LETTER", "Offer Letter", category),
-                    createDocumentType("RELIEVING_LETTER", "Relieving Letter", category),
-                    createDocumentType("PAYSLIP", "Payslip", category),
-                    createDocumentType("APPOINTMENT_LETTER", "Appointment Letter", category)
+                    createDocumentType("EXPERIENCE_LETTER", "Experience Letter", category,"EXPERIENCE_LETTER"),
+                    createDocumentType("OFFER_LETTER", "Offer Letter", category,"OFFER_LETTER"),
+                    createDocumentType("RELIEVING_LETTER", "Relieving Letter", category,"RELIEVING_LETTER"),
+                    createDocumentType("PAYSLIP", "Payslip", category,"PAYSLIP"),
+                    createDocumentType("APPOINTMENT_LETTER", "Appointment Letter", category,"APPOINTMENT_LETTER")
                 );
+            case "ADDRESS":
+            	 return Arrays.asList(
+                         createDocumentType("ADDR_PERM", "Permanent Address", category,"ADDR_PERM"),
+                         createDocumentType("ADDR_CURR", "Current Address", category,"ADDR_CURR")
+                     );
+            	
             case "OTHER":
                 return Arrays.asList(
-                    createDocumentType("OTHER", "Other Document", category)
+                    createDocumentType("OTHER", "Other Document", category,"OTHER")
                 );
             default:
                 return Arrays.asList();
         }
     }
     
-    private DocumentType createDocumentType(String name, String label, DocumentCategory category) {
+    private DocumentType createDocumentType(String name, String label, CheckCategory category,String code) {
         return DocumentType.builder()
                 .name(name)
                 .label(label)
                 .category(category)
+                .code(code)
                 .build();
     }
     
-    private void saveDocumentTypeIfNotExists(DocumentType documentType, DocumentCategory category) {
+    private void saveDocumentTypeIfNotExists(DocumentType documentType, CheckCategory category) {
         if (docTypeRepo.findByNameAndCategory_CategoryId(documentType.getName(), category.getCategoryId()).isEmpty()) {
             docTypeRepo.save(documentType);
         }

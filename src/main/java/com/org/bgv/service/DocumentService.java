@@ -1,10 +1,11 @@
 package com.org.bgv.service;
 
 import com.org.bgv.controller.ProfileController;
+import com.org.bgv.dto.CheckCategoryGroup;
 import com.org.bgv.dto.DeleteResponse;
-import com.org.bgv.dto.DocumentCategoryGroup;
 import com.org.bgv.dto.DocumentResponse;
 import com.org.bgv.dto.DocumentTypeResponse;
+import com.org.bgv.dto.FieldDTO;
 import com.org.bgv.dto.document.CategoriesDTO;
 import com.org.bgv.dto.document.CompanyDto;
 import com.org.bgv.dto.document.DocumentCategoryDto;
@@ -12,10 +13,10 @@ import com.org.bgv.dto.document.DocumentTypeDto;
 import com.org.bgv.dto.document.EducationDTO;
 import com.org.bgv.dto.document.FileDTO;
 import com.org.bgv.entity.BaseDocument;
+import com.org.bgv.entity.CheckCategory;
 import com.org.bgv.entity.Document;
-import com.org.bgv.entity.DocumentCategory;
 import com.org.bgv.entity.DocumentType;
-import com.org.bgv.entity.EducationDocuments;
+//import com.org.bgv.entity.EducationDocuments;
 import com.org.bgv.entity.EducationHistory;
 import com.org.bgv.entity.IdentityDocuments;
 import com.org.bgv.entity.IdentityProof;
@@ -23,10 +24,9 @@ import com.org.bgv.entity.Other;
 import com.org.bgv.entity.ProfessionalDocuments;
 import com.org.bgv.entity.Profile;
 import com.org.bgv.entity.WorkExperience;
-import com.org.bgv.repository.DocumentCategoryRepository;
+import com.org.bgv.repository.CheckCategoryRepository;
 import com.org.bgv.repository.DocumentRepository;
 import com.org.bgv.repository.DocumentTypeRepository;
-import com.org.bgv.repository.EducationDocumentsRepository;
 import com.org.bgv.repository.EducationHistoryRepository;
 import com.org.bgv.repository.IdentityDocumentsRepository;
 import com.org.bgv.repository.IdentityProofRepository;
@@ -69,14 +69,12 @@ public class DocumentService {
 
     private final DocumentRepository documentRepository;
     private final ProfessionalDocumentsRepository professionalDocumentsRepository;
-    private final EducationDocumentsRepository educationDocumentsRepository;
     private final IdentityDocumentsRepository identityDocumentsRepository;
     private final S3StorageService s3StorageService;
     private final ProfileRepository profileRepository;
-    private final DocumentCategoryRepository categoryRepository;
+    private final CheckCategoryRepository checkCategoryRepository;
     private final DocumentTypeRepository typeRepository;
     private final DocumentTypeRepository documentTypeRepository;
-    private final DocumentCategoryRepository documentCategoryRepository;
     private final IdentityProofRepository identityProofRepository;
     private final EducationHistoryRepository educationHistoryRepository;
     private final WorkExperienceRepository workExperienceRepository;
@@ -98,7 +96,7 @@ public class DocumentService {
 		DocumentType type = null;
 		Profile profile = profileRepository.findById(profileId)
 				.orElseThrow(() -> new RuntimeException("Profile not found: " + profileId));
-		DocumentCategory category = categoryRepository.findById(categoryId)
+		CheckCategory category = checkCategoryRepository.findById(categoryId)
 				.orElseThrow(() -> new RuntimeException("Category not found: " + categoryId));
 		DocumentType documentType = documentTypeRepository.findById(typeId)
 		        .orElseThrow(() -> new RuntimeException("Doctype not found: " + profileId));
@@ -230,9 +228,9 @@ public class DocumentService {
         List<Map<String, Object>> sections = new ArrayList();
         
         // Get all categories
-        List<DocumentCategory> categories = categoryRepository.findAll();
+        List<CheckCategory> categories = checkCategoryRepository.findAll();
         
-        for (DocumentCategory category : categories) {
+        for (CheckCategory category : categories) {
             Map<String, Object> section = new HashMap<>();
             section.put("sectionId", category.getName().toLowerCase());
             section.put("sectionName", category.getLabel());
@@ -277,7 +275,7 @@ public class DocumentService {
     }
     
     
-    public List<DocumentCategoryGroup> getDocumentsByProfileGroupedByCategory(Long profileId) {
+    public List<CheckCategoryGroup> getDocumentsByProfileGroupedByCategory(Long profileId) {
         try {
             // Verify profile exists with better error message
             Profile profile = profileRepository.findById(profileId)
@@ -307,15 +305,15 @@ public class DocumentService {
                     .map(doc -> doc.getCategory().getCategoryId())
                     .collect(Collectors.toSet());
             
-            Map<Long, DocumentCategory> categoriesMap = categoryRepository.findAllById(categoryIds)
+            Map<Long, CheckCategory> categoriesMap = checkCategoryRepository.findAllById(categoryIds)
                     .stream()
-                    .collect(Collectors.toMap(DocumentCategory::getCategoryId, Function.identity()));
+                    .collect(Collectors.toMap(CheckCategory::getCategoryId, Function.identity()));
 
             // Group documents by category with proper error handling
-            Map<DocumentCategory, List<BaseDocument>> groupedByCategory = allDocuments.stream()
+            Map<CheckCategory, List<BaseDocument>> groupedByCategory = allDocuments.stream()
                     .collect(Collectors.groupingBy(
                         doc -> {
-                            DocumentCategory category = doc.getCategory();
+                        	CheckCategory category = doc.getCategory();
                             if (category == null) {
                                
                                 return getUnknownCategory();
@@ -330,7 +328,7 @@ public class DocumentService {
             return groupedByCategory.entrySet().stream()
                     .map(entry -> createCategoryGroup(entry.getKey(), entry.getValue()))
                     .filter(Objects::nonNull)
-                    .sorted(Comparator.comparing(DocumentCategoryGroup::getCategoryId))
+                    .sorted(Comparator.comparing(CheckCategoryGroup::getCategoryId))
                     .collect(Collectors.toList());
 
         } catch (EntityNotFoundException e) {
@@ -341,7 +339,7 @@ public class DocumentService {
         }
     }
 
-    private DocumentCategoryGroup createCategoryGroup(DocumentCategory category, List<BaseDocument> documents) {
+    private CheckCategoryGroup createCategoryGroup(CheckCategory category, List<BaseDocument> documents) {
         if (category == null || documents == null || documents.isEmpty()) {
             return null;
         }
@@ -356,7 +354,7 @@ public class DocumentService {
             return null;
         }
 
-        return DocumentCategoryGroup.builder()
+        return CheckCategoryGroup.builder()
                 .categoryId(category.getCategoryId())
                 .categoryName(category.getName())
                 .description(category.getDescription())
@@ -427,8 +425,8 @@ public class DocumentService {
                 .count();
     }
 
-    private DocumentCategory getUnknownCategory() {
-        return DocumentCategory.builder()
+    private CheckCategory getUnknownCategory() {
+        return CheckCategory.builder()
                 .categoryId(-1L)
                 .name("UNCATEGORIZED")
                 .description("Documents without category")
@@ -445,13 +443,13 @@ public class DocumentService {
     
     public List<DocumentTypeResponse> getDocumentTypesByCategoryNameIgnoreCase(String categoryName) {
         // Step 1: Find category by name (case-insensitive)
-        Optional<DocumentCategory> categoryOpt = documentCategoryRepository.findByNameContainingIgnoreCase(categoryName);
+        Optional<CheckCategory> categoryOpt = checkCategoryRepository.findByNameContainingIgnoreCase(categoryName);
         
         if (categoryOpt.isEmpty()) {
             throw new RuntimeException("Category not found with name: " + categoryName);
         }
         
-        DocumentCategory category = categoryOpt.get();
+        CheckCategory category = categoryOpt.get();
         
         // Step 2: Find document types by category ID
         List<DocumentType> documentTypes = documentTypeRepository.findByCategoryCategoryId(category.getCategoryId());
@@ -474,7 +472,7 @@ public class DocumentService {
                 .build();
     }
     
-    private DocumentTypeResponse convertToResponse(DocumentType documentType, DocumentCategory category) {
+    private DocumentTypeResponse convertToResponse(DocumentType documentType, CheckCategory category) {
         return DocumentTypeResponse.builder()
                 .categoryId(category.getCategoryId())
                 .doc_type_id(documentType.getDocTypeId())
@@ -643,10 +641,10 @@ public class DocumentService {
     
     */
     public CategoriesDTO getDocuments(Long profileId) {
-        List<DocumentCategory> documentCategories = documentCategoryRepository.findAll();
+        List<CheckCategory> documentCategories = checkCategoryRepository.findAll();
         List<DocumentCategoryDto> documentCategoryDtos = new ArrayList<>();
         
-        for (DocumentCategory documentCategory : documentCategories) {
+        for (CheckCategory documentCategory : documentCategories) {
             DocumentCategoryDto categoryDto = buildDocumentCategoryDto(documentCategory);
             List<DocumentType> documentTypes = documentTypeRepository.findByCategoryCategoryId(documentCategory.getCategoryId());
             
@@ -678,13 +676,13 @@ public class DocumentService {
     
     public DocumentCategoryDto getDocumentsBySection(Long profileId, String section) {
         // Find category by section name (case insensitive)
-        Optional<DocumentCategory> documentCategoryOpt = documentCategoryRepository.findByNameIgnoreCase(section);
+        Optional<CheckCategory> documentCategoryOpt = checkCategoryRepository.findByNameIgnoreCase(section);
         
         if (documentCategoryOpt.isEmpty()) {
             throw new RuntimeException("Section not found: " + section);
         }
         
-        DocumentCategory documentCategory = documentCategoryOpt.get();
+        CheckCategory documentCategory = documentCategoryOpt.get();
         DocumentCategoryDto categoryDto = buildDocumentCategoryDto(documentCategory);
         List<DocumentType> documentTypes = documentTypeRepository.findByCategoryCategoryId(documentCategory.getCategoryId());
         
@@ -716,7 +714,7 @@ public class DocumentService {
     
     
     // Generic Document Category DTO Builder
-    private DocumentCategoryDto buildDocumentCategoryDto(DocumentCategory category) {
+    private DocumentCategoryDto buildDocumentCategoryDto(CheckCategory category) {
         return DocumentCategoryDto.builder()
             .categoryId(category.getCategoryId())
             .categoryLabel(category.getLabel())
@@ -745,11 +743,20 @@ public class DocumentService {
     
     // Identity Proof Documents
     private List<DocumentTypeDto> buildIdentityProofDocumentTypes(Long profileId, 
-                                                                 DocumentCategory category, 
+    		CheckCategory category, 
                                                                  List<DocumentType> documentTypes) {
         return documentTypes.stream()
             .map(documentType -> {
                 DocumentTypeDto dto = buildDocumentTypeDto(documentType);
+                if(documentType!=null && documentType.getName().equalsIgnoreCase("AADHAR")) {
+                	dto.setFields(createAadharFields());
+                }else if(documentType!=null && documentType.getName().equalsIgnoreCase("PANCARD")) {
+                	dto.setFields(createPanFields());
+                }else if(documentType!=null && documentType.getName().equalsIgnoreCase("PASSPORT")) {
+                	dto.setFields(createPassportFields());
+                }
+                
+                
                 List<Document> documents = documentRepository.findByProfile_ProfileIdAndCategory_CategoryIdAndDocTypeId_DocTypeId(
                     profileId, category.getCategoryId(), documentType.getDocTypeId());
                 dto.setFiles(convertDocumentsToFileDTOs(documents));
@@ -760,7 +767,7 @@ public class DocumentService {
     
     // Education Documents
     private List<EducationDTO> buildEducationDocuments(Long profileId, 
-                                                      DocumentCategory category, 
+    		CheckCategory category, 
                                                       List<DocumentType> documentTypes) {
         List<EducationHistory> educationHistories = educationHistoryRepository.findByProfile_ProfileId(profileId);
         
@@ -784,7 +791,7 @@ public class DocumentService {
     
     // Education Document Types
     private List<DocumentTypeDto> buildEducationDocumentTypes(Long profileId, 
-                                                             DocumentCategory category, 
+    		                                                 CheckCategory category, 
                                                              List<DocumentType> documentTypes, 
                                                              Long educationId) {
         return documentTypes.stream()
@@ -800,7 +807,7 @@ public class DocumentService {
     
     // Work Experience Documents
     private List<CompanyDto> buildWorkExperienceDocuments(Long profileId, 
-                                                         DocumentCategory category, 
+    		CheckCategory category, 
                                                          List<DocumentType> documentTypes) {
         List<WorkExperience> workExperiences = workExperienceRepository.findByProfile_ProfileId(profileId);
         
@@ -821,7 +828,7 @@ public class DocumentService {
     
     // Company Document Types
     private List<DocumentTypeDto> buildCompanyDocumentTypes(Long profileId, 
-                                                           DocumentCategory category, 
+    		CheckCategory category, 
                                                            List<DocumentType> documentTypes, 
                                                            Long companyId) {
         return documentTypes.stream()
@@ -837,7 +844,7 @@ public class DocumentService {
     
     // Generic Document Types (for OTHER category)
     private List<DocumentTypeDto> buildGenericDocumentTypes(Long profileId, 
-                                                           DocumentCategory category, 
+    		CheckCategory category, 
                                                            List<DocumentType> documentTypes) {
         return documentTypes.stream()
             .map(documentType -> {
@@ -856,4 +863,69 @@ public class DocumentService {
             .map(this::convertToFileDTO)
             .collect(Collectors.toList());
     }
+    
+    private static List<FieldDTO> createAadharFields() {
+        return List.of(
+            FieldDTO.builder()
+                    .name("documentNumber")
+                    .label("Aadhar Number")
+                    .type("text")
+                    .required(true)
+                    .value("") // Empty for new entry
+                    .build(),
+            FieldDTO.builder()
+                    .name("issueDate")
+                    .label("Issue Date")
+                    .type("date")
+                    .required(false)
+                    .value("")
+                    .build()
+        );
+    }
+    
+    private static List<FieldDTO> createPanFields() {
+        return List.of(
+            FieldDTO.builder()
+                    .name("documentNumber")
+                    .label("PAN Number")
+                    .type("text")
+                    .required(true)
+                    .value("")
+                    .build(),
+            FieldDTO.builder()
+                    .name("issueDate")
+                    .label("Issue Date")
+                    .type("date")
+                    .required(false)
+                    .value("")
+                    .build()
+        );
+    }
+    
+    private static List<FieldDTO> createPassportFields() {
+        return List.of(
+            FieldDTO.builder()
+                    .name("documentNumber")
+                    .label("Passport Number")
+                    .type("text")
+                    .required(true)
+                    .value("")
+                    .build(),
+            FieldDTO.builder()
+                    .name("issueDate")
+                    .label("Issue Date")
+                    .type("date")
+                    .required(true)
+                    .value("")
+                    .build(),
+            FieldDTO.builder()
+                    .name("expiryDate")
+                    .label("Expiry Date")
+                    .type("date")
+                    .required(true)
+                    .value("")
+                    .build()
+        );
+    }
+    
 }

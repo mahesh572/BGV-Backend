@@ -22,4 +22,13 @@ public interface IdentityProofRepository extends JpaRepository<IdentityProof, Lo
     // Check if a document number already exists for a profile (avoid duplicates)
     boolean existsByProfile_ProfileIdAndDocumentNumber(Long profileId, String documentNumber);
     void deleteByProfile_ProfileId(Long profileId); //
+    
+ // Find all proofs by candidate ID
+    List<IdentityProof> findByCandidate_CandidateId(Long candidateId);
+    
+
+
+ // Correct method name - using camelCase for docTypeId
+    List<IdentityProof> findByCandidateCandidateIdAndDocTypeId(Long candidateId, Long docTypeId);
+
 }

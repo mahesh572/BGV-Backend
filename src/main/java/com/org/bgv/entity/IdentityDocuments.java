@@ -32,7 +32,7 @@ public class IdentityDocuments implements BaseDocument{
 	
     @ManyToOne
     @JoinColumn(name = "category_id")
-    private DocumentCategory category;
+    private CheckCategory category;
 
     @ManyToOne
     @JoinColumn(name = "doc_type_id")

@@ -2,20 +2,16 @@ package com.org.bgv.dto;
 
 import lombok.AllArgsConstructor;
 import lombok.Builder;
-import lombok.Getter;
+import lombok.Data;
 import lombok.NoArgsConstructor;
-import lombok.Setter;
 
-import java.util.List;
-
-@Getter
-@Setter
+@Data
+@Builder
 @NoArgsConstructor
 @AllArgsConstructor
-@Builder
-public class DocumentCategoryGroup {
+public class PackageCheckCategoryResponse {
+    private Long id;
     private Long categoryId;
     private String categoryName;
-    private String description;
-    private List<DocumentResponse> documents;
+    private String rulesData;
 }

@@ -30,5 +30,5 @@ public class ProfileDTO {
     private List<IdentityProofDTO> Identity;
     
     // Documents grouped by category
-    private List<DocumentCategoryGroup> documents;
+    private List<CheckCategoryGroup> documents;
 }

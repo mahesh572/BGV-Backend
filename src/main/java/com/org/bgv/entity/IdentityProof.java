@@ -37,7 +37,7 @@ public class IdentityProof {
     
     private Date issueDate;
     private Date expiryDate;
-
+    private Long docTypeId;
     
     @Column(name = "status", length = 50)
     private String status; // e.g. PENDING, VERIFIED, REJECTED

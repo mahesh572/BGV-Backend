@@ -75,7 +75,7 @@ public class ProfileService {
                // .workExperiences(workExperienceService.getWorkExperiencesByProfile(profileId))
                 .workExperiences(workExperienceService.getWorkExperiencesWithDocuments(profileId).getWorkExperiences())
                 .addresses(profileAddressService.getAddressesByProfile(profileId)) 
-                .educationHistory(educationHistoryService.getEducationByProfile(profileId))
+             //   .educationHistory(educationHistoryService.getEducationByProfile(profileId))
                 .Identity(identityProofService.getIdentityProofsWithDocuments(profileId).getProofs())
                 .documents(documentService.getDocumentsByProfileGroupedByCategory(profileId))
                 .build();
@@ -191,7 +191,7 @@ public class ProfileService {
                 .basicDetails(basicdetailsDTO)                            
                 .workExperiences(workExperienceService.getWorkExperiencesByProfile(entity.getProfileId()))
                 .addresses(profileAddressService.getAddressesByProfile(entity.getProfileId())) 
-                .educationHistory(educationHistoryService.getEducationByProfile(entity.getProfileId()))
+           //     .educationHistory(educationHistoryService.getEducationByProfile(entity.getProfileId()))
                // .documents(documentService.getDocumentsByProfileGroupedByCategory(entity.getProfileId()))
                 .build();
     }
