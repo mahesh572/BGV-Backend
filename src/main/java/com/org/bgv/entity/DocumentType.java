@@ -43,6 +43,8 @@ public class DocumentType {
     private String upload;
     
     private String code;
+    
+    private Double price;
 
     // getters and setters
 }

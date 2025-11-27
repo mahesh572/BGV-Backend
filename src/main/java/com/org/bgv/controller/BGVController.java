@@ -3,6 +3,9 @@ package com.org.bgv.controller;
 import com.org.bgv.api.response.CustomApiResponse;
 import com.org.bgv.common.CheckCategoryResponse;
 import com.org.bgv.service.BGVServices;
+
+import lombok.extern.slf4j.Slf4j;
+
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
@@ -13,6 +16,7 @@ import java.util.Map;
 
 @RestController
 @RequestMapping("/api/bgv")
+@Slf4j
 public class BGVController {
 
     @Autowired
@@ -117,7 +121,24 @@ public class BGVController {
         return ResponseEntity.ok(CustomApiResponse.success(null, categoryResponse, HttpStatus.OK));
     }
     
-    
+    @GetMapping("/document-types/by-category")
+    public ResponseEntity<CustomApiResponse<Map<Long, List<Map<String, Object>>>>> getDocumentTypesByCategory() {
+        try {
+            Map<Long, List<Map<String, Object>>> documentTypes = bgvServices.getDocumentTypesByCategory();
+            log.info("getDocumentTypesByCategory:::::::{}",documentTypes);
+            return ResponseEntity.ok(CustomApiResponse.success(
+                "Document types retrieved successfully", 
+                documentTypes, 
+                HttpStatus.OK
+            ));
+        } catch (Exception e) {
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
+                .body(CustomApiResponse.failure(
+                    "Failed to retrieve document types: " + e.getMessage(), 
+                    HttpStatus.INTERNAL_SERVER_ERROR
+                ));
+        }
+    }
     
     
     

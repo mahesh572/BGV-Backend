@@ -4,10 +4,12 @@ import com.org.bgv.common.CheckCategoryResponse;
 import com.org.bgv.entity.BGVCategory;
 import com.org.bgv.entity.CheckCategory;
 import com.org.bgv.entity.CheckType;
+import com.org.bgv.entity.DocumentType;
 import com.org.bgv.mapper.CheckCategoryMapper;
 import com.org.bgv.repository.BGVCategoryRepository;
 import com.org.bgv.repository.CheckCategoryRepository;
 import com.org.bgv.repository.CheckTypeRepository;
+import com.org.bgv.repository.DocumentTypeRepository;
 
 import lombok.AllArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -19,6 +21,7 @@ import org.springframework.transaction.annotation.Transactional;
 import java.time.LocalDateTime;
 import java.util.ArrayList;
 import java.util.HashMap;
+import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.stream.Collectors;
@@ -36,11 +39,14 @@ public class BGVServices {
     
     private final CheckCategoryRepository checkCategoryRepository;
     private final CheckCategoryMapper checkCategoryMapper;
+    private final DocumentTypeRepository documentTypeRepository;
     
 
     /**
      * Get all categories from database and convert to JSON structure manually
      */
+    
+    
     public List<Map<String, Object>> getAllCategoriesAndCheckVerification() {
         List<BGVCategory> categories = bgvCategoryRepository.findAll();
         List<Map<String, Object>> result = new ArrayList<>();
@@ -179,6 +185,48 @@ public class BGVServices {
         // List<CheckCategory> categories = checkCategoryRepository.findAll();
         
         return checkCategoryMapper.toDetailedResponseList(categories);
+    }
+    
+    /**
+     * Get document types for a specific category
+     */
+    
+    public Map<Long, List<Map<String, Object>>> getDocumentTypesByCategory() {
+        log.debug("Fetching document types grouped by category");
+        
+        // Fetch all categories
+        List<CheckCategory> categories = checkCategoryRepository.findAll();
+        
+        Map<Long, List<Map<String, Object>>> result = new LinkedHashMap();
+        
+        for (CheckCategory category : categories) {
+            // Fetch document types for this category
+            List<DocumentType> documentTypes = documentTypeRepository.findByCategoryCategoryId(category.getCategoryId());
+            
+            // Convert to the desired JSON format
+            List<Map<String, Object>> documentTypeMaps = documentTypes.stream()
+                .map(this::convertToMap)
+                .collect(Collectors.toList());
+            
+            result.put(category.getCategoryId(), documentTypeMaps);
+        }
+        
+        return result;
+    }
+    
+    /**
+     * Convert DocumentType entity to Map for JSON response
+     */
+    private Map<String, Object> convertToMap(DocumentType documentType) {
+        Map<String, Object> map = new LinkedHashMap<>();
+        map.put("docTypeId", documentType.getDocTypeId());
+        map.put("name", documentType.getName());
+        map.put("code", documentType.getCode());
+        map.put("label", documentType.getLabel());
+        map.put("isRequired", documentType.isRequired());
+        map.put("upload", documentType.getUpload());
+        
+        return map;
     }
     
 }

@@ -49,6 +49,8 @@ public class BgvPackage {
     @Column(name = "isactive")
     private Boolean isActive;
     
+    private Double price;
+    
     @OneToMany(mappedBy = "bgvPackage", cascade = CascadeType.ALL, fetch = FetchType.LAZY)
     @Builder.Default
     private List<PackageCheckCategory> packageCheckCategories = new ArrayList<>();
