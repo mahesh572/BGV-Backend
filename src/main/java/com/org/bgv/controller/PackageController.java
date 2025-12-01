@@ -7,12 +7,15 @@ import com.org.bgv.common.PackageRequest;
 import com.org.bgv.service.PackageService;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
+
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
 
+@Slf4j
 @RestController
 @RequestMapping("/api/packages")
 @RequiredArgsConstructor
@@ -58,6 +61,17 @@ public class PackageController {
                     .body(CustomApiResponse.failure("Failed to retrieve packages: " + e.getMessage(), HttpStatus.INTERNAL_SERVER_ERROR));
         }
     }
+    @GetMapping("/admin/company/{companyId}")
+    public ResponseEntity<CustomApiResponse<List<PackageDTO>>> getAllPackages(@PathVariable Long companyId) {
+        try {
+        	log.info("getAllPackages::::::::companyId:{}",companyId);
+            List<PackageDTO> packages = packageService.getAllPackages(companyId);
+            return ResponseEntity.ok(CustomApiResponse.success("Packages retrieved successfully", packages, HttpStatus.OK));
+        } catch (Exception e) {
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
+                    .body(CustomApiResponse.failure("Failed to retrieve packages: " + e.getMessage(), HttpStatus.INTERNAL_SERVER_ERROR));
+        }
+    }
 
     @GetMapping("/active")
     public ResponseEntity<CustomApiResponse<List<PackageDTO>>> getActivePackages() {
@@ -70,6 +84,8 @@ public class PackageController {
         }
     }
 
+    
+    // updating package by employer specific
     @PutMapping("/{id}")
     public ResponseEntity<CustomApiResponse<PackageDTO>> updatePackage(
             @PathVariable Long id, 
@@ -116,4 +132,34 @@ public class PackageController {
                     .body(CustomApiResponse.failure("Failed to update package status: " + e.getMessage(), HttpStatus.INTERNAL_SERVER_ERROR));
         }
     }
+    
+    @PostMapping("/admin/company/{companyId}/package/{packageId}/assign")
+    public ResponseEntity<CustomApiResponse<?>> assignPackageToCompany(@PathVariable Long companyId, @PathVariable Long packageId) {
+    	 try {
+    	packageService.assignPackageToCompany(companyId, packageId);
+    	 return ResponseEntity.ok(CustomApiResponse.success("Package Assigned successfully", null, HttpStatus.OK));
+    } catch (RuntimeException e) {
+        return ResponseEntity.status(HttpStatus.NOT_FOUND)
+                .body(CustomApiResponse.failure(e.getMessage(), HttpStatus.NOT_FOUND));
+    } catch (Exception e) {
+        return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
+                .body(CustomApiResponse.failure("Failed to delete package: " + e.getMessage(), HttpStatus.INTERNAL_SERVER_ERROR));
+    }
+    }
+    
+    @PostMapping("/admin/company/{companyId}/package/{packageId}/unassign")
+    public ResponseEntity<CustomApiResponse<?>> unassignPackageToCompany(@PathVariable Long companyId, @PathVariable Long packageId) {
+    	 try {
+    	packageService.unassignPackageFromCompany(companyId, packageId);
+    	 return ResponseEntity.ok(CustomApiResponse.success("Package Assigned successfully", null, HttpStatus.OK));
+    } catch (RuntimeException e) {
+        return ResponseEntity.status(HttpStatus.NOT_FOUND)
+                .body(CustomApiResponse.failure(e.getMessage(), HttpStatus.NOT_FOUND));
+    } catch (Exception e) {
+        return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
+                .body(CustomApiResponse.failure("Failed to delete package: " + e.getMessage(), HttpStatus.INTERNAL_SERVER_ERROR));
+    }
+    }
+    
+    
 }

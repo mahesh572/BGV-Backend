@@ -9,9 +9,9 @@ import lombok.NoArgsConstructor;
 @Builder
 @NoArgsConstructor
 @AllArgsConstructor
-public class PackageDocumentRequest {
-    private Long documentTypeId;
-    private Boolean required;
-    private Integer priorityOrder;
-    private Boolean selected;
+public class DocumentTypeInfo {
+    private Long docTypeId;
+    private String name;
+    private String code;
+    private Double price;
 }

@@ -34,5 +34,7 @@ public class PackageDTO {
     
     private Double price;
     
+    private Boolean isAssigned;
+    
     private List<PackageCategoryDTO> categories;
 }

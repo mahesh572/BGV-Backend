@@ -34,5 +34,7 @@ public class RuleTypes {
 	 private String name;
 	 private String code;
 	 private String label;
+	 private Long minCount;
+	 private Long maxCount;
 	
 }

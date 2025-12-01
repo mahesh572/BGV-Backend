@@ -8,6 +8,7 @@ import com.org.bgv.common.PackageDocumentRequest;
 import com.org.bgv.common.PackageRequest;
 import com.org.bgv.common.PackageRuleTypeDTO;
 import com.org.bgv.common.RuleTypesDTO;
+import com.org.bgv.constants.EmployerPackageStatus;
 import com.org.bgv.dto.*;
 import com.org.bgv.entity.*;
 import com.org.bgv.repository.*;
@@ -16,10 +17,12 @@ import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.time.LocalDateTime;
 import java.util.ArrayList;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Objects;
+import java.util.Optional;
 import java.util.Set;
 import java.util.stream.Collectors;
 
@@ -35,6 +38,7 @@ public class PackageService  {
     private final CheckCategoryRepository checkCategoryRepository;
     private final RuleTypesRepository ruleTypesRepository;
     private final DocumentTypeRepository documentTypeRepository;
+    private final EmployerPackageRepository employerPackageRepository;
 
     
     @Transactional
@@ -65,7 +69,7 @@ public class PackageService  {
             processPackageCategories(savedPackage, request.getCategories());
         }
         
-        return convertToDTO(savedPackage);
+        return convertToDTO(savedPackage,Boolean.TRUE);
     }
 
     
@@ -76,7 +80,7 @@ public class PackageService  {
         BgvPackage bgvPackage = packageRepository.findByIdWithCategories(packageId)
                 .orElseThrow(() -> new RuntimeException("Package not found with id: " + packageId));
         
-        return convertToDTO(bgvPackage);
+        return convertToDTO(bgvPackage,Boolean.TRUE);
     }
 
     
@@ -85,17 +89,46 @@ public class PackageService  {
         log.debug("Fetching all packages");
         
         return packageRepository.findAll().stream()
-                .map(this::convertToDTO)
+        		.map(pkg -> convertToDTO(pkg, Boolean.TRUE)) // categories not required
                 .collect(Collectors.toList());
     }
-
+    
+    @Transactional(readOnly = true)
+    public List<PackageDTO> getAllPackages(Long companyId) {
+       
+        log.debug("Fetching all packages for company: {}", companyId);
+        
+        // Fetch all packages
+        List<BgvPackage> allPackages = packageRepository.findAll();
+        
+        // Fetch employer packages for this company to check assignment
+        List<EmployerPackage> employerPackages = employerPackageRepository.findByCompanyId(companyId);
+        
+        // Create a set of package IDs that are assigned to this employer with ACTIVE status
+        Set<Long> assignedPackageIds = employerPackages.stream()
+                .filter(employerPackage -> employerPackage.getStatus() == EmployerPackageStatus.ACTIVE)
+                .map(employerPackage -> employerPackage.getBgvPackage().getPackageId())
+                .collect(Collectors.toSet());
+        
+        log.info("getAllPackages - assignedPackageIds: {}", assignedPackageIds);
+        
+        return allPackages.stream()
+                .map(bgvpackage -> {
+                    PackageDTO dto = convertToDTO(bgvpackage, Boolean.FALSE);
+                    // Check if this package is assigned to the employer
+                    boolean isAssigned = assignedPackageIds.contains(bgvpackage.getPackageId());
+                    dto.setIsAssigned(isAssigned);
+                    return dto;
+                })
+                .collect(Collectors.toList());
+    }
     
     @Transactional(readOnly = true)
     public List<PackageDTO> getActivePackages() {
         log.debug("Fetching active packages");
         
         return packageRepository.findByIsActiveTrue().stream()
-                .map(this::convertToDTO)
+                .map(pkg -> convertToDTO(pkg, Boolean.TRUE))
                 .collect(Collectors.toList());
     }
 
@@ -129,7 +162,7 @@ public class PackageService  {
         processPackageUpdate(updatedPackage, request.getCategories());
         
         log.info("Package updated successfully with ID: {}", updatedPackage.getPackageId());
-        return convertToDTO(updatedPackage);
+        return convertToDTO(updatedPackage,Boolean.TRUE);
     }
 
     
@@ -162,7 +195,7 @@ public class PackageService  {
         bgvPackage.setIsActive(isActive);
         BgvPackage updatedPackage = packageRepository.save(bgvPackage);
         
-        return convertToDTO(updatedPackage);
+        return convertToDTO(updatedPackage,Boolean.TRUE);
     }
 
     // ================= PRIVATE HELPER METHODS =================
@@ -290,14 +323,20 @@ public class PackageService  {
         }
     }
 
-    private PackageDTO convertToDTO(BgvPackage bgvPackage) {
-        // Fetch related data
-        List<PackageCheckCategory> packageCategories = packageCheckCategoryRepository.findByBgvPackage_PackageId(bgvPackage.getPackageId());
-        
-        List<PackageCategoryDTO> categoryDTOs = packageCategories.stream()
-                .map(this::convertToCategoryDTO)
-                .collect(Collectors.toList());
-        
+    private PackageDTO convertToDTO(BgvPackage bgvPackage, Boolean isCategoriesRequired) {
+
+        List<PackageCategoryDTO> categoryDTOs = null;
+
+        // Only load categories if required (1 = true)
+        if (isCategoriesRequired != null && isCategoriesRequired == Boolean.TRUE) {
+            List<PackageCheckCategory> packageCategories =
+                    packageCheckCategoryRepository.findByBgvPackage_PackageId(bgvPackage.getPackageId());
+
+            categoryDTOs = packageCategories.stream()
+                    .map(this::convertToCategoryDTO)
+                    .collect(Collectors.toList());
+        }
+
         return PackageDTO.builder()
                 .packageId(bgvPackage.getPackageId())
                 .name(bgvPackage.getName())
@@ -307,7 +346,7 @@ public class PackageService  {
                 .basePrice(bgvPackage.getBasePrice())
                 .isActive(bgvPackage.getIsActive())
                 .price(bgvPackage.getPrice())
-                .categories(categoryDTOs)
+                .categories(categoryDTOs)   // will be null if not required
                 .build();
     }
 
@@ -360,4 +399,59 @@ public class PackageService  {
                 .priorityOrder(allowedDocument.getPriorityOrder())
                 .build();
     }
+    
+    
+    public void assignPackageToCompany(Long companyId,Long packageId) {
+    	
+    	log.info("Creating employer package for employer: {}, package: {}", 
+    			companyId, packageId);
+        
+        // Validate BGV package exists
+        BgvPackage bgvPackage = packageRepository.findById(packageId)
+                .orElseThrow(() -> new RuntimeException("BGV Package not found with id: " + packageId));
+        
+        // Check if employer already has an active package of this type
+        if (employerPackageRepository.existsByCompanyIdAndBgvPackage_PackageIdAndStatus(
+        		companyId, packageId, EmployerPackageStatus.ACTIVE)) {
+            throw new RuntimeException("Employer already has an active package of this type");
+        }
+        
+		
+		
+		EmployerPackage employerPackage = EmployerPackage.builder()
+                .companyId(companyId)
+                .bgvPackage(bgvPackage)
+                .basePrice(bgvPackage.getBasePrice())
+               // .addonPrice(addonPrice)
+               // .totalPrice(totalPrice)
+                .status(EmployerPackageStatus.ACTIVE)
+                .build();
+        
+        EmployerPackage savedPackage = employerPackageRepository.save(employerPackage);
+    }
+    
+    public void unassignPackageFromCompany(Long companyId, Long packageId) {
+        log.info("Unassigning package from company: {}, package: {}", companyId, packageId);
+        
+        // Validate BGV package exists
+        BgvPackage bgvPackage = packageRepository.findById(packageId)
+                .orElseThrow(() -> new RuntimeException("BGV Package not found with id: " + packageId));
+        
+        // Check if employer has an active package of this type
+        Optional<EmployerPackage> activePackageOpt = employerPackageRepository.findActiveByCompanyAndPackage(companyId, packageId);
+        
+        if (activePackageOpt.isPresent()) {
+            EmployerPackage employerPackage = activePackageOpt.get();
+            
+            // Update status to INACTIVE or DELETED instead of saving the same entity
+            employerPackage.setStatus(EmployerPackageStatus.INACTIVE);
+            employerPackage.setUpdatedAt(LocalDateTime.now());
+            
+            EmployerPackage savedPackage = employerPackageRepository.save(employerPackage);
+            log.info("Successfully unassigned package from company. EmployerPackage ID: {}", savedPackage.getId());
+        } else {
+            throw new RuntimeException("Employer has no active package with packageId: " + packageId);
+        }
+    }
+    
 }

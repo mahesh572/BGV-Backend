@@ -16,5 +16,6 @@ public class PackageDocumentDTO {
     private String documentCode;
     private Boolean required;
     private Integer priorityOrder;
+    private Boolean selected;
 }
 

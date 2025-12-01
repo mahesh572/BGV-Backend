@@ -47,4 +47,7 @@ public class RuleTypesDTO {
     @JsonProperty("categoryName")
     @JsonAlias({"category_name", "checkCategoryName"})
     private String categoryName;
+    
+    private Long minCount;
+    private Long maxCount;
 }

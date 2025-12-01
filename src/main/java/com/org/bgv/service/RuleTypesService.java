@@ -148,6 +148,8 @@ public class RuleTypesService {
                 .name(rule.getName())
                 .code(rule.getCode())
                 .label(rule.getLabel())
+                .minCount(rule.getMinCount())
+                .maxCount(rule.getMaxCount())
                 .build();
     }
 }
