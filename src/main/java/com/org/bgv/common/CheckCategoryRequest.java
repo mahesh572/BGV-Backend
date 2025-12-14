@@ -27,4 +27,8 @@ public class CheckCategoryRequest {
     @NotBlank(message = "Code is required")
     @Size(max = 20, message = "Code must not exceed 20 characters")
     private String code;
+    
+    private Boolean hasDocuments;
+    private Boolean isActive;
+    private Double price;
 }

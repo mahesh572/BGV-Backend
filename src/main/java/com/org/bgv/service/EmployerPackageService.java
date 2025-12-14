@@ -1,6 +1,8 @@
 package com.org.bgv.service;
 
+import com.org.bgv.common.CategoryDocumentsDto;
 import com.org.bgv.common.CategoryInfo;
+import com.org.bgv.common.DocumentSelectionDto;
 import com.org.bgv.common.DocumentTypeInfo;
 import com.org.bgv.common.EmployerPackageDocumentRequest;
 import com.org.bgv.common.EmployerPackageDocumentResponse;
@@ -596,5 +598,102 @@ private void updateDocumentSelections(PackageDTO packageDTO,
         }
     }
     
+    /**
+     * Get all categories with their documents and selection status for a package
+     * Returns List<CategoryDocumentsDto> as required
+     */
+    @Transactional(readOnly = true)
+    public List<CategoryDocumentsDto> getPackageDocumentsByCategory(Long employerPackageId) {
+        // 1. Verify employer package exists
+        EmployerPackage employerPackage = employerPackageRepository.findById(employerPackageId)
+                .orElseThrow(() -> new RuntimeException("Employer package not found with id: " + employerPackageId));
+        
+        // 2. Get all selected documents for this package
+        List<EmployerPackageDocument> selectedDocuments = employerPackageDocumentRepository
+                .findByEmployerPackageId(employerPackageId);
+        
+        // 3. Create map for quick lookup of selected documents
+        Map<Long, EmployerPackageDocument> selectedDocumentMap = selectedDocuments.stream()
+                .collect(Collectors.toMap(
+                        doc -> doc.getDocumentType().getDocTypeId(),
+                        doc -> doc
+                ));
+        
+        // 4. Get all active categories that have documents
+        List<CheckCategory> activeCategories = checkCategoryRepository
+                .findAll().stream().filter(c->(c.getIsActive()!=null && c.getIsActive()==true)).collect(Collectors.toList());
+        
+        log.info("activeCategories::::::::::::::::::::::::::::::{}",activeCategories.size());
+        
+        // 5. Build the DTO list
+        return activeCategories.stream()
+                .map(category -> buildCategoryDocumentsDto(category, selectedDocumentMap))
+               // .filter(categoryDto -> !categoryDto.getDocuments().isEmpty())
+                .collect(Collectors.toList());
+    }
+    
+    /**
+     * Helper method to build CategoryDocumentsDto for a specific category
+     */
+    private CategoryDocumentsDto buildCategoryDocumentsDto(
+            CheckCategory category, 
+            Map<Long, EmployerPackageDocument> selectedDocumentMap) {
+        
+        // Get all documents for this category
+        List<DocumentType> categoryDocuments = documentTypeRepository
+                .findByCategoryCategoryId(category.getCategoryId());
+        
+        if (categoryDocuments.isEmpty()) {
+            return CategoryDocumentsDto.builder()
+                    .categoryId(category.getCategoryId())
+                    .categoryName(category.getName())
+                    .categoryCode(category.getCode())
+                    .categoryDescription(category.getDescription())
+                    .categoryLabel(category.getLabel())
+                    .documents(new ArrayList<>())
+                    .build();
+        }
+        
+        // Build DocumentSelectionDto list
+        List<DocumentSelectionDto> documentDtos = categoryDocuments.stream()
+                .map(documentType -> buildDocumentSelectionDto(documentType, selectedDocumentMap))
+                .collect(Collectors.toList());
+        
+        return CategoryDocumentsDto.builder()
+                .categoryId(category.getCategoryId())
+                .categoryName(category.getName())
+                .categoryCode(category.getCode())
+                .categoryDescription(category.getDescription())
+                .categoryLabel(category.getLabel())
+                .documents(documentDtos)
+                .build();
+    }
+    
+    
+    /**
+     * Helper method to build DocumentSelectionDto
+     */
+    private DocumentSelectionDto buildDocumentSelectionDto(
+            DocumentType documentType,
+            Map<Long, EmployerPackageDocument> selectedDocumentMap) {
+        
+        EmployerPackageDocument existingSelection = selectedDocumentMap.get(documentType.getDocTypeId());
+        
+        return DocumentSelectionDto.builder()
+                .documentTypeId(documentType.getDocTypeId())
+                .documentName(documentType.getName())
+                .documentCode(documentType.getCode())
+                .documentLabel(documentType.getLabel())
+                .price(documentType.getPrice())
+                .isSelected(existingSelection != null)
+                .isDisabled(existingSelection != null) // Disable if already selected
+                .includedInBase(existingSelection != null ? existingSelection.getIncludedInBase() : false)
+                .selectionType(existingSelection != null && existingSelection.getSelectionType() != null 
+                        ? existingSelection.getSelectionType().name() 
+                        : null)
+                .isRequired(documentType.isRequired())
+                .employerPackageDocumentId(existingSelection != null ? existingSelection.getId() : null)
+                .build();
+    }
     
 }

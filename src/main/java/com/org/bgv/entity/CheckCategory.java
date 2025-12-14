@@ -35,7 +35,9 @@ public class CheckCategory {
     private String description;
     private String label;
     private String code;
-    
+    private Boolean hasDocuments;
+    private Boolean isActive;
+    private Double price;
     
 
     // getters and setters

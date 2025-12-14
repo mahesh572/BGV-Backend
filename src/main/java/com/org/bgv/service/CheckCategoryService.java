@@ -26,6 +26,9 @@ public class CheckCategoryService {
                 .description(checkCategory.getDescription())
                 .label(checkCategory.getLabel())
                 .code(checkCategory.getCode())
+                .hasDocuments(checkCategory.getHasDocuments())
+                .isActive(checkCategory.getIsActive())
+                .price(checkCategory.getPrice())
                 .build();
     }
 
@@ -35,6 +38,9 @@ public class CheckCategoryService {
                 .description(request.getDescription())
                 .label(request.getLabel())
                 .code(request.getCode())
+                .hasDocuments(request.getHasDocuments())
+                .isActive(request.getIsActive())
+                .price(request.getPrice())
                 .build();
     }
 
@@ -99,6 +105,9 @@ public class CheckCategoryService {
                     existingCategory.setDescription(checkCategoryRequest.getDescription());
                     existingCategory.setLabel(checkCategoryRequest.getLabel());
                     existingCategory.setCode(checkCategoryRequest.getCode());
+                    existingCategory.setHasDocuments(checkCategoryRequest.getHasDocuments());
+                    existingCategory.setIsActive(checkCategoryRequest.getIsActive());
+                    existingCategory.setPrice(checkCategoryRequest.getPrice());
                     
                     CheckCategory updatedCategory = checkCategoryRepository.save(existingCategory);
                     return mapToResponse(updatedCategory);

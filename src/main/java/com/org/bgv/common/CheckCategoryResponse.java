@@ -17,5 +17,8 @@ public class CheckCategoryResponse {
     private String description;
     private String label;
     private String code;
+    private Boolean isActive;
+    private Boolean hasDocuments;
     private List<RuleTypeResponse> ruleTypes;
+    private Double price;
 }

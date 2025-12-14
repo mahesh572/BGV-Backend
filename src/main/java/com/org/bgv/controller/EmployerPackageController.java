@@ -1,6 +1,7 @@
 package com.org.bgv.controller;
 
 import com.org.bgv.api.response.CustomApiResponse;
+import com.org.bgv.common.CategoryDocumentsDto;
 import com.org.bgv.common.EmployerPackageRequest;
 import com.org.bgv.common.EmployerPackageResponse;
 import com.org.bgv.common.PackageDTO;
@@ -58,7 +59,7 @@ public class EmployerPackageController {
     }
     
     
-    // Get all packegeas assigned to specific company...
+    // Get all packages assigned to specific company...
     @GetMapping("/company/{companyId}")
     public ResponseEntity<CustomApiResponse<List<EmployerPackageResponse>>> getEmployerPackagesByCompany(
             @PathVariable Long companyId) {
@@ -200,5 +201,30 @@ public class EmployerPackageController {
         }
     }
     
-    
+    @GetMapping("/{employerpackageId}/documents")
+    public ResponseEntity<CustomApiResponse<List<CategoryDocumentsDto>>> getPackageDocuments(
+            @PathVariable Long employerpackageId) {
+        
+        try {
+            log.info("Getting documents for employerpackageId: {}", employerpackageId);
+            List<CategoryDocumentsDto> result = employerPackageService
+                    .getPackageDocumentsByCategory(employerpackageId);
+            
+            return ResponseEntity.ok(
+                    CustomApiResponse.<List<CategoryDocumentsDto>>success(
+                            "Package documents retrieved successfully",
+                            result,
+                            HttpStatus.OK
+                    )
+            );
+        } catch (Exception e) {
+            log.error("Failed to get documents for packageId: {}", employerpackageId, e);
+            
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
+                    .body(CustomApiResponse.<List<CategoryDocumentsDto>>failure(
+                            "Failed to retrieve package documents: " + e.getMessage(),
+                            HttpStatus.INTERNAL_SERVER_ERROR
+                    ));
+        }
+    }
 }

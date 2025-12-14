@@ -1,5 +1,6 @@
 package com.org.bgv.service;
 
+import com.org.bgv.common.CandidateDTO;
 import com.org.bgv.common.ChangePasswordRequest;
 import com.org.bgv.common.ColumnMetadata;
 import com.org.bgv.common.FilterMetadata;
@@ -352,7 +353,7 @@ public class UserService {
                 userDto.setCompanyId(companyUsers.get(0).getCompanyId());
             }
             if(userDto.getRoles().contains(RoleConstants.ROLE_CANDIDATE)) {
-            	Candidate candidate = candidateService.getCandidateByUserId(userDto.getUserId());
+            	CandidateDTO candidate = candidateService.getCandidateByUserId(userDto.getUserId());
             	if(candidate!=null) {
             		userDto.setHasConsentProvided(candidate.getIsConsentProvided()==null?Boolean.FALSE:candidate.getIsConsentProvided());
             		userDto.setCandidateId(candidate.getCandidateId());
