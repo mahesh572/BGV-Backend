@@ -17,6 +17,8 @@ import com.org.bgv.entity.Candidate;
 @Repository
 public interface CandidateRepository extends JpaRepository<Candidate, Long>, JpaSpecificationExecutor<Candidate> {
 	
+	Optional<Candidate> findByUuid(String uuid);
+	
 	Optional<Candidate> findByUserUserId(Long userId);
 	
 	// Check if candidate has any consent records
@@ -25,6 +27,7 @@ public interface CandidateRepository extends JpaRepository<Candidate, Long>, Jpa
     
     List<Candidate> findByCompanyId(Long companyId);
     
+    
     Page<Candidate> findAll(Specification<Candidate> spec, Pageable pageable);
     
     boolean existsByUserUserId(Long userId);
@@ -32,7 +35,6 @@ public interface CandidateRepository extends JpaRepository<Candidate, Long>, Jpa
     // For search by user details
     List<Candidate> findByUserEmailContainingIgnoreCase(String email);
     
-    List<Candidate> findByUserFirstNameContainingIgnoreCaseOrUserLastNameContainingIgnoreCase(String firstName, String lastName);
     
     @Query("SELECT c FROM Candidate c WHERE c.company.id = :companyId AND c.candidateId = :candidateId")
     Optional<Candidate> findByCompanyIdAndCandidateId(@Param("companyId") Long companyId, 

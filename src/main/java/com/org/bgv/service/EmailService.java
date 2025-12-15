@@ -21,9 +21,11 @@ import com.org.bgv.config.SecurityUtils;
 import com.org.bgv.entity.Company;
 import com.org.bgv.entity.Email;
 import com.org.bgv.entity.EmailTemplate;
+import com.org.bgv.entity.Profile;
 import com.org.bgv.entity.User;
 import com.org.bgv.repository.CompanyRepository;
 import com.org.bgv.repository.EmailTemplateRepository;
+import com.org.bgv.repository.ProfileRepository;
 
 import jakarta.mail.MessagingException;
 import jakarta.mail.internet.MimeMessage;
@@ -44,6 +46,8 @@ public class EmailService {
 	
 	// private final StringSubstitutor stringSubstitutor;
 	 private final CompanyRepository companyRepository;
+	 
+	 private final ProfileRepository profileRepository;
 	
 	private final Map<String, TemplateConfig> templateConfigs = Map.of(
 	        "account_creation", new TemplateConfig("Welcome New User", "templates/email/account-creation.html", "templates/email/account-creation.txt"),
@@ -352,6 +356,9 @@ public class EmailService {
     	Company company = companyRepository.findById(companyId)
                 .orElseThrow(() -> new RuntimeException("Company not found with ID: " + companyId));
     	
+    	 Profile profile =profileRepository.findByUserUserId(user.getUserId());
+        
+    	
 	        String from =company.getContactEmail();
 	        String to = user.getEmail();
 	     
@@ -360,7 +367,7 @@ public class EmailService {
 	        // Prepare variables
 	        Map<String, Object> variables = new HashMap();
 	        variables.put("company", company.getCompanyName());
-	        variables.put("name", user.getFirstName()+user.getLastName());
+	        variables.put("name", profile.getFirstName()+profile.getLastName());
 	        variables.put("email", user.getEmail());
 	        variables.put("password", tempPassword);
 	        variables.put("portalUrl", "https://localhost:5173/login");
@@ -376,12 +383,12 @@ public class EmailService {
     }
     
     public void sendEmailResetPasswordSuccessfull(User user) {
-    	
+    	 Profile profile =profileRepository.findByUserUserId(user.getUserId());
     	EmailTemplate emailTemplate = getEmailTemplate("PASSWORD_RESET_SUCCESS", "Password Reset Successful");
     	// Prepare variables
         Map<String, Object> variables = new HashMap();
        
-        variables.put("firstName", user.getFirstName());
+        variables.put("firstName", profile.getFirstName());
         variables.put("loginLink", "https://localhost:5173/login");
         String processedHtml = processTemplate(emailTemplate.getBodyHtml(), variables);
         

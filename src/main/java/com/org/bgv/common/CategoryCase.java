@@ -1,6 +1,5 @@
 package com.org.bgv.common;
 
-import java.math.BigDecimal;
 import java.util.List;
 
 import jakarta.validation.constraints.NotNull;
@@ -13,19 +12,10 @@ import lombok.NoArgsConstructor;
 @Builder
 @NoArgsConstructor
 @AllArgsConstructor
-public class VerificationCaseRequest {
-    
+public class CategoryCase {
 	@NotNull
-    private Long candidateId;
+    private Long categoryId;
     
     @NotNull
-    private Long companyId;
-    
-    @NotNull
-    private Long employerPackageId;
-    
-    @NotNull
-    private BigDecimal totalPrice;
-    
-    private List<CategoryCase> categories;
+    private List<CaseDocumentSelection> documents;
 }

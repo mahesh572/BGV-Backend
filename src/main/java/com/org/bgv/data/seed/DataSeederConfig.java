@@ -90,12 +90,12 @@ public class DataSeederConfig implements CommandLineRunner {
     private void seedDefaultAdminUser() {
         if (userRepository.findByEmail("admin@example.com").isEmpty()) {
             User adminUser = User.builder()
-                    .firstName("System Administrator")
+                   // .firstName("System Administrator")
                     .email("admin@example.com")
                     .password(passwordEncoder.encode("123456"))
-                    .firstName("System")
-                    .lastName("Administrator")
-                    .phoneNumber("+1234567890")
+                  //  .firstName("System")
+                  //  .lastName("Administrator")
+                 //   .phoneNumber("+1234567890")
                     .userType("ADMIN")
                     .build();
             

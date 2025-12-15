@@ -3,6 +3,8 @@ package com.org.bgv.service;
 import com.org.bgv.common.VerificationCaseDocumentResponse;
 import com.org.bgv.common.VerificationCaseResponse;
 import com.org.bgv.common.CandidateCaseStatisticsResponse;
+import com.org.bgv.common.CaseDocumentSelection;
+import com.org.bgv.common.CategoryCase;
 import com.org.bgv.common.CategoryInfo;
 import com.org.bgv.common.DocumentTypeInfo;
 import com.org.bgv.common.DocumentUploadCaseRequest;
@@ -10,6 +12,7 @@ import com.org.bgv.common.EmployerPackageInfo;
 import com.org.bgv.common.VerificationCaseRequest;
 import com.org.bgv.common.VerificationStatisticsResponse;
 import com.org.bgv.common.VerificationUpdateRequest;
+import com.org.bgv.constants.CaseCheckStatus;
 import com.org.bgv.constants.CaseStatus;
 import com.org.bgv.constants.EmployerPackageStatus;
 import com.org.bgv.constants.VerificationStatus;
@@ -24,7 +27,11 @@ import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.time.LocalDateTime;
+import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 import java.util.stream.Collectors;
 
 @Service
@@ -36,6 +43,8 @@ public class VerificationCaseService {
     private final VerificationCaseDocumentRepository verificationCaseDocumentRepository;
     private final EmployerPackageRepository employerPackageRepository;
     private final EmployerPackageDocumentRepository employerPackageDocumentRepository;
+    private final CheckCategoryRepository checkCategoryRepository;
+    private final VerificationCaseCheckRepository verificationCaseCheckRepository;
     
     @Transactional
     public VerificationCaseResponse createVerificationCase(VerificationCaseRequest request) {
@@ -53,38 +62,113 @@ public class VerificationCaseService {
         // Check if candidate already has a case with this package
         if (verificationCaseRepository.findByCandidateIdAndEmployerPackageId(
                 request.getCandidateId(), request.getEmployerPackageId()).isPresent()) {
+        	log.info("####################################################################################################################");
             throw new RuntimeException("Candidate already has a case with this package");
         }
+        
+        // Extract all selected document IDs from categories
+        List<Long> selectedDocumentIds = extractSelectedDocumentIds(request.getCategories());
         
         // Get employer package documents
         List<EmployerPackageDocument> employerDocuments = employerPackageDocumentRepository
                 .findByEmployerPackageId(request.getEmployerPackageId());
         
-        // Calculate pricing based on selected addons
-        PricingResult pricing = calculateCandidatePricing(employerDocuments, request.getSelectedAddonDocumentIds());
+        // Calculate pricing
+        PricingResult pricing = calculateCandidatePricing(employerDocuments, selectedDocumentIds);
         
-        // Create candidate case
-        VerificationCase candidateCase = VerificationCase.builder()
+       /*
+        // Validate total price matches request
+        if (request.getTotalPrice() != null && 
+            request.getTotalPrice().compareTo(pricing.getTotalPrice()) != 0) {
+            log.warn("Price mismatch: requested={}, calculated={}", 
+                    request.getTotalPrice(), pricing.getTotalPrice());
+            throw new RuntimeException("Total price does not match calculated price");
+        }
+        */
+        
+        // Create verification case
+        VerificationCase verificationCase = VerificationCase.builder()
                 .candidateId(request.getCandidateId())
                 .companyId(request.getCompanyId())
                 .employerPackage(employerPackage)
                 .basePrice(pricing.getBasePrice())
                 .addonPrice(pricing.getAddonPrice())
                 .totalPrice(pricing.getTotalPrice())
-                .status(CaseStatus.ASSIGNED)
+                .status(CaseStatus.CREATED)
                 .build();
         
-        VerificationCase savedCase = verificationCaseRepository.save(candidateCase);
+        VerificationCase savedCase = verificationCaseRepository.save(verificationCase);
         
-        // Create candidate case documents
+        // Create verification case checks based on categories with selected documents
+        List<VerificationCaseCheck> caseChecks = createVerificationCaseChecks(
+                savedCase, request.getCategories());
+        
+        // Create candidate case documents based on selected documents
         List<VerificationCaseDocument> caseDocuments = createCandidateCaseDocuments(
-                savedCase, employerDocuments, request.getSelectedAddonDocumentIds());
+                savedCase, employerDocuments, selectedDocumentIds, request.getCategories());
         
+        savedCase.setCaseChecks(caseChecks);
         savedCase.setCaseDocuments(caseDocuments);
         
-        log.info("Created candidate case with id: {}", savedCase.getCaseId());
+        // Update verification case with checks and documents
+        verificationCaseRepository.save(savedCase);
+        
+        log.info("Created candidate case with id: {} and {} documents, {} checks", 
+                savedCase.getCaseId(), caseDocuments.size(), caseChecks.size());
         return mapToVerificationCaseResponse(savedCase);
     }
+ 
+    // Create verification case checks based on categories with selected documents
+    private List<VerificationCaseCheck> createVerificationCaseChecks(
+            VerificationCase verificationCase, 
+            List<CategoryCase> categories) {
+        
+        if (categories == null || categories.isEmpty()) {
+            return List.of();
+        }
+        
+        List<VerificationCaseCheck> caseChecks = new ArrayList();
+        
+        for (CategoryCase categoryData : categories) {
+            // Get the check category
+            CheckCategory checkCategory = checkCategoryRepository.findById(categoryData.getCategoryId())
+                    .orElseThrow(() -> new RuntimeException(
+                            "Check category not found: " + categoryData.getCategoryId()));
+            
+            // Count selected documents in this category
+            long selectedCount = categoryData.getDocuments().stream()
+                    .filter(doc -> doc.getSelected() != null && doc.getSelected())
+                    .count();
+            
+            // Only create check if there are selected documents in this category
+            if (selectedCount > 0) {
+                VerificationCaseCheck caseCheck = VerificationCaseCheck.builder()
+                        .verificationCase(verificationCase)
+                        .category(checkCategory)
+                        .status(CaseCheckStatus.PENDING)
+                        .build();
+                
+                caseChecks.add(caseCheck);
+            }
+        }
+        
+        // Save all case checks
+        return verificationCaseCheckRepository.saveAll(caseChecks);
+    }
+ // Helper method to extract selected document IDs from categories
+    private List<Long> extractSelectedDocumentIds(List<CategoryCase> categories) {
+        if (categories == null || categories.isEmpty()) {
+            return List.of();
+        }
+        
+        return categories.stream()
+                .flatMap(category -> category.getDocuments().stream())
+                .filter(doc -> doc.getSelected() != null && doc.getSelected())
+                .map(CaseDocumentSelection::getDocumentId)
+                .distinct()
+                .collect(Collectors.toList());
+    }
+    
     
     public VerificationCaseResponse getVerificationCase(Long caseId) {
     	VerificationCase candidateCase = verificationCaseRepository.findById(caseId)
@@ -177,31 +261,69 @@ public class VerificationCaseService {
                 .count();
     }
     
-    private List<VerificationCaseDocument> createCandidateCaseDocuments(VerificationCase candidateCase,
-                                                                    List<EmployerPackageDocument> employerDocuments,
-                                                                    List<Long> selectedAddonDocumentIds) {
-        return employerDocuments.stream()
-                .map(empDoc -> {
-                    boolean isAddOn = !empDoc.getIncludedInBase();
-                    boolean isSelected = empDoc.getIncludedInBase() || 
-                                       selectedAddonDocumentIds.contains(empDoc.getDocumentType().getDocTypeId());
-                    
-                    if (!isSelected) {
-                        return null; // Skip documents not selected by candidate
-                    }
-                    
-                    return VerificationCaseDocument.builder()
-                            .verificationCase(candidateCase)
-                            .checkCategory(empDoc.getCheckCategory())
-                            .documentType(empDoc.getDocumentType())
-                            .isAddOn(isAddOn)
-                            .required(empDoc.getIncludedInBase()) // Required if included in base
-                            .documentPrice(isAddOn ? empDoc.getAddonPrice() : 0.0)
-                            .verificationStatus(VerificationStatus.PENDING)
-                            .build();
-                })
-                .filter(doc -> doc != null)
-                .collect(Collectors.toList());
+ // Create candidate case documents with enhanced logic for categories
+    private List<VerificationCaseDocument> createCandidateCaseDocuments(
+            VerificationCase verificationCase,
+            List<EmployerPackageDocument> employerDocuments,
+            List<Long> selectedDocumentIds,
+            List<CategoryCase> categories) {
+    	
+    	// categories - selected by an employer while raising verification case
+        
+        List<VerificationCaseDocument> caseDocuments = new ArrayList<>();
+        
+        // Create a map of document selections by category for quick lookup
+        Map<Long, List<CaseDocumentSelection>> categoryDocumentSelections = new HashMap();
+        
+        if (categories != null) {
+            for (CategoryCase category : categories) {
+                categoryDocumentSelections.put(category.getCategoryId(), category.getDocuments());
+            }
+        }
+        
+        for (EmployerPackageDocument employerDoc : employerDocuments) {
+            Long documentId = employerDoc.getDocumentType().getDocTypeId();
+            boolean isSelected = selectedDocumentIds.contains(documentId);
+            
+            // If categories are provided, use them to determine selection
+            if (!categoryDocumentSelections.isEmpty()) {
+                List<CaseDocumentSelection> categoryDocs = categoryDocumentSelections.get(
+                        employerDoc.getCheckCategory().getCategoryId());
+                
+                if (categoryDocs != null) {
+                    isSelected = categoryDocs.stream()
+                            .anyMatch(doc -> doc.getDocumentId().equals(documentId) && 
+                                    doc.getSelected() != null && doc.getSelected());
+                }
+            }
+            
+            // Determine if this is an addon (not included in base package)
+            boolean isAddOn = !employerDoc.getIncludedInBase() && isSelected;
+            
+            // Determine if document is required
+          //  boolean required = employerDoc.getRequired() != null ? employerDoc.getRequired() : false;
+            
+            // Calculate document price
+          //  Double documentPrice = calculateDocumentPrice(employerDoc, isAddOn);
+            
+            // Create case document
+            VerificationCaseDocument caseDocument = VerificationCaseDocument.builder()
+                    .verificationCase(verificationCase)
+                    .checkCategory(employerDoc.getCheckCategory())
+                    .documentType(employerDoc.getDocumentType())
+                    .isAddOn(isAddOn)
+                    .required(true)
+                   // .documentPrice(documentPrice)
+                    .verificationStatus(VerificationStatus.PENDING)
+                    .createdAt(LocalDateTime.now())
+                    .updatedAt(LocalDateTime.now())
+                    .build();
+            
+            caseDocuments.add(caseDocument);
+        }
+        
+        // Save all case documents
+        return verificationCaseDocumentRepository.saveAll(caseDocuments);
     }
     
 

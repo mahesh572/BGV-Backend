@@ -15,6 +15,7 @@ import jakarta.persistence.JoinColumn;
 import jakarta.persistence.ManyToOne;
 import jakarta.persistence.OneToMany;
 import jakarta.persistence.OneToOne;
+import jakarta.persistence.OrderBy;
 import jakarta.persistence.PrePersist;
 import jakarta.persistence.PreUpdate;
 import jakarta.persistence.Table;
@@ -43,6 +44,13 @@ public class Candidate {
     @OneToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "user_id")
     private User user;
+    
+    @OneToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "profile_id")
+    private Profile profile;
+    
+    @Column(name = "uuid", unique = true, nullable = false)
+    private String uuid;
     
     @Column(name = "is_active")
     private Boolean isActive;
@@ -75,6 +83,25 @@ public class Candidate {
     @OneToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "company_id", nullable = false)
     private Company company;
+    
+    @OneToMany(mappedBy = "candidate", 
+            cascade = CascadeType.ALL, 
+            fetch = FetchType.LAZY,
+            orphanRemoval = true)
+   @OrderBy("timestamp DESC")
+   private List<ActivityTimeline> activityTimeline = new ArrayList<>();
+    
+    // Helper method to add activity
+    public void addActivity(ActivityTimeline activity) {
+        activityTimeline.add(activity);
+        activity.setCandidate(this);
+    }
+    
+    // Helper method to remove activity
+    public void removeActivity(ActivityTimeline activity) {
+        activityTimeline.remove(activity);
+        activity.setCandidate(null);
+    }
     
  // Lifecycle Methods
     @PrePersist

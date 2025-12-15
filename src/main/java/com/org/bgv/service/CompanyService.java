@@ -213,11 +213,11 @@ public class CompanyService {
 	    	   	    		    	
 	    	String tempPassword = CommonUtils.generateTempPassword();
 	    	User user = User.builder()
-	                .firstName(employeeDTO.getFirstName())
-	                .lastName(employeeDTO.getLastName())
-	                .phoneNumber(employeeDTO.getMobileNo())
+	              //  .firstName(employeeDTO.getFirstName())
+	              //  .lastName(employeeDTO.getLastName())
+	             //   .phoneNumber(employeeDTO.getMobileNo())
 	                .email(employeeDTO.getEmail())
-	                .gender(employeeDTO.getGender())
+	             //   .gender(employeeDTO.getGender())
 	               // .password(UUID.randomUUID().toString())
 	                .password(passwordEncoder.encode(tempPassword))
 	                .userType(type)
@@ -270,11 +270,11 @@ public class CompanyService {
 	    			log.info("addPerson::::::::::::employeeDTO.getId()::::::::::{}",employeeDTO.getId());
 	    			 // Create new User entity from DTO
 	    	        User user = User.builder()
-	    	                .firstName(employeeDTO.getFirstName())
-	    	                .lastName(employeeDTO.getLastName())
-	    	                .phoneNumber(employeeDTO.getMobileNo())
+	    	              //  .firstName(employeeDTO.getFirstName())
+	    	              //  .lastName(employeeDTO.getLastName())
+	    	              //  .phoneNumber(employeeDTO.getMobileNo())
 	    	                .email(employeeDTO.getEmail())
-	    	                .gender(employeeDTO.getGender())
+	    	             //   .gender(employeeDTO.getGender())
 	    	               // .password(UUID.randomUUID().toString())
 	    	                .password(passwordEncoder.encode("123456"))
 	    	                .userType(Status.USER_TYPE_CANDIDATE)
@@ -346,11 +346,11 @@ public class CompanyService {
 	    	}else {
 	    		 // Create new User entity from DTO
     	        User user = User.builder()
-    	                .firstName(employeeDTO.getFirstName())
-    	                .lastName(employeeDTO.getLastName())
-    	                .phoneNumber(employeeDTO.getMobileNo())
+    	              //  .firstName(employeeDTO.getFirstName())
+    	             //   .lastName(employeeDTO.getLastName())
+    	             //   .phoneNumber(employeeDTO.getMobileNo())
     	                .email(employeeDTO.getEmail())
-    	                .gender(employeeDTO.getGender())
+    	             //   .gender(employeeDTO.getGender())
     	               // .password(UUID.randomUUID().toString())
     	                .password(passwordEncoder.encode("123456"))
     	                .userType(Status.USER_TYPE_CANDIDATE)

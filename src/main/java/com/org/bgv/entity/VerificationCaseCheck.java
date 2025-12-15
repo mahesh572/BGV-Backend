@@ -39,4 +39,6 @@ public class VerificationCaseCheck {
     @Enumerated(EnumType.STRING)
     @Column(name = "status", nullable = false)
     private CaseCheckStatus status;
+    
+    
 }

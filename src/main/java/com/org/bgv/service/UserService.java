@@ -22,12 +22,14 @@ import com.org.bgv.dto.UserDetailsDto;
 import com.org.bgv.entity.Candidate;
 import com.org.bgv.entity.Company;
 import com.org.bgv.entity.CompanyUser;
+import com.org.bgv.entity.Profile;
 import com.org.bgv.entity.Role;
 import com.org.bgv.entity.User;
 import com.org.bgv.entity.UserRole;
 import com.org.bgv.mapper.UserMapper;
 import com.org.bgv.repository.CompanyRepository;
 import com.org.bgv.repository.CompanyUserRepository;
+import com.org.bgv.repository.ProfileRepository;
 import com.org.bgv.repository.RoleRepository;
 import com.org.bgv.repository.UserRepository;
 import com.org.bgv.repository.UserRoleRepository;
@@ -72,6 +74,7 @@ public class UserService {
     private final CompanyRepository companyRepository;
     private final CandidateService candidateService;
     private final EmailService emailService;
+    private final ProfileRepository profileRepository;
     
     private static final Logger logger = LoggerFactory.getLogger(UserService.class);
 
@@ -212,6 +215,8 @@ public class UserService {
         try {
             User existingUser = userRepository.findById(id)
                     .orElseThrow(() -> new RuntimeException("User not found with id: " + id));
+            
+            Profile profile = profileRepository.findByUserUserId(existingUser.getUserId());
 
             // Check if email is being changed and if it already exists for another user
             if (!existingUser.getEmail().equals(userDto.getEmail()) && 
@@ -220,16 +225,17 @@ public class UserService {
             }
 
             // Update fields
-            existingUser.setFirstName(userDto.getFirstName());
-            existingUser.setLastName(userDto.getLastName());
+            profile.setFirstName(userDto.getFirstName());
+            profile.setLastName(userDto.getLastName());
             existingUser.setEmail(userDto.getEmail());
             
             // Update other fields as needed
             if (userDto.getPhoneNumber() != null) {
-                existingUser.setPhoneNumber(userDto.getPhoneNumber());
+            	profile.setPhoneNumber(userDto.getPhoneNumber());
             }
 
             User updated = userRepository.save(existingUser);
+            profileRepository.save(profile);
             return userMapper.toDto(updated);
         } catch (Exception e) {
             throw new RuntimeException("Failed to update user: " + e.getMessage(), e);

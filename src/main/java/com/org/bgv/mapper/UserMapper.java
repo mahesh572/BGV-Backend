@@ -6,24 +6,43 @@ import com.org.bgv.dto.BasicdetailsDTO;
 import com.org.bgv.dto.UserDetailsDto;
 
 import com.org.bgv.entity.Address;
+import com.org.bgv.entity.Profile;
 import com.org.bgv.entity.User;
+import com.org.bgv.repository.ProfileRepository;
+import com.org.bgv.repository.UserRepository;
+import com.org.bgv.service.DocumentService;
+import com.org.bgv.service.EducationService;
+import com.org.bgv.service.IdentityProofService;
+import com.org.bgv.service.ProfileAddressService;
+import com.org.bgv.service.WorkExperienceService;
 
+import lombok.RequiredArgsConstructor;
+
+import java.util.Optional;
 import java.util.stream.Collectors;
 
 import org.springframework.stereotype.Component;
 
+
 @Component
+@RequiredArgsConstructor
 public class UserMapper implements BaseMapper<User, UserDto> {
    
+	 private final ProfileRepository profileRepository;
+	
 	@Override
     public UserDto toDto(User entity) {
+		
+		Profile profile = profileRepository.findByUserUserId(entity.getUserId());
+		        		
+		
 		UserDto dto = new UserDto();
         dto.setUserId(entity.getUserId());
-        dto.setFirstName(entity.getFirstName());
-        dto.setLastName(entity.getLastName());
+        dto.setFirstName(profile.getFirstName());
+        dto.setLastName(profile.getLastName());
         dto.setEmail(entity.getEmail());
         dto.setUserType(entity.getUserType());
-        dto.setPhoneNumber(entity.getPhoneNumber());
+        dto.setPhoneNumber(profile.getPhoneNumber());
         dto.setPasswordResetrequired(entity.getPasswordResetrequired()==null?Boolean.FALSE:entity.getPasswordResetrequired());
 
         return dto;
@@ -33,9 +52,9 @@ public class UserMapper implements BaseMapper<User, UserDto> {
         if (user == null) {
             return null;
         }
-
-        String fullName = (user.getFirstName() != null ? user.getFirstName() : "") + 
-                         (user.getLastName() != null ? " " + user.getLastName() : "").trim();
+        Profile profile = profileRepository.findByUserUserId(user.getUserId());
+        String fullName = (profile.getFirstName() != null ? profile.getFirstName() : "") + 
+                         (profile.getLastName() != null ? " " + profile.getLastName() : "").trim();
         
         if (fullName.isEmpty()) {
             fullName = null;
@@ -45,14 +64,14 @@ public class UserMapper implements BaseMapper<User, UserDto> {
                 .userId(user.getUserId())
                 .email(user.getEmail())
                 .userType(user.getUserType())
-                .firstName(user.getFirstName())
-                .lastName(user.getLastName())
+                .firstName(profile.getFirstName())
+                .lastName(profile.getLastName())
                 .name(fullName)
-                .phoneNumber(user.getPhoneNumber())
+                .phoneNumber(profile.getPhoneNumber())
                 .isActive(user.getIsActive())
                 .isVerified(user.getIsVerified())
                 .profilePictureUrl(user.getProfilePictureUrl())
-                .gender(user.getGender())
+                .gender(profile.getGender())
                 .status(user.getStatus())
                 .dateOfBirth(user.getDateOfBirth() != null ? user.getDateOfBirth() : null)
                 .build();
@@ -63,10 +82,10 @@ public class UserMapper implements BaseMapper<User, UserDto> {
     public User toEntity(UserDto dto) {
         User user = new User();
         user.setUserId(dto.getUserId());
-        user.setFirstName(dto.getFirstName());
-        user.setLastName(dto.getLastName());
+       // user.setFirstName(dto.getFirstName());
+      //  user.setLastName(dto.getLastName());
         user.setEmail(dto.getEmail());
-        user.setPhoneNumber(dto.getPhoneNumber());
+      //  user.setPhoneNumber(dto.getPhoneNumber());
        // user.setDateOfBirth(dto.getDateOfBirth());
         user.setUserType(dto.getUserType());
         user.setIsVerified(Boolean.FALSE);

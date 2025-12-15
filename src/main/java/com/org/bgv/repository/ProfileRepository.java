@@ -14,7 +14,7 @@ public interface ProfileRepository extends JpaRepository<Profile, Long> {
     Optional<Profile> findByPhoneNumber(String phoneNumber);
     
     // FIXED: Use the actual field name 'userId' from User entity
-    Optional<Profile> findByUserUserId(Long userId);
+    Profile findByUserUserId(Long userId);
     
     // FIXED: Correct JPQL query to use the actual field names
     @Query("SELECT p.profileId FROM Profile p WHERE p.user.userId = :userId")

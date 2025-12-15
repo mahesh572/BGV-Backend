@@ -58,6 +58,10 @@ public class VerificationCase {
     @OneToMany(mappedBy = "verificationCase", cascade = CascadeType.ALL, fetch = FetchType.LAZY)
     @Builder.Default
     private List<VerificationCaseDocument> caseDocuments = new ArrayList<>();
+    
+    @OneToMany(mappedBy = "verificationCase", cascade = CascadeType.ALL, fetch = FetchType.LAZY)
+    @Builder.Default
+    private List<VerificationCaseCheck> caseChecks = new ArrayList<>();
 
     @PreUpdate
     protected void onUpdate() {

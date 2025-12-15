@@ -30,6 +30,7 @@ import org.springframework.web.multipart.MultipartFile;
 import com.org.bgv.candidate.CandidateMapper;
 import com.org.bgv.candidate.CandidateSearchRequest;
 import com.org.bgv.common.CandidateDTO;
+import com.org.bgv.common.CandidateDetailsDTO;
 import com.org.bgv.common.ColumnMetadata;
 import com.org.bgv.common.CommonUtils;
 import com.org.bgv.common.ConsentRequest;
@@ -54,6 +55,7 @@ import com.org.bgv.entity.Profile;
 import com.org.bgv.entity.Role;
 import com.org.bgv.entity.User;
 import com.org.bgv.entity.UserRole;
+import com.org.bgv.mapper.CandidateDetailsMapper;
 import com.org.bgv.repository.CandidateConsentRepository;
 import com.org.bgv.repository.CandidateRepository;
 import com.org.bgv.repository.CompanyRepository;
@@ -87,6 +89,7 @@ public class CandidateService {
     private final S3StorageService s3StorageService;
     private final EmailService emailService;
     private final CandidateMapper candidateMapper;
+    private final CandidateDetailsMapper candidateDetailsMapper;
     
     private static final Logger log = LoggerFactory.getLogger(CandidateService.class);
     
@@ -95,9 +98,7 @@ public class CandidateService {
 		// source type - university,individual,company
 		try {
 			String tempPassword = CommonUtils.generateTempPassword();
-			User user = User.builder().firstName(candidateDTO.getFirstName()).lastName(candidateDTO.getLastName())
-					.phoneNumber(candidateDTO.getMobileNo()).email(candidateDTO.getEmail())
-					.gender(candidateDTO.getGender())
+			User user = User.builder().email(candidateDTO.getEmail())
 					// .password(UUID.randomUUID().toString())
 					.password(passwordEncoder.encode(tempPassword))
 					.userType(Constants.USER_TYPE_CANDIDATE)
@@ -493,7 +494,7 @@ public class CandidateService {
 
     public PaginationResponse<CandidateDTO> searchCandidates(CandidateSearchRequest searchRequest) {
         Pageable pageable = createPageable(searchRequest.getPagination(), searchRequest.getSorting());
-        
+        log.info("Candidate service ::::searchCandidates::");
         // Build specification for filtering
         Specification<Candidate> spec = buildSearchSpecification(searchRequest);
         
@@ -527,82 +528,111 @@ public class CandidateService {
     }
 
     private Specification<Candidate> buildSearchSpecification(CandidateSearchRequest searchRequest) {
-        return (root, query, criteriaBuilder) -> {
+        return (root, query, cb) -> {
+
             List<Predicate> predicates = new ArrayList<>();
-            
-            // Filter by company if specified
+
+            /* ---------- Company Filter (mandatory in BGV apps) ---------- */
             if (searchRequest.getCompanyId() != null && searchRequest.getCompanyId() != 0) {
                 Join<Candidate, Company> companyJoin = root.join("company", JoinType.INNER);
-                predicates.add(criteriaBuilder.equal(companyJoin.get("id"), searchRequest.getCompanyId()));
+                predicates.add(cb.equal(companyJoin.get("id"), searchRequest.getCompanyId()));
             }
-            
-            // Search term across user fields and candidate fields
+
+            /* ---------- Search Term ---------- */
             if (StringUtils.hasText(searchRequest.getSearch())) {
                 String searchTerm = "%" + searchRequest.getSearch().toLowerCase() + "%";
-                
-                // Join with User entity for user fields
-                Join<Candidate, User> userJoin = root.join("user", JoinType.INNER);
-                
-                Predicate firstNamePredicate = criteriaBuilder.like(criteriaBuilder.lower(userJoin.get("firstName")), searchTerm);
-                Predicate lastNamePredicate = criteriaBuilder.like(criteriaBuilder.lower(userJoin.get("lastName")), searchTerm);
-                Predicate emailPredicate = criteriaBuilder.like(criteriaBuilder.lower(userJoin.get("email")), searchTerm);
-                Predicate phonePredicate = criteriaBuilder.like(criteriaBuilder.lower(userJoin.get("phoneNumber")), searchTerm);
-                
-                // Candidate specific fields
-                Predicate sourceTypePredicate = criteriaBuilder.like(criteriaBuilder.lower(root.get("sourceType")), searchTerm);
-                Predicate verificationStatusPredicate = criteriaBuilder.like(criteriaBuilder.lower(root.get("verificationStatus")), searchTerm);
-                Predicate jobSearchStatusPredicate = criteriaBuilder.like(criteriaBuilder.lower(root.get("jobSearchStatus")), searchTerm);
-                
-                predicates.add(criteriaBuilder.or(
-                    firstNamePredicate, lastNamePredicate, emailPredicate, phonePredicate,
-                    sourceTypePredicate, verificationStatusPredicate, jobSearchStatusPredicate
+
+                Join<Candidate, Profile> profileJoin = root.join("profile", JoinType.LEFT);
+                Join<Candidate, User> userJoin = root.join("user", JoinType.LEFT);
+
+                Predicate firstName = cb.like(cb.lower(profileJoin.get("firstName")), searchTerm);
+                Predicate lastName  = cb.like(cb.lower(profileJoin.get("lastName")), searchTerm);
+                Predicate phone     = cb.like(cb.lower(profileJoin.get("phoneNumber")), searchTerm);
+                Predicate email     = cb.like(cb.lower(userJoin.get("email")), searchTerm);
+
+                Predicate sourceType = cb.like(cb.lower(root.get("sourceType")), searchTerm);
+                Predicate verificationStatus = cb.like(cb.lower(root.get("verificationStatus")), searchTerm);
+                Predicate jobSearchStatus = cb.like(cb.lower(root.get("jobSearchStatus")), searchTerm);
+
+                predicates.add(cb.or(
+                    firstName,
+                    lastName,
+                    phone,
+                    email,
+                    sourceType,
+                    verificationStatus,
+                    jobSearchStatus
                 ));
             }
-            
-            // Filters
+
+            /* ---------- Filters ---------- */
             if (searchRequest.getFilters() != null) {
                 for (FilterRequest filter : searchRequest.getFilters()) {
-                    if (filter.getIsSelected() != null && filter.getIsSelected() && filter.getSelectedValue() != null) {
-                        switch (filter.getField()) {
-                            case "isActive":
-                                Boolean activeValue = Boolean.valueOf(filter.getSelectedValue().toString());
-                                predicates.add(criteriaBuilder.equal(root.get("isActive"), activeValue));
-                                break;
-                            case "isVerified":
-                                Boolean verifiedValue = Boolean.valueOf(filter.getSelectedValue().toString());
-                                predicates.add(criteriaBuilder.equal(root.get("isVerified"), verifiedValue));
-                                break;
-                            case "verificationStatus":
-                                predicates.add(criteriaBuilder.equal(root.get("verificationStatus"), filter.getSelectedValue()));
-                                break;
-                            case "jobSearchStatus":
-                                predicates.add(criteriaBuilder.equal(root.get("jobSearchStatus"), filter.getSelectedValue()));
-                                break;
-                            case "isConsentProvided":
-                                Boolean consentValue = Boolean.valueOf(filter.getSelectedValue().toString());
-                                predicates.add(criteriaBuilder.equal(root.get("isConsentProvided"), consentValue));
-                                break;
-                            case "sourceType":
-                                predicates.add(criteriaBuilder.equal(root.get("sourceType"), filter.getSelectedValue()));
-                                break;
-                            case "createdDate":
-                                // Handle date range - you might want to implement proper date range logic
-                                // For now, exact match
-                                try {
-                                    LocalDateTime dateValue = LocalDateTime.parse(filter.getSelectedValue().toString());
-                                    predicates.add(criteriaBuilder.equal(root.get("createdAt"), dateValue));
-                                } catch (Exception e) {
-                                    log.warn("Invalid date format for createdDate filter: {}", filter.getSelectedValue());
-                                }
-                                break;
-                        }
+
+                    if (!Boolean.TRUE.equals(filter.getIsSelected()) || filter.getSelectedValue() == null) {
+                        continue;
+                    }
+
+                    switch (filter.getField()) {
+
+                        case "isActive":
+                            predicates.add(cb.equal(
+                                root.get("isActive"),
+                                Boolean.valueOf(filter.getSelectedValue().toString())
+                            ));
+                            break;
+
+                        case "isVerified":
+                            predicates.add(cb.equal(
+                                root.get("isVerified"),
+                                Boolean.valueOf(filter.getSelectedValue().toString())
+                            ));
+                            break;
+
+                        case "verificationStatus":
+                            predicates.add(cb.equal(
+                                root.get("verificationStatus"),
+                                filter.getSelectedValue()
+                            ));
+                            break;
+
+                        case "jobSearchStatus":
+                            predicates.add(cb.equal(
+                                root.get("jobSearchStatus"),
+                                filter.getSelectedValue()
+                            ));
+                            break;
+
+                        case "isConsentProvided":
+                            predicates.add(cb.equal(
+                                root.get("isConsentProvided"),
+                                Boolean.valueOf(filter.getSelectedValue().toString())
+                            ));
+                            break;
+
+                        case "sourceType":
+                            predicates.add(cb.equal(
+                                root.get("sourceType"),
+                                filter.getSelectedValue()
+                            ));
+                            break;
+
+                        case "createdDate":
+                            try {
+                                LocalDateTime date = LocalDateTime.parse(filter.getSelectedValue().toString());
+                                predicates.add(cb.greaterThanOrEqualTo(root.get("createdAt"), date));
+                            } catch (Exception e) {
+                                log.warn("Invalid createdDate filter value: {}", filter.getSelectedValue());
+                            }
+                            break;
                     }
                 }
             }
-            
-            return criteriaBuilder.and(predicates.toArray(new Predicate[0]));
+
+            return cb.and(predicates.toArray(new Predicate[0]));
         };
     }
+
 
     private PaginationResponse<CandidateDTO> buildCompletePaginationResponse(Page<Candidate> candidatePage, CandidateSearchRequest searchRequest) {
         List<CandidateDTO> candidateDtos = candidatePage.getContent()
@@ -881,6 +911,28 @@ public class CandidateService {
         
         Candidate updatedCandidate = candidateRepository.save(existingCandidate);
         return candidateMapper.toDto(updatedCandidate); // Using normal mapper
+    }
+    
+    @Transactional
+    public CandidateDetailsDTO getCandidateDetails(Long companyId,Long candidateId) {
+        log.info("Fetching candidate details for candidateId: {}", candidateId);
+        
+        log.info("Fetching companyId details for companyId: {}", companyId);
+        
+        Candidate candidate = candidateRepository
+                .findByCompanyIdAndCandidateId(companyId, candidateId)
+                .orElseThrow(() -> new RuntimeException(
+                    String.format("Candidate not found with ID: %s", candidateId)
+                ));
+        
+        log.info("candidate:::::::::::::::::{}",candidate);
+        
+        // Eagerly fetch related entities
+        candidate.getProfile();
+        candidate.getCompany();
+        candidate.getActivityTimeline().size(); // Force initialization
+        
+        return candidateDetailsMapper.toDTO(candidate);
     }
 
     public void deleteCandidate(Long candidateId) {

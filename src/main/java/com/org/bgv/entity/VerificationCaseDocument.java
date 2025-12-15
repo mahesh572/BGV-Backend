@@ -7,7 +7,7 @@ import java.time.LocalDateTime;
 import com.org.bgv.constants.VerificationStatus;
 
 @Entity
-@Table(name = "candidate_case_document")
+@Table(name = "verification_case_document")
 @Getter
 @Setter
 @NoArgsConstructor
@@ -38,7 +38,7 @@ public class VerificationCaseDocument {
     @Column(name = "required", nullable = false)
     private Boolean required;
 
-    @Column(name = "document_price", nullable = false)
+    @Column(name = "document_price")
     private Double documentPrice;
 
     @Enumerated(EnumType.STRING)

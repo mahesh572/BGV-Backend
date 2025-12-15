@@ -29,6 +29,7 @@ public class User {
     
     @Column(name = "user_type")
     private String userType;
+    /*
     
     @Column(name = "first_name")
     private String firstName;
@@ -38,6 +39,11 @@ public class User {
     
     @Column(name = "phone_number", unique = true)
     private String phoneNumber;
+    
+    @Column(name = "gender")
+    private String gender;
+    
+    */
     
     @Column(name = "is_active")
     private Boolean isActive;
@@ -54,8 +60,6 @@ public class User {
     @Column(name = "updated_at")
     private LocalDateTime updatedAt;
     
-    @Column(name = "gender")
-    private String gender;
     
     @Column(name = "status")
     private String status;
