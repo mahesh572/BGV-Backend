@@ -13,7 +13,7 @@ import com.org.bgv.constants.VerificationStatus;
 @NoArgsConstructor
 @AllArgsConstructor
 @Builder
-public class CandidateCaseDocument {
+public class VerificationCaseDocument {
     
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
@@ -22,7 +22,7 @@ public class CandidateCaseDocument {
 
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "case_id", nullable = false)
-    private CandidateCase candidateCase;
+    private VerificationCase verificationCase;
 
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "check_category_id", nullable = false)

@@ -12,7 +12,7 @@ import lombok.NoArgsConstructor;
 @Builder
 @NoArgsConstructor
 @AllArgsConstructor
-public class CandidateCaseResponse {
+public class VerificationCaseResponse {
     
     private Long caseId;
     private Long candidateId;
@@ -23,5 +23,5 @@ public class CandidateCaseResponse {
     private Double totalPrice;
     private String status;
     private LocalDateTime createdAt;
-    private List<CandidateCaseDocumentResponse> documents;
+    private List<VerificationCaseDocumentResponse> documents;
 }

@@ -49,7 +49,7 @@ public class EmployerPackageService {
     private final BgvPackageRepository bgvPackageRepository;
     private final CheckCategoryRepository checkCategoryRepository;
     private final DocumentTypeRepository documentTypeRepository;
-    private final CandidateCaseRepository candidateCaseRepository;
+    private final VerificationCaseRepository candidateCaseRepository;
     private final PackageService packageService;
     
     @Transactional

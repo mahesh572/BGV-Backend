@@ -12,7 +12,7 @@ import lombok.NoArgsConstructor;
 @Builder
 @NoArgsConstructor
 @AllArgsConstructor
-public class CandidateCaseRequest {
+public class VerificationCaseRequest {
     
     @NotNull
     private Long candidateId;

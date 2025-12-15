@@ -11,7 +11,7 @@ import lombok.NoArgsConstructor;
 @Builder
 @NoArgsConstructor
 @AllArgsConstructor
-public class CandidateCaseDocumentResponse {
+public class VerificationCaseDocumentResponse {
     
     private Long caseDocumentId;
     private CategoryInfo checkCategory;

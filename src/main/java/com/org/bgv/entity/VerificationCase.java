@@ -9,13 +9,13 @@ import java.util.List;
 import com.org.bgv.constants.CaseStatus;
 
 @Entity
-@Table(name = "candidate_case")
+@Table(name = "verification_case")
 @Getter
 @Setter
 @NoArgsConstructor
 @AllArgsConstructor
 @Builder
-public class CandidateCase {
+public class VerificationCase {
     
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
@@ -44,7 +44,7 @@ public class CandidateCase {
     
     @Enumerated(EnumType.STRING)
     @Builder.Default
-    private CaseStatus status = CaseStatus.ASSIGNED;
+    private CaseStatus status = CaseStatus.CREATED;
     
     @Builder.Default
     private LocalDateTime createdAt = LocalDateTime.now();
@@ -55,9 +55,9 @@ public class CandidateCase {
     @Column(name = "completed_at")
     private LocalDateTime completedAt;
     
-    @OneToMany(mappedBy = "candidateCase", cascade = CascadeType.ALL, fetch = FetchType.LAZY)
+    @OneToMany(mappedBy = "verificationCase", cascade = CascadeType.ALL, fetch = FetchType.LAZY)
     @Builder.Default
-    private List<CandidateCaseDocument> caseDocuments = new ArrayList<>();
+    private List<VerificationCaseDocument> caseDocuments = new ArrayList<>();
 
     @PreUpdate
     protected void onUpdate() {
