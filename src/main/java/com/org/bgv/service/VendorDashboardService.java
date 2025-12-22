@@ -1,5 +1,7 @@
 package com.org.bgv.service;
 
+import com.org.bgv.candidate.entity.Candidate;
+import com.org.bgv.candidate.repository.CandidateRepository;
 import com.org.bgv.constants.CaseCheckStatus;
 import com.org.bgv.constants.CaseStatus;
 import com.org.bgv.entity.*;

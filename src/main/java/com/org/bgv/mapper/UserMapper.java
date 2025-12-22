@@ -2,7 +2,7 @@ package com.org.bgv.mapper;
 
 import com.org.bgv.common.UserDto;
 import com.org.bgv.dto.AddressDTO;
-import com.org.bgv.dto.BasicdetailsDTO;
+import com.org.bgv.dto.BasicDetailsDTO;
 import com.org.bgv.dto.UserDetailsDto;
 
 import com.org.bgv.entity.Address;
@@ -134,9 +134,9 @@ public class UserMapper implements BaseMapper<User, UserDto> {
         addrDto.setAddressType(address.getAddressType());
         return addrDto;
     }
-    public BasicdetailsDTO mapUserDTOToBasicdetails(UserDto userDto) {
+    public BasicDetailsDTO mapUserDTOToBasicdetails(UserDto userDto) {
     	
-    	return BasicdetailsDTO.builder()
+    	return BasicDetailsDTO.builder()
     			.firstName(userDto.getFirstName())
     			.lastName(userDto.getLastName())
     			.gender(userDto.getGender())

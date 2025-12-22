@@ -1,5 +1,9 @@
 package com.org.bgv.service;
 
+import com.org.bgv.candidate.entity.Candidate;
+import com.org.bgv.candidate.entity.IdentityProof;
+import com.org.bgv.candidate.repository.CandidateRepository;
+import com.org.bgv.candidate.repository.IdentityProofRepository;
 import com.org.bgv.dto.DocumentResponse;
 import com.org.bgv.dto.DocumentStats;
 import com.org.bgv.dto.DocumentUploadRequest;
@@ -8,23 +12,21 @@ import com.org.bgv.dto.IdentityProofDTO;
 import com.org.bgv.dto.IdentityProofResponse;
 import com.org.bgv.dto.IdentitySectionRequest;
 import com.org.bgv.dto.UploadRuleDTO;
-import com.org.bgv.entity.Candidate;
 import com.org.bgv.entity.CheckCategory;
 import com.org.bgv.entity.DocumentType;
 import com.org.bgv.entity.IdentityDocuments;
-import com.org.bgv.entity.IdentityProof;
 import com.org.bgv.entity.Profile;
-import com.org.bgv.repository.CandidateRepository;
 import com.org.bgv.repository.CheckCategoryRepository;
 import com.org.bgv.repository.DocumentTypeRepository;
 import com.org.bgv.repository.IdentityDocumentsRepository;
-import com.org.bgv.repository.IdentityProofRepository;
 import com.org.bgv.repository.ProfileRepository;
 import com.org.bgv.s3.S3StorageService;
 
 import jakarta.persistence.EntityNotFoundException;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+
+import org.springframework.cache.annotation.Cacheable;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -212,7 +214,7 @@ public class IdentityProofService {
         
         for (DocumentType documentType : documentTypes) {
         	Optional<IdentityProof> identityProof = identityProofRepository
-                     .findByCandidateCandidateIdAndDocTypeId(candidateId,documentType.getDocTypeId())
+                     .findByCandidateIdAndDocumentType(candidateId,documentType.getDocTypeId())
                      .stream()
                      .findFirst();
             DocumentUploadRequest documentRequest = createDocumentByType(documentType,identityProof.orElse(null));
@@ -335,16 +337,11 @@ public class IdentityProofService {
                     .build()
         );
     }
-    private static String formatDateForHTML(Date date) {
+    private static String formatDateForHTML(LocalDate date) {
         if (date == null) {
             return "";
         }
-        try {
-            SimpleDateFormat sdf = new SimpleDateFormat("yyyy-MM-dd");
-            return sdf.format(date);
-        } catch (Exception e) {
-            return "";
-        }
+        return date.format(java.time.format.DateTimeFormatter.ISO_LOCAL_DATE);
     }
     
     
@@ -365,7 +362,7 @@ public class IdentityProofService {
 
                 // Find existing identity proof or create new one
                 IdentityProof identityProof = identityProofRepository
-                        .findByCandidateCandidateIdAndDocTypeId(candidateId,documentRequest.getTypeId())
+                        .findByCandidateIdAndDocumentType(candidateId,documentRequest.getTypeId())
                         .stream()
                         .findFirst()
                         .orElse(IdentityProof.builder()
@@ -401,8 +398,8 @@ public class IdentityProofService {
                     if (field.getValue() != null && !field.getValue().trim().isEmpty()) {
                         try {
                             LocalDate localDate = LocalDate.parse(field.getValue());
-                            Date issueDate = Date.from(localDate.atStartOfDay(ZoneId.systemDefault()).toInstant());
-                            identityProof.setIssueDate(issueDate);
+                           // LocalDate issueDate = Date.from(localDate.atStartOfDay(ZoneId.systemDefault()).toInstant());
+                            identityProof.setIssueDate(localDate);
                         } catch (Exception e) {
                             throw new RuntimeException("Invalid issue date format for " + documentRequest.getType() + ": " + field.getValue());
                         }
@@ -412,8 +409,8 @@ public class IdentityProofService {
                     if (field.getValue() != null && !field.getValue().trim().isEmpty()) {
                         try {
                             LocalDate localDate = LocalDate.parse(field.getValue());
-                            Date expiryDate = Date.from(localDate.atStartOfDay(ZoneId.systemDefault()).toInstant());
-                            identityProof.setExpiryDate(expiryDate);
+                           // Date expiryDate = Date.from(localDate.atStartOfDay(ZoneId.systemDefault()).toInstant());
+                            identityProof.setExpiryDate(localDate);
                         } catch (Exception e) {
                             throw new RuntimeException("Invalid expiry date format for " + documentRequest.getType() + ": " + field.getValue());
                         }
@@ -432,12 +429,71 @@ public class IdentityProofService {
     public List<IdentityProof> getIdentityProofsByCandidate(Long candidateId) {
         return identityProofRepository.findByCandidate_CandidateId(candidateId);
     }
-/*
-    // Get specific identity proof by candidate and document type
-    public Optional<IdentityProof> getIdentityProofByCandidateAndType(Long candidateId) {
-        return identityProofRepository.findByCandidate_CandidateIdAndDocumentType(candidateId)
-                .stream()
-                .findFirst();
+
+    // verification
+    
+    
+    @Cacheable(value = "identity", key = "#candidateId")
+    public List<IdentityProofDTO> getIdentityInfo(Long candidateId) {
+
+        log.info("Fetching identity information for candidate: {}", candidateId);
+
+        List<IdentityProof> identities =
+                identityProofRepository.findByCandidate_CandidateId(candidateId);
+
+        if (identities.isEmpty()) {
+            throw new RuntimeException("No identity proofs found for candidate " + candidateId);
+        }
+
+        return identities.stream()
+                .map(this::convertToDTO)
+                .toList();
     }
-    */
+    private IdentityProofDTO convertToDTO(IdentityProof identity) {
+    	IdentityProofDTO dto = new IdentityProofDTO();
+        dto.setId(identity.getId());
+        dto.setCandidateId(identity.getCandidate().getCandidateId());
+        dto.setDocumentTypeId(identity.getDocTypeId());
+        dto.setDocumentNumber(identity.getDocumentNumber());
+        dto.setIssueDate(identity.getIssueDate());
+        dto.setExpiryDate(identity.getExpiryDate());
+      //  dto.setIssuingAuthority(identity.getIssuingAuthority());
+      //  dto.setIssuingCountry(identity.getIssuingCountry());
+      //  dto.setPlaceOfIssue(identity.getPlaceOfIssue());
+        dto.setVerified(identity.getVerified());
+        dto.setVerificationStatus(identity.getVerificationStatus());
+        dto.setVerifiedBy(identity.getVerifiedBy());
+        dto.setVerifiedAt(identity.getVerifiedAt());
+        
+        // Convert field values
+       // Map<String, String> fieldValues = getFieldValuesMap(identity);
+      //  dto.setFieldValues(fieldValues);
+        
+        // Calculate derived fields
+        dto.setDocumentExpired(isDocumentExpired(identity));
+        dto.setDaysUntilExpiry(getDaysUntilExpiry(identity));
+        
+        return dto;
+    }
+
+    private boolean isDocumentExpired(IdentityProof identity) {
+        if (identity.getExpiryDate() == null) {
+            return false;
+        }
+        return identity.getExpiryDate().isBefore(java.time.LocalDate.now());
+    }
+    
+    private Long getDaysUntilExpiry(IdentityProof identity) {
+        if (identity.getExpiryDate() == null) {
+            return null;
+        }
+        
+        java.time.LocalDate today = java.time.LocalDate.now();
+        if (today.isAfter(identity.getExpiryDate())) {
+            return 0L; // Already expired
+        }
+        
+        return java.time.temporal.ChronoUnit.DAYS.between(today, identity.getExpiryDate());
+    }
+    
 }

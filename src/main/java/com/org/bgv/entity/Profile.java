@@ -20,6 +20,13 @@ public class Profile {
     @Column(name = "profile_id")
     private Long profileId;
     
+    @Column(name = "candidate_id", nullable = false, unique = true)
+    private Long candidateId;
+    
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "user_id")
+    private User user;
+    
     @Column(name = "first_name")
     private String firstName;
     
@@ -45,9 +52,7 @@ public class Profile {
     @Column(name = "email_address")
     private String emailAddress;
 
-    @ManyToOne(fetch = FetchType.LAZY)
-    @JoinColumn(name = "user_id")
-    private User user;
+    
 
     @Column(name = "created_by")
     private String createdBy;
@@ -68,11 +73,27 @@ public class Profile {
     private Boolean hasWorkExperience;
     
     @Column(name = "verification_status")
-    private String verificationStatus;
+    private String verificationStatus = "pending";;
     
     @Column(name = "linkedin_url")
     private String linkedinUrl;
-
+    
+    @Column(name = "passport_number")
+    private String passportNumber;
+    
+    @Column(name = "passport_expiry")
+    private LocalDate passportExpiry;
+    
+    @Column(name = "verified")
+    private Boolean verified = false;
+    
+    @Column(name = "verified_at")
+    private LocalDateTime verifiedAt;
+    
+    @Column(name = "verified_by")
+    private String verifiedBy;
+    
+    
     @PrePersist
     protected void onCreate() {
         this.createdAt = LocalDateTime.now();

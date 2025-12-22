@@ -33,10 +33,10 @@ public class ProfileController {
     private static final Logger logger = LoggerFactory.getLogger(ProfileController.class);
     // Create a new profile
     @PostMapping
-    public ResponseEntity<CustomApiResponse<BasicdetailsDTO>> createProfile(@RequestBody BasicdetailsDTO profileDTO) {
+    public ResponseEntity<CustomApiResponse<BasicDetailsDTO>> createProfile(@RequestBody BasicDetailsDTO profileDTO) {
         try {
         	
-        	BasicdetailsDTO createdProfile = profileService.createProfile(profileDTO);
+        	BasicDetailsDTO createdProfile = profileService.createProfile(profileDTO);
             return ResponseEntity.status(HttpStatus.CREATED)
                     .body(CustomApiResponse.success("Profile created successfully", createdProfile, HttpStatus.CREATED));
         } catch (Exception e) {
@@ -74,9 +74,9 @@ public class ProfileController {
 
     // Get basic profile info
     @GetMapping("/{profileId}")
-    public ResponseEntity<CustomApiResponse<BasicdetailsDTO>> getProfile(@PathVariable Long profileId) {
+    public ResponseEntity<CustomApiResponse<BasicDetailsDTO>> getProfile(@PathVariable Long profileId) {
         try {
-        	BasicdetailsDTO profileDTO = profileService.getProfile(profileId);
+        	BasicDetailsDTO profileDTO = profileService.getProfile(profileId);
             return ResponseEntity.ok(CustomApiResponse.success("Profile retrieved successfully", profileDTO, HttpStatus.OK));
         } catch (RuntimeException e) {
             return ResponseEntity.status(HttpStatus.NOT_FOUND)
@@ -89,11 +89,11 @@ public class ProfileController {
 
     // Update profile
     @PutMapping("/{profileId}")
-    public ResponseEntity<CustomApiResponse<BasicdetailsDTO>> updateProfile(@PathVariable Long profileId, @RequestBody BasicdetailsDTO profileDTO) {
+    public ResponseEntity<CustomApiResponse<BasicDetailsDTO>> updateProfile(@PathVariable Long profileId, @RequestBody BasicDetailsDTO profileDTO) {
         try {
         	logger.info("profileId:::UPDATE::::{}",profileId);
         	logger.info("ProfileDTO::::UPDATE:::{}",profileDTO);
-        	BasicdetailsDTO updatedProfile = profileService.updateProfile(profileId, profileDTO);
+        	BasicDetailsDTO updatedProfile = profileService.updateProfile(profileId, profileDTO);
             return ResponseEntity.ok(CustomApiResponse.success("Profile updated successfully", updatedProfile, HttpStatus.OK));
         } catch (RuntimeException e) {
             return ResponseEntity.status(HttpStatus.NOT_FOUND)

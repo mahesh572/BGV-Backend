@@ -30,4 +30,17 @@ public interface ProfileRepository extends JpaRepository<Profile, Long> {
     
     // Alternative method names that will also work:
     Optional<Profile> findByUser_UserId(Long userId);
+    
+    // verification
+    
+    Optional<Profile> findByCandidateId(Long candidateId);
+    
+    
+    boolean existsByCandidateId(Long candidateId);
+    
+    boolean existsByEmailAddress(String email);
+    
+    @Query("SELECT cp FROM Profile cp WHERE cp.candidateId = :candidateId AND cp.status = 'active'")
+    Optional<Profile> findActiveByCandidateId(@Param("candidateId") Long candidateId);
+
 }

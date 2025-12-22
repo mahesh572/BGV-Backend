@@ -1,16 +1,18 @@
 package com.org.bgv.service;
 
+import com.org.bgv.candidate.entity.Candidate;
+import com.org.bgv.candidate.entity.EducationHistory;
+import com.org.bgv.candidate.repository.CandidateRepository;
+import com.org.bgv.candidate.repository.EducationHistoryRepository;
 import com.org.bgv.dto.DegreeTypeResponse;
 import com.org.bgv.dto.DocumentResponse;
 import com.org.bgv.dto.EducationHistoryDTO;
 import com.org.bgv.dto.FieldOfStudyResponse;
-import com.org.bgv.entity.EducationHistory;
 import com.org.bgv.entity.Profile;
 import com.org.bgv.entity.DegreeType;
 
 //import com.org.bgv.entity.EducationDocuments;
 import com.org.bgv.entity.FieldOfStudy;
-import com.org.bgv.repository.EducationHistoryRepository;
 import com.org.bgv.repository.ProfileRepository;
 import com.org.bgv.s3.S3StorageService;
 
@@ -22,6 +24,7 @@ import lombok.RequiredArgsConstructor;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.springframework.cache.annotation.Cacheable;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -46,16 +49,22 @@ public class EducationService {
     private final FieldOfStudyRepository fieldOfStudyRepository;
    // private final EducationDocumentsRepository educationDocumentsRepository;
     private final S3StorageService s3StorageService;
+    private final CandidateRepository candidateRepository;
 
     private static final Logger logger = LoggerFactory.getLogger(EducationService.class);
     
     @Transactional
-    public List<EducationHistoryDTO> saveEducationHistory(List<EducationHistoryDTO> educationHistoryDTOs, Long profileId) {
-        Profile profile = profileRepository.findById(profileId)
+    public List<EducationHistoryDTO> saveEducationHistory(List<EducationHistoryDTO> educationHistoryDTOs, Long candidateId) {
+       
+    	Candidate candidate = candidateRepository.findById(candidateId)
+    	        .orElseThrow(() -> new RuntimeException("Profile not found: " + candidateId));
+    	/*
+    	Profile profile = profileRepository.findById(profileId)
                 .orElseThrow(() -> new RuntimeException("Profile not found: " + profileId));
-
+        */
+    	
         List<EducationHistory> educationHistories = educationHistoryDTOs.stream()
-                .map(dto -> mapToEntity(dto, profile))
+                .map(dto -> mapToEntity(dto, candidate))
                 .collect(Collectors.toList());
 
         List<EducationHistory> savedEducations = educationHistoryRepository.saveAll(educationHistories);
@@ -65,8 +74,8 @@ public class EducationService {
                 .collect(Collectors.toList());
     }
 
-    public List<EducationHistoryDTO> getEducationByProfile(Long profileId) {
-        List<EducationHistory> educationHistories = educationHistoryRepository.findByProfile_ProfileId(profileId);
+    public List<EducationHistoryDTO> getEducationByProfile(Long candidateId) {
+        List<EducationHistory> educationHistories = educationHistoryRepository.findByCandidateId(candidateId);
         List<Long> eduIds = educationHistories.stream()
                 .map(EducationHistory::getId)
                 .collect(Collectors.toList());
@@ -76,7 +85,7 @@ public class EducationService {
                 .collect(Collectors.toList());
     }
 
-    private EducationHistory mapToEntity(EducationHistoryDTO dto, Profile profile) {
+    private EducationHistory mapToEntity(EducationHistoryDTO dto, Candidate candidate) {
         DegreeType degree = null;
         if (dto.getQualificationType() != null) {
             degree = degreeTypeRepository.findById(dto.getQualificationType())
@@ -90,7 +99,8 @@ public class EducationService {
         }
 
         return EducationHistory.builder()
-                .profile(profile)
+               // .profile(profile)
+        		.candidateId(candidate.getCandidateId())
                 .degree(degree)
                 .field(field)
                 .institute_name(dto.getInstitutionName())
@@ -149,7 +159,7 @@ public class EducationService {
         return date.getMonth().getDisplayName(java.time.format.TextStyle.FULL, java.util.Locale.ENGLISH);
     }
 
-    public EducationHistoryDTO updateEducationHistory(Long profileId, EducationHistoryDTO educationHistoryDTO) {
+    public EducationHistoryDTO updateEducationHistory(Long candidateId, EducationHistoryDTO educationHistoryDTO) {
        logger.info("Education service::::::START");
     	EducationHistory existingEducation = null;
     	if(educationHistoryDTO.getId()!=null) {
@@ -158,10 +168,16 @@ public class EducationService {
     	}else {
     		existingEducation = new EducationHistory();
     	}
+    	/*
     	 Profile profile = profileRepository.findById(profileId)
                  .orElseThrow(() -> new RuntimeException("Profile not found: " + profileId));
+    	 */
     	
-    	existingEducation.setProfile(profile);
+    	 Candidate candidate = candidateRepository.findById(candidateId)
+     	        .orElseThrow(() -> new RuntimeException("Profile not found: " + candidateId));
+    	
+    	// existingEducation.setProfile(profile);
+    	existingEducation.setCandidateId(candidateId);
         existingEducation.setInstitute_name(educationHistoryDTO.getInstitutionName());
         existingEducation.setUniversity_name(educationHistoryDTO.getUniversityName());
         existingEducation.setFromDate(parseDate(educationHistoryDTO.getFromMonth(), educationHistoryDTO.getFromYear()));
@@ -191,7 +207,7 @@ public class EducationService {
         return mapToDTO(updatedEducation);
     }
     
-    public List<EducationHistoryDTO> updateEducationHistories(List<EducationHistoryDTO> educationHistoryDTOs, Long profileId) {
+    public List<EducationHistoryDTO> updateEducationHistories(List<EducationHistoryDTO> educationHistoryDTOs, Long candidateId) {
         
     	 if (educationHistoryDTOs == null || educationHistoryDTOs.isEmpty()) {
     	        throw new IllegalArgumentException("Education history list cannot be null or empty");
@@ -200,22 +216,22 @@ public class EducationService {
     	 List<EducationHistoryDTO> updatedList = new ArrayList<>();
     	 for (EducationHistoryDTO dto : educationHistoryDTOs) {
     	       
-    		 EducationHistoryDTO updateEducationHistory = updateEducationHistory(profileId, dto);
+    		 EducationHistoryDTO updateEducationHistory = updateEducationHistory(candidateId, dto);
     		 
     		 updatedList.add(updateEducationHistory);
     	 }
     	return updatedList;
     }
-    public void deleteEducationHistory(Long profileId, Long id) {
-        educationHistoryRepository.findByProfile_ProfileIdAndId(profileId, id)
-                .ifPresentOrElse(
-                        educationHistoryRepository::delete,
-                        () -> {
-                            throw new EntityNotFoundException(
-                                "Education history not found for profileId: " + profileId + " and id: " + id
-                            );
-                        }
-                );
+    public void deleteEducationHistory(Long candidateId, Long id) {
+    	
+    	EducationHistory education = educationHistoryRepository
+                .findByCandidateIdAndId(candidateId, id)
+                .orElseThrow(() -> new EntityNotFoundException(
+                        "Education history not found for candidateId: " + candidateId +
+                        " and id: " + id
+                ));
+
+        educationHistoryRepository.delete(education);
     }
 
     public void deleteAllEducationByProfile(Long profileId) {
@@ -323,4 +339,21 @@ public class EducationService {
         int dotIndex = fileUrl.lastIndexOf(".");
         return dotIndex > 0 ? fileUrl.substring(dotIndex + 1).toUpperCase() : "UNKNOWN";
     }
+    
+    
+    // verification
+    
+    @Cacheable(value = "education", key = "#candidateId")
+    public List<EducationHistoryDTO> getEducations(Long candidateId) {
+        logger.info("Fetching education records for candidate: {}", candidateId);
+        
+        List<EducationHistory> educations = educationHistoryRepository.findByCandidateIdOrderByDate(candidateId);
+        
+        return educations.stream()
+            .map(this::convertEducationDetails)
+            .collect(Collectors.toList());
+    }
+    
+   
+    
 }

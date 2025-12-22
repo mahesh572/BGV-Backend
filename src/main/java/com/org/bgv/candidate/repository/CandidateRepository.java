@@ -1,4 +1,4 @@
-package com.org.bgv.repository;
+package com.org.bgv.candidate.repository;
 
 import java.util.List;
 import java.util.Optional;
@@ -12,7 +12,8 @@ import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 import org.springframework.stereotype.Repository;
 
-import com.org.bgv.entity.Candidate;
+import com.org.bgv.candidate.entity.Candidate;
+
 
 @Repository
 public interface CandidateRepository extends JpaRepository<Candidate, Long>, JpaSpecificationExecutor<Candidate> {

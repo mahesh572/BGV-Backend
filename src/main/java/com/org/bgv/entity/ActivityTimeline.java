@@ -6,6 +6,7 @@ import lombok.NoArgsConstructor;
 
 import java.time.LocalDateTime;
 
+import com.org.bgv.candidate.entity.Candidate;
 import com.org.bgv.common.ActivityStatus;
 
 import jakarta.persistence.Column;

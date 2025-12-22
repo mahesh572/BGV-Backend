@@ -4,8 +4,8 @@ import org.springframework.lang.NonNull;
 import org.springframework.mail.javamail.JavaMailSender;
 import org.springframework.stereotype.Component;
 
+import com.org.bgv.candidate.entity.Candidate;
 import com.org.bgv.common.CandidateDTO;
-import com.org.bgv.entity.Candidate;
 import com.org.bgv.entity.Company;
 import com.org.bgv.entity.Profile;
 import com.org.bgv.entity.User;

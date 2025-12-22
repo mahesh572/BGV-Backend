@@ -6,11 +6,11 @@ import java.util.stream.Collectors;
 
 import org.springframework.stereotype.Service;
 
+import com.org.bgv.candidate.entity.Candidate;
+import com.org.bgv.candidate.repository.CandidateRepository;
 import com.org.bgv.common.ActivityStatus;
 import com.org.bgv.entity.ActivityTimeline;
-import com.org.bgv.entity.Candidate;
 import com.org.bgv.repository.ActivityTimelineRepository;
-import com.org.bgv.repository.CandidateRepository;
 
 import jakarta.transaction.Transactional;
 import lombok.RequiredArgsConstructor;

@@ -2,6 +2,11 @@ package com.org.bgv.entity;
 
 import java.time.LocalDateTime;
 
+import org.hibernate.annotations.CreationTimestamp;
+import org.hibernate.annotations.UpdateTimestamp;
+
+import com.org.bgv.candidate.entity.Candidate;
+
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
 import jakarta.persistence.GeneratedValue;
@@ -29,7 +34,7 @@ public class Document implements BaseDocument {
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     @Column(name = "doc_id")
     private Long docId;
-
+    
     @ManyToOne
     @JoinColumn(name = "category_id")
     private CheckCategory category;
@@ -41,21 +46,43 @@ public class Document implements BaseDocument {
     @ManyToOne
     @JoinColumn(name = "profile_id")
     private Profile profile;
+    
+    @Column(name = "file_name")
+    private String fileName;
+    
+    @Column(name = "original_file_name")
+    private String originalFileName;
 
     @Column(name = "file_url")
     private String fileUrl;
+    
+    @Column(name = "file_type")
+    private String fileType;
 
     @Column(name = "file_size")
     private Long fileSize;
 
     @Column(name = "status")
-    private String status;
+    private String status = "active";
 
     @Column(name = "uploaded_at")
     private LocalDateTime uploadedAt;
 
+       
+    @Column(name = "uploaded_by")
+    private String uploadedBy;
+    
+    @Column(name = "verified")
+    private boolean verified = false;
+    
     @Column(name = "verified_at")
     private LocalDateTime verifiedAt;
+    
+    @Column(name = "verified_by")
+    private String verifiedBy;
+    
+    @Column(name = "verification_notes", length = 1000)
+    private String verificationNotes;
 
     @Column(name = "comments")
     private String comments;
@@ -65,7 +92,6 @@ public class Document implements BaseDocument {
 
     @Column(name = "object_id")
     private Long objectId;
-
 	
     @ManyToOne
     @JoinColumn(name = "candidate_id")
@@ -77,5 +103,12 @@ public class Document implements BaseDocument {
     @Column(name = "entity_type")
     private String entityType;
 
+    @CreationTimestamp
+    @Column(name = "created_at", updatable = false)
+    private LocalDateTime createdAt;
+    
+    @UpdateTimestamp
+    @Column(name = "updated_at")
+    private LocalDateTime updatedAt;
 	
 }

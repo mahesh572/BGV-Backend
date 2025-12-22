@@ -1,5 +1,7 @@
 package com.org.bgv.service;
 
+import com.org.bgv.candidate.entity.WorkExperience;
+import com.org.bgv.candidate.repository.WorkExperienceRepository;
 import com.org.bgv.controller.ProfileController;
 import com.org.bgv.dto.DocumentResponse;
 import com.org.bgv.dto.DocumentStats;
@@ -7,13 +9,10 @@ import com.org.bgv.dto.DocumentSummary;
 import com.org.bgv.dto.WorkExperienceDTO;
 import com.org.bgv.dto.WorkExperienceResponse;
 import com.org.bgv.entity.BaseDocument;
-import com.org.bgv.entity.EducationHistory;
 import com.org.bgv.entity.ProfessionalDocuments;
 import com.org.bgv.entity.Profile;
-import com.org.bgv.entity.WorkExperience;
 import com.org.bgv.repository.ProfessionalDocumentsRepository;
 import com.org.bgv.repository.ProfileRepository;
-import com.org.bgv.repository.WorkExperienceRepository;
 import com.org.bgv.s3.S3StorageService;
 
 import jakarta.persistence.EntityNotFoundException;
@@ -21,6 +20,7 @@ import lombok.RequiredArgsConstructor;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.springframework.cache.annotation.Cacheable;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -108,7 +108,10 @@ public class WorkExperienceService {
 	}
 
 	private WorkExperience mapToEntity(WorkExperienceDTO dto, Profile profile) {
-		return WorkExperience.builder().profile(profile).company_name(dto.getCompanyName()).position(dto.getPosition())
+		return WorkExperience.builder()
+				.profile(profile)
+				.company_name(dto.getCompanyName())
+				.position(dto.getPosition())
 				.start_date(dto.getStartDate()).end_date(dto.getEndDate()).reason(dto.getReasonForLeaving())
 				.employee_id(dto.getEmployeeId()).manager_email_id(dto.getManagerEmail())
 				.hr_email_id(dto.getHrEmail()).address(dto.getCompanyAddress())
@@ -285,5 +288,43 @@ public class WorkExperienceService {
         }
         return workList;
         
+    }
+	
+	
+	
+	// verification
+	@Cacheable(value = "workExperience", key = "#candidateId")
+    public List<WorkExperienceDTO> getExperiences(Long candidateId) {
+        logger.info("Fetching work experience records for candidate: {}", candidateId);
+        
+        List<WorkExperience> experiences = workExperienceRepository.findByCandidateIdOrderByDate(candidateId);
+        
+        return experiences.stream()
+            .map(this::convertToDTO)
+            .collect(Collectors.toList());
+    }
+	private WorkExperienceDTO convertToDTO(WorkExperience experience) {
+        WorkExperienceDTO dto = new WorkExperienceDTO();
+        dto.setId(experience.getExperienceId());
+        dto.setCandidateId(experience.getCandidateId());
+        dto.setCompanyName(experience.getCompany_name());
+        dto.setPosition(experience.getPosition());
+        dto.setEmploymentType(experience.getEmploymentType());
+        dto.setStartDate(experience.getStart_date());
+        dto.setEndDate(experience.getEnd_date());
+        dto.setCurrentlyWorking(experience.getCurrentlyWorking());
+        dto.setEmployeeId(experience.getEmployee_id());
+        dto.setManagerEmail(experience.getManager_email_id());
+        dto.setHrEmail(experience.getHr_email_id());
+        dto.setReasonForLeaving(experience.getReason());
+        dto.setNoticePeriod(experience.getNoticePeriod());
+        dto.setCompanyAddress(experience.getAddress());
+        dto.setCity(experience.getCity());
+        dto.setState(experience.getState());
+        dto.setCountry(experience.getCountry());
+        dto.setVerified(experience.isVerified());
+        dto.setVerificationStatus(experience.getVerificationStatus());
+        dto.setVerifiedBy(experience.getVerifiedBy());
+        return dto;
     }
 }

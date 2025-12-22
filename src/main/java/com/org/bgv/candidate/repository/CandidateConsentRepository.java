@@ -1,4 +1,4 @@
-package com.org.bgv.repository;
+package com.org.bgv.candidate.repository;
 
 import java.util.List;
 

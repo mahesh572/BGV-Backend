@@ -19,7 +19,6 @@ import com.org.bgv.common.UserSearchRequest;
 import com.org.bgv.config.JwtUtil;
 import com.org.bgv.controller.UserController;
 import com.org.bgv.dto.UserDetailsDto;
-import com.org.bgv.entity.Candidate;
 import com.org.bgv.entity.Company;
 import com.org.bgv.entity.CompanyUser;
 import com.org.bgv.entity.Profile;

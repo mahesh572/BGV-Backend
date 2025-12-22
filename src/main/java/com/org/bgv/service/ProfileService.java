@@ -3,7 +3,7 @@ package com.org.bgv.service;
 import com.org.bgv.common.ProfileStatus;
 import com.org.bgv.common.Status;
 import com.org.bgv.controller.ProfileController;
-import com.org.bgv.dto.BasicdetailsDTO;
+import com.org.bgv.dto.BasicDetailsDTO;
 import com.org.bgv.dto.ProfileDTO;
 import com.org.bgv.entity.Profile;
 import com.org.bgv.entity.User;
@@ -20,6 +20,7 @@ import java.util.stream.Collectors;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.springframework.cache.annotation.Cacheable;
 import org.springframework.stereotype.Service;
 
 @Service
@@ -36,7 +37,7 @@ public class ProfileService {
     
     private static final Logger logger = LoggerFactory.getLogger(ProfileService.class);
     
-    public BasicdetailsDTO createProfile(BasicdetailsDTO profileDTO) {
+    public BasicDetailsDTO createProfile(BasicDetailsDTO profileDTO) {
     	Profile savedProfile = null;
     	try {
     	profileDTO.setStatus(Status.PENDING);
@@ -56,7 +57,7 @@ public class ProfileService {
         Profile profile = profileRepository.findById(profileId)
                 .orElseThrow(() -> new RuntimeException("Profile not found: " + profileId));
         
-        BasicdetailsDTO basicdetailsDTO = BasicdetailsDTO.builder()
+        BasicDetailsDTO basicdetailsDTO = BasicDetailsDTO.builder()
             	.firstName(profile.getFirstName())
             	.lastName(profile.getLastName())
             	.email(profile.getEmailAddress())
@@ -81,13 +82,13 @@ public class ProfileService {
                 .build();
     }
     
-    public BasicdetailsDTO getProfile(Long profileId) {
+    public BasicDetailsDTO getProfile(Long profileId) {
         Profile profile = profileRepository.findById(profileId)
                 .orElseThrow(() -> new RuntimeException("Profile not found: " + profileId));
         return mapToBasicdetailsDTO(profile);
     }
 
-    public BasicdetailsDTO updateProfile(Long profileId, BasicdetailsDTO basicdetailsDTO) {
+    public BasicDetailsDTO updateProfile(Long profileId, BasicDetailsDTO basicdetailsDTO) {
         Profile existingProfile = profileRepository.findById(profileId)
                 .orElseThrow(() -> new RuntimeException("Profile not found: " + profileId));
       //  BasicdetailsDTO basicdetailsDTO  = profileDTO.getBasicDetails();
@@ -131,7 +132,7 @@ public class ProfileService {
                 .collect(Collectors.toList());
     }
 
-    private Profile mapToEntity(BasicdetailsDTO dto) {
+    private Profile mapToEntity(BasicDetailsDTO dto) {
     	
     	
     	 User user = userRepository.findById(dto.getUser_id())
@@ -152,9 +153,9 @@ public class ProfileService {
     }
     
     
-    private BasicdetailsDTO mapToBasicdetailsDTO(Profile entity) {
+    private BasicDetailsDTO mapToBasicdetailsDTO(Profile entity) {
     	
-    	BasicdetailsDTO basicdetailsDTO = BasicdetailsDTO.builder()
+    	BasicDetailsDTO basicdetailsDTO = BasicDetailsDTO.builder()
     	    	.firstName(entity.getFirstName())
     	    	.lastName(entity.getLastName())
     	    	.email(entity.getEmailAddress())
@@ -174,7 +175,7 @@ public class ProfileService {
 
     private ProfileDTO mapToDTO(Profile entity) {
     	
-    	BasicdetailsDTO basicdetailsDTO = BasicdetailsDTO.builder()
+    	BasicDetailsDTO basicdetailsDTO = BasicDetailsDTO.builder()
     	.firstName(entity.getFirstName())
     	.lastName(entity.getLastName())
     	.email(entity.getEmailAddress())
@@ -224,6 +225,38 @@ public class ProfileService {
         	logger.error("Failed to get profile ID for user ID: {}", userId, e);
             throw new RuntimeException("Failed to get profile ID: " + e.getMessage());
         }
+    }
+    
+    
+    // verification 
+    
+    @Cacheable(value = "basicDetails", key = "#candidateId")
+    public BasicDetailsDTO getBasicDetails(Long candidateId) {
+    	logger.info("Fetching basic details for candidate: {}", candidateId);
+        
+        Profile profile = profileRepository.findByCandidateId(candidateId)
+            .orElseThrow(() -> new EntityNotFoundException("Candidate profile not found"));
+        
+        return convertToDTO(profile);
+    }
+    
+    private BasicDetailsDTO convertToDTO(Profile profile) {
+        BasicDetailsDTO dto = new BasicDetailsDTO();
+        dto.setCandidateId(profile.getCandidateId());
+        dto.setFirstName(profile.getFirstName());
+        dto.setLastName(profile.getLastName());
+        dto.setEmail(profile.getEmailAddress());
+        dto.setPhone(profile.getPhoneNumber());
+        dto.setDateOfBirth(profile.getDateOfBirth());
+        dto.setGender(profile.getGender());
+        dto.setLinkedIn(profile.getLinkedinUrl());
+        dto.setNationality(profile.getNationality());
+        dto.setPassportNumber(profile.getPassportNumber());
+        dto.setPassportExpiry(profile.getPassportExpiry());
+        dto.setVerified(profile.getVerified());
+        dto.setVerifiedAt(profile.getVerifiedAt());
+        dto.setVerifiedBy(profile.getVerifiedBy());
+        return dto;
     }
 
 }

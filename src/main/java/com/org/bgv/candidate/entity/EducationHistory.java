@@ -1,4 +1,4 @@
-package com.org.bgv.entity;
+package com.org.bgv.candidate.entity;
 
 
 import lombok.AllArgsConstructor;
@@ -10,6 +10,14 @@ import lombok.Setter;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
 
+import org.hibernate.annotations.CreationTimestamp;
+import org.hibernate.annotations.UpdateTimestamp;
+
+import com.org.bgv.entity.DegreeType;
+import com.org.bgv.entity.FieldOfStudy;
+import com.org.bgv.entity.Profile;
+
+import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
 import jakarta.persistence.GeneratedValue;
 import jakarta.persistence.GenerationType;
@@ -29,6 +37,9 @@ public class EducationHistory {
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
+    
+    @Column(name = "candidate_id", nullable = false)
+    private Long candidateId;
 
     @ManyToOne
     @JoinColumn(name = "profile_id")
@@ -56,8 +67,21 @@ public class EducationHistory {
     private String grade;
     private Double gpa;
     private String description;
+    
+    @CreationTimestamp
     private LocalDateTime createdAt;
+    
+    @UpdateTimestamp
     private LocalDateTime updatedAt;
+    
+    @Column(name = "verified")
+    private boolean verified = false;
+    
+    @Column(name = "verification_status")
+    private String verificationStatus = "pending";
+    
+    @Column(name = "verified_by")
+    private String verifiedBy;
 
     // getters and setters
 }

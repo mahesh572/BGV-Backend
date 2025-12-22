@@ -16,7 +16,7 @@ import java.util.List;
 @Builder
 public class ProfileDTO {
 	
-	private BasicdetailsDTO basicDetails;
+	private BasicDetailsDTO basicDetails;
     
     // Work experiences
     private List<WorkExperienceDTO> workExperiences;

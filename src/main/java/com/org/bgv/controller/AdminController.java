@@ -25,7 +25,7 @@ import com.org.bgv.company.dto.CompanyRegistrationRequestDTO;
 import com.org.bgv.company.dto.CompanyRegistrationResponse;
 import com.org.bgv.company.dto.EmployerDTO;
 import com.org.bgv.config.SecurityUtils;
-import com.org.bgv.dto.BasicdetailsDTO;
+import com.org.bgv.dto.BasicDetailsDTO;
 import com.org.bgv.dto.UserDetailsDto;
 import com.org.bgv.entity.Company;
 import com.org.bgv.mapper.UserMapper;
@@ -61,7 +61,7 @@ public class AdminController {
 	        	logger.info("AdminController:::::createdUser::{}",createdUser);
 	        	userDto.setUserId(createdUser.getUserId());
 	        	// Profile creation
-	        	BasicdetailsDTO basicDetailsDTO = userMapper.mapUserDTOToBasicdetails(userDto);
+	        	BasicDetailsDTO basicDetailsDTO = userMapper.mapUserDTOToBasicdetails(userDto);
 	        	logger.info("AdminController::::::profileservice:::::START:::::{}",basicDetailsDTO);
 	        	basicDetailsDTO = profileService.createProfile(basicDetailsDTO);
 	        	

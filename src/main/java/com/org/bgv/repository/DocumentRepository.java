@@ -99,4 +99,31 @@ public interface DocumentRepository extends JpaRepository<Document, Long> {
             Long docTypeId,
             Long candidateId
     );
+    
+    // for verification part
+    
+    List<Document> findByCandidateCandidateId(Long candidateId);
+    
+    List<Document> findByCandidateCandidateIdAndCategoryCategoryId(Long candidateId, Long categoryId);
+    
+    List<Document> findByCandidateCandidateIdAndDocTypeIdDocTypeId(Long candidateId, Long documentTypeId);
+    
+    List<Document> findByCandidateCandidateIdAndObjectId(Long candidateId, Long objectId);
+    
+    List<Document> findByCandidateCandidateIdAndCategoryCategoryIdAndObjectId(
+            Long candidateId,
+            Long categoryId,
+            Long objectId
+    );
+    
+    @Query("""
+    	    SELECT d FROM Document d
+    	    WHERE d.candidate.candidateId = :candidateId
+    	    AND d.verified = true
+    	""")
+    	List<Document> findVerifiedDocumentsByCandidateId(@Param("candidateId") Long candidateId);
+    
+    Long countByCandidateCandidateId(Long candidateId);
+    
+    Long countByCandidateCandidateIdAndVerified(Long candidateId, boolean verified);
 }

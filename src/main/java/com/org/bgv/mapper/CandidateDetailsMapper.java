@@ -9,13 +9,13 @@ import java.util.stream.Collectors;
 
 import org.springframework.stereotype.Component;
 
+import com.org.bgv.candidate.entity.Candidate;
 import com.org.bgv.common.ActivityTimelineDTO;
 import com.org.bgv.common.CandidateDetailsDTO;
 import com.org.bgv.common.VPackageDTO;
 import com.org.bgv.common.VerificationCheckDTO;
 import com.org.bgv.dto.document.CompanyDto;
 import com.org.bgv.entity.ActivityTimeline;
-import com.org.bgv.entity.Candidate;
 import com.org.bgv.entity.CheckCategory;
 import com.org.bgv.entity.Company;
 import com.org.bgv.entity.Profile;

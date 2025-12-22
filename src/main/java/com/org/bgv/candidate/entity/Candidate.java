@@ -1,8 +1,14 @@
-package com.org.bgv.entity;
+package com.org.bgv.candidate.entity;
 
 import java.time.LocalDateTime;
 import java.util.ArrayList;
 import java.util.List;
+
+import com.org.bgv.entity.ActivityTimeline;
+import com.org.bgv.entity.Company;
+import com.org.bgv.entity.JobApplication;
+import com.org.bgv.entity.Profile;
+import com.org.bgv.entity.User;
 
 import jakarta.persistence.CascadeType;
 import jakarta.persistence.Column;

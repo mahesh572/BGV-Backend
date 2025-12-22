@@ -11,18 +11,18 @@ import java.util.stream.Collectors;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 
+import com.org.bgv.candidate.entity.Candidate;
+import com.org.bgv.candidate.repository.CandidateRepository;
 import com.org.bgv.common.VerificationCaseResponse;
 import com.org.bgv.common.navigation.CreateNavigationMenuDto;
 import com.org.bgv.common.navigation.NavigationResponseDto;
 import com.org.bgv.common.navigation.UpdateNavigationMenuDto;
 import com.org.bgv.config.SecurityUtils;
-import com.org.bgv.entity.Candidate;
 import com.org.bgv.entity.Company;
 import com.org.bgv.entity.NavigationMenu;
 import com.org.bgv.entity.User;
 import com.org.bgv.entity.UserType;
 import com.org.bgv.entity.VerificationCase;
-import com.org.bgv.repository.CandidateRepository;
 import com.org.bgv.repository.NavigationMenuRepository;
 import com.org.bgv.repository.UserRepository;
 import com.org.bgv.repository.VerificationCaseRepository;
@@ -69,7 +69,7 @@ public class NavigationMenuService {
             defaultNaviSet.add("DashBoard");
             defaultNaviSet.add("Basic Details");
             defaultNaviSet.add("Documents");
-            
+            defaultNaviSet.add("Education");
             
             Long userId = SecurityUtils.getCurrentCustomUserDetails().getUserId();
             User user = userRepository.findById(userId).orElseThrow(() -> new RuntimeException("User not found with id: " + userId));

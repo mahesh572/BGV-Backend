@@ -8,8 +8,8 @@ import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 import org.springframework.stereotype.Repository;
 
+import com.org.bgv.candidate.entity.Candidate;
 import com.org.bgv.entity.ActivityTimeline;
-import com.org.bgv.entity.Candidate;
 
 @Repository
 public interface ActivityTimelineRepository extends JpaRepository<ActivityTimeline, Long> {

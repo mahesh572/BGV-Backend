@@ -1,7 +1,12 @@
-package com.org.bgv.entity;
+package com.org.bgv.candidate.entity;
 
 import java.time.LocalDate;
 import java.time.LocalDateTime;
+
+import org.hibernate.annotations.CreationTimestamp;
+import org.hibernate.annotations.UpdateTimestamp;
+
+import com.org.bgv.entity.Profile;
 
 import lombok.AllArgsConstructor;
 import lombok.Builder;
@@ -36,6 +41,9 @@ public class WorkExperience {
     @JoinColumn(name = "profile_id")
     private Profile profile;
     
+    @Column(name = "candidate_id")
+    private Long candidateId;
+    
     private String company_name;
     private String position;
     private LocalDate start_date;
@@ -53,5 +61,45 @@ public class WorkExperience {
     private String noticePeriod;
     private String employmentType;
 
+    
+    @Column(name = "verified", nullable = false)
+    private boolean verified = false;
+    
+    @Column(name = "verification_status", length = 50)
+    private String verificationStatus = "pending";
+    
+    @Column(name = "verified_by", length = 100)
+    private String verifiedBy;
+    
+    @CreationTimestamp
+    @Column(name = "created_at", updatable = false)
+    private LocalDateTime createdAt;
+    
+    @UpdateTimestamp
+    @Column(name = "updated_at")
+    private LocalDateTime updatedAt;
     // getters and setters
+    
+ // Helper methods
+    public int getDurationInMonths() {
+        if (start_date == null) {
+            return 0;
+        }
+        
+        LocalDate end = currentlyWorking ? LocalDate.now() : end_date;
+        if (end == null) {
+            return 0;
+        }
+        
+        return (int) java.time.temporal.ChronoUnit.MONTHS.between(
+            start_date.withDayOfMonth(1),
+            end.withDayOfMonth(1)
+        );
+    }
+    
+    public double getDurationInYears() {
+        int months = getDurationInMonths();
+        return months / 12.0;
+    }
+    
 }
