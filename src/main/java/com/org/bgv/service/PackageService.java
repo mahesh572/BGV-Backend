@@ -382,9 +382,15 @@ public class PackageService  {
 
     private PackageRuleTypeDTO convertToRuleTypeDTO(PackageCheckCategoryRuleType packageRuleType) {
         // You might want to fetch the actual rule type entity for more details
+    	RuleTypes ruleTypes = ruleTypesRepository.findById(packageRuleType.getRuleTypeId()).orElseThrow(()->new RuntimeException("rule type not found:"+packageRuleType.getRuleTypeId()));
+    	
         return PackageRuleTypeDTO.builder()
                 .id(packageRuleType.getId())
                 .ruleTypeId(packageRuleType.getRuleTypeId())
+                .ruleCode(ruleTypes.getCode())
+                .ruleName(ruleTypes.getName())
+                .minCount(ruleTypes.getMinCount())
+                .maxCount(ruleTypes.getMaxCount())
                 .build();
     }
 

@@ -17,6 +17,7 @@ import com.org.bgv.service.ProfileAddressService;
 import com.org.bgv.service.WorkExperienceService;
 
 import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 
 import java.util.Optional;
 import java.util.stream.Collectors;
@@ -26,17 +27,19 @@ import org.springframework.stereotype.Component;
 
 @Component
 @RequiredArgsConstructor
+@Slf4j
 public class UserMapper implements BaseMapper<User, UserDto> {
    
 	 private final ProfileRepository profileRepository;
 	
 	@Override
     public UserDto toDto(User entity) {
+		UserDto dto = new UserDto();
+		try {
+		log.info("UserMapper:::::::::::::{}",entity);
 		
 		Profile profile = profileRepository.findByUserUserId(entity.getUserId());
-		        		
 		
-		UserDto dto = new UserDto();
         dto.setUserId(entity.getUserId());
         dto.setFirstName(profile.getFirstName());
         dto.setLastName(profile.getLastName());
@@ -44,38 +47,45 @@ public class UserMapper implements BaseMapper<User, UserDto> {
         dto.setUserType(entity.getUserType());
         dto.setPhoneNumber(profile.getPhoneNumber());
         dto.setPasswordResetrequired(entity.getPasswordResetrequired()==null?Boolean.FALSE:entity.getPasswordResetrequired());
-
+		}catch (Exception e) {
+			log.error(e.getMessage());
+		}
         return dto;
     }
 	
 	public UserDto toUserDto(User user) {
-        if (user == null) {
-            return null;
-        }
-        Profile profile = profileRepository.findByUserUserId(user.getUserId());
-        String fullName = (profile.getFirstName() != null ? profile.getFirstName() : "") + 
-                         (profile.getLastName() != null ? " " + profile.getLastName() : "").trim();
-        
-        if (fullName.isEmpty()) {
-            fullName = null;
-        }
+	    if (user == null) {
+	        return null;
+	    }
 
-        return UserDto.builder()
-                .userId(user.getUserId())
-                .email(user.getEmail())
-                .userType(user.getUserType())
-                .firstName(profile.getFirstName())
-                .lastName(profile.getLastName())
-                .name(fullName)
-                .phoneNumber(profile.getPhoneNumber())
-                .isActive(user.getIsActive())
-                .isVerified(user.getIsVerified())
-                .profilePictureUrl(user.getProfilePictureUrl())
-                .gender(profile.getGender())
-                .status(user.getStatus())
-                .dateOfBirth(user.getDateOfBirth() != null ? user.getDateOfBirth() : null)
-                .build();
-    }
+	    Profile profile = profileRepository.findByUserUserId(user.getUserId());
+
+	    String firstName = profile != null ? profile.getFirstName() : null;
+	    String lastName  = profile != null ? profile.getLastName()  : null;
+
+	    String fullName = null;
+	    if (firstName != null || lastName != null) {
+	        fullName = ((firstName != null ? firstName : "") +
+	                    (lastName  != null ? " " + lastName : "")).trim();
+	    }
+
+	    return UserDto.builder()
+	            .userId(user.getUserId())
+	            .email(user.getEmail())
+	            .userType(user.getUserType())
+	            .firstName(firstName)
+	            .lastName(lastName)
+	            .name(fullName)
+	            .phoneNumber(profile != null ? profile.getPhoneNumber() : null)
+	            .gender(profile != null ? profile.getGender() : null)
+	            .profilePictureUrl(user.getProfilePictureUrl())
+	            .isActive(user.getIsActive())
+	            .isVerified(user.getIsVerified())
+	            .status(user.getStatus())
+	            .dateOfBirth(user.getDateOfBirth())
+	            .build();
+	}
+
 
 
     @Override

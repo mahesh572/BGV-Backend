@@ -32,5 +32,6 @@ public class UserDto {
     private Boolean hasConsentProvided;
     private Long candidateId;
     private Boolean passwordResetrequired;
+    private Long vendorId;
     
 }

@@ -24,16 +24,21 @@ public interface VerificationCaseRepository extends JpaRepository<VerificationCa
     List<VerificationCase> findByStatus(CaseStatus status);
     
     List<VerificationCase> findByCompanyIdAndStatus(Long companyId, CaseStatus status);
+    
+    VerificationCase findByCompanyIdAndCandidateIdAndStatus(Long companyId,Long candidateId,CaseStatus status);
 
 
     List<VerificationCase> findByCompanyIdAndStatusIn(Long companyId, List<CaseStatus> statuses);
+    
+    
+    // candidateId,companyId,category checkId,document typeId
     
     
     @Query("SELECT cc FROM VerificationCase cc WHERE cc.candidateId = :candidateId AND cc.status IN :statuses")
     List<VerificationCase> findByCandidateIdAndStatusIn(@Param("candidateId") Long candidateId, 
                                                    @Param("statuses") List<CaseStatus> statuses);
     
-    Optional<VerificationCase> findByCandidateIdAndEmployerPackageId(Long candidateId, Long employerPackageId);
+    Optional<VerificationCase> findByCandidateIdAndEmployerPackageIdAndCompanyId(Long candidateId, Long employerPackageId,Long companyId);
     
     @Query("SELECT COUNT(cc) FROM VerificationCase cc WHERE cc.employerPackage.id = :employerPackageId")
     Long countByEmployerPackage(@Param("employerPackageId") Long employerPackageId);
@@ -41,5 +46,11 @@ public interface VerificationCaseRepository extends JpaRepository<VerificationCa
     @Query("SELECT COUNT(cc) FROM VerificationCase cc WHERE cc.employerPackage = :employerPackage AND cc.status != 'COMPLETED'")
     Long countByEmployerPackageAndStatusNot(@Param("employerPackage") EmployerPackage employerPackage, 
                                           @Param("status") CaseStatus status);
+    
+    @Query("SELECT vc FROM VerificationCase vc " +
+            "WHERE vc.vendorId = :vendorId OR vc.status IN :statuses")
+     List<VerificationCase> findByVendorIdOrStatusIn(
+             @Param("vendorId") Long vendorId,
+             @Param("statuses") List<CaseStatus> statuses);
     
 }

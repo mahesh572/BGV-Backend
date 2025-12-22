@@ -2,6 +2,8 @@ package com.org.bgv.mapper;
 
 import java.time.LocalDate;
 import java.time.format.DateTimeFormatter;
+import java.util.ArrayList;
+import java.util.Collections;
 import java.util.List;
 import java.util.stream.Collectors;
 
@@ -14,11 +16,28 @@ import com.org.bgv.common.VerificationCheckDTO;
 import com.org.bgv.dto.document.CompanyDto;
 import com.org.bgv.entity.ActivityTimeline;
 import com.org.bgv.entity.Candidate;
+import com.org.bgv.entity.CheckCategory;
 import com.org.bgv.entity.Company;
 import com.org.bgv.entity.Profile;
+import com.org.bgv.entity.VerificationCase;
+import com.org.bgv.entity.VerificationCaseCheck;
+import com.org.bgv.repository.VerificationCaseCheckRepository;
+import com.org.bgv.repository.VerificationCaseRepository;
+import com.org.bgv.service.IconService;
+
+import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 
 @Component
+@RequiredArgsConstructor
+@Slf4j
 public class CandidateDetailsMapper {
+	
+	private final IconService iconService;
+	
+	private final VerificationCaseRepository verificationCaseRepository;
+	
+	private final VerificationCaseCheckRepository verificationCaseCheckRepository;
     
     private static final DateTimeFormatter DATE_FORMATTER = 
         DateTimeFormatter.ofPattern("dd MMM yyyy");
@@ -55,7 +74,7 @@ public class CandidateDetailsMapper {
                 .linkedinUrl(profile != null ? profile.getLinkedinUrl() : null)
              //   .company(mapCompany(candidate.getCompany()))
                 .vpackage(getMockPackage()) // Mock data - replace with actual
-                .verificationChecks(getMockVerificationChecks()) // Mock data
+                .verificationChecks(getVerificationChecks(candidate)) 
                 .activityTimeline(mapActivityTimeline(candidate.getActivityTimeline()))
                 .build();
     }
@@ -143,33 +162,113 @@ public class CandidateDetailsMapper {
                 .build();
     }
     
-    private List<VerificationCheckDTO> getMockVerificationChecks() {
+    private List<VerificationCheckDTO> getVerificationChecks(Candidate candidate) {
+        // Using IconService to get icons
+    	List<VerificationCheckDTO> verificationChecks = new ArrayList();
+    	List<VerificationCase> verificationCases = verificationCaseRepository.findByCandidateId(candidate.getCandidateId());
+    	
+    	if (verificationCases.isEmpty()) {
+            log.warn("No verification cases found for candidate ID: {}", candidate.getCandidateId());
+            return Collections.emptyList();
+        }
+    	
+    	// Process each verification case
+        for (VerificationCase verificationCase : verificationCases) {
+            // Find verification checks for this case
+            List<VerificationCaseCheck> caseChecks = verificationCaseCheckRepository
+                    .findByVerificationCase_CaseId(verificationCase.getCaseId());
+            
+            // Convert each check to DTO
+            for (VerificationCaseCheck caseCheck : caseChecks) {
+                VerificationCheckDTO dto = mapToVerificationCheckDTO(caseCheck);
+                verificationChecks.add(dto);
+            }
+        }
+        
+        log.info("getVerificationChecks:::::::::::::::::::{}",verificationChecks);
+        
+        return verificationChecks;
+        
+    	/*
         return List.of(
                 VerificationCheckDTO.builder()
                         .id(1L)
                         .name("Employment Verification")
                         .description("Member / ex officio editor")
                         .status("verified")
-                        .icon("💼")
-                       // .category("EMPLOYMENT")
+                        .icon(iconService.getIconForVerification("Employment Verification"))
+                      //  .category("EMPLOYMENT")
                         .build(),
                 VerificationCheckDTO.builder()
                         .id(2L)
                         .name("Education Verification")
                         .description("Member - Degree Admission")
                         .status("verified")
-                        .icon("🎓")
-                       // .category("EDUCATION")
+                        .icon(iconService.getIconForVerification("Education Verification"))
+                      //  .category("EDUCATION")
                         .build(),
                 VerificationCheckDTO.builder()
                         .id(3L)
                         .name("Address Verification")
                         .description("Member / ex officio editor")
                         .status("in_progress")
-                        .icon("🏠")
-                       // .category("ADDRESS")
+                        .icon(iconService.getIconForVerification("Address Verification"))
+                     //   .category("ADDRESS")
+                        .build(),
+                VerificationCheckDTO.builder()
+                        .id(4L)
+                        .name("Criminal/Court Check")
+                        .description("Court records verification")
+                        .status("verified")
+                        .icon(iconService.getIconForVerification("Criminal/Court Check"))
+                     //   .category("LEGAL")
+                        .build(),
+                VerificationCheckDTO.builder()
+                        .id(5L)
+                        .name("Identity Verification")
+                        .description("Aadhaar and PAN verification")
+                        .status("verified")
+                        .icon(iconService.getIconForVerification("Identity Verification"))
+                     //   .category("IDENTITY")
+                        .build(),
+                VerificationCheckDTO.builder()
+                        .id(6L)
+                        .name("Reference Check")
+                        .description("Professional references verification")
+                        .status("pending")
+                        .icon(iconService.getIconForVerification("Reference Check"))
+                      //  .category("REFERENCE")
                         .build()
         );
+        */
+        
+    }
+    
+    private VerificationCheckDTO mapToVerificationCheckDTO(VerificationCaseCheck caseCheck) {
+        CheckCategory category = caseCheck.getCategory();
+        String categoryName = category != null ? category.getName() : "Unknown";
+        String description = category.getDescription();
+        
+        return VerificationCheckDTO.builder()
+                .id(caseCheck.getCaseCheckId())
+                .name(categoryName +" Verification")
+                .description(description)
+                .status(mapStatus(caseCheck.getStatus().name()))
+                .icon(iconService.getIconForVerification(categoryName))
+            //    .category(category != null ? category.getCode() : null)
+                .build();
+    }
+    
+    private String mapStatus(String dbStatus) {
+        if (dbStatus == null) return "pending";
+        
+        return switch (dbStatus.toUpperCase()) {
+            case "VERIFIED", "COMPLETED" -> "verified";
+            case "IN_PROGRESS", "UNDER_REVIEW" -> "in_progress";
+            case "ASSIGNED", "CREATED" -> "pending";
+            case "REJECTED", "CANCELLED" -> "rejected";
+            default -> "pending";
+        };
     }
     
     private List<ActivityTimelineDTO> getMockActivityTimeline() {

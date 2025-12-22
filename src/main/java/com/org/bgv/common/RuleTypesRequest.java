@@ -24,4 +24,8 @@ public class RuleTypesRequest {
     private String code;
     
     private String label;
+    
+    private Integer minCount;
+    
+    private Integer maxCount;
 }

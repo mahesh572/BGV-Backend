@@ -44,6 +44,8 @@ public class RuleTypesService {
                 .name(request.getName())
                 .code(request.getCode())
                 .label(request.getLabel())
+                .minCount(request.getMinCount())
+                .maxCount(request.getMaxCount())
                 .build();
         
         RuleTypes savedRule = ruleTypesRepository.save(rule);
@@ -108,6 +110,8 @@ public class RuleTypesService {
         existingRule.setName(request.getName());
         existingRule.setCode(request.getCode());
         existingRule.setLabel(request.getLabel());
+        existingRule.setMinCount(request.getMinCount());
+        existingRule.setMaxCount(request.getMaxCount());
         
         RuleTypes updatedRule = ruleTypesRepository.save(existingRule);
         log.info("Rule updated successfully with ID: {}", updatedRule.getRuleTypeId());

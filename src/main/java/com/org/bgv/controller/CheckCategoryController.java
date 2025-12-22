@@ -52,11 +52,23 @@ public class CheckCategoryController {
     }
 
     @GetMapping("/code/{code}")
-    public ResponseEntity<CustomApiResponse<CheckCategoryResponse>> getCheckCategoryByCode(@PathVariable String code) {
-        Optional<CheckCategoryResponse> category = checkCategoryService.getCheckCategoryByCode(code);
-        return category.map(cat -> ResponseEntity.ok(CustomApiResponse.success(null, cat, HttpStatus.OK)))
-                      .orElse(ResponseEntity.status(HttpStatus.NOT_FOUND)
-                              .body(CustomApiResponse.failure("CheckCategory not found with code: " + code, HttpStatus.NOT_FOUND)));
+    public ResponseEntity<CustomApiResponse<CheckCategoryResponse>> getCheckCategoryByCode(
+            @PathVariable String code) {
+
+        CheckCategoryResponse category =
+                checkCategoryService.getCheckCategoryByCode(code);
+
+        if (category == null) {
+            return ResponseEntity.status(HttpStatus.NOT_FOUND)
+                    .body(CustomApiResponse.failure(
+                            "CheckCategory not found with code: " + code,
+                            HttpStatus.NOT_FOUND
+                    ));
+        }
+
+        return ResponseEntity.ok(
+                CustomApiResponse.success(null, category, HttpStatus.OK)
+        );
     }
 
     @PostMapping

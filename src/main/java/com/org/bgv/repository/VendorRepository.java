@@ -43,4 +43,6 @@ public interface VendorRepository extends JpaRepository<Vendor, Long> {
     boolean existsByRegistrationNumber(String registrationNumber);
     
     boolean existsByTaxId(String taxId);
+    
+    Vendor findByUser_userId(Long userId);
 }

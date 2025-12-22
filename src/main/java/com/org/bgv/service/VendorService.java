@@ -85,6 +85,7 @@ public class VendorService {
             
             profileRepository.save(profile);
             
+            /*
             // Assign ROLE_VENDOR to the user
             Role vendorRole = roleRepository.findByName("ROLE_VENDOR")
                     .orElseThrow(() -> new RuntimeException("ROLE_VENDOR not found"));
@@ -95,6 +96,7 @@ public class VendorService {
                     .build();
             
             userRoleRepository.save(userRole);
+            */
             
             // Handle services provided - FIXED: Use final reference
             if (vendorDTO.getServicesProvided() != null && !vendorDTO.getServicesProvided().isEmpty()) {

@@ -43,4 +43,6 @@ public interface VerificationCaseCheckRepository
      * Count checks by status for dashboard
      */
     long countByStatus(CaseCheckStatus status);
+    
+    List<VerificationCaseCheck> findTop10ByVendorIdOrderByUpdatedAtDesc(Long vendorId);
 }

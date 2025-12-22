@@ -35,6 +35,8 @@ public interface CandidateRepository extends JpaRepository<Candidate, Long>, Jpa
     // For search by user details
     List<Candidate> findByUserEmailContainingIgnoreCase(String email);
     
+    Candidate findByCompanyIdAndUserUserId(Long companyId,Long userId);
+    
     
     @Query("SELECT c FROM Candidate c WHERE c.company.id = :companyId AND c.candidateId = :candidateId")
     Optional<Candidate> findByCompanyIdAndCandidateId(@Param("companyId") Long companyId, 

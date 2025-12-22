@@ -73,7 +73,7 @@ public class DataSeederConfig implements CommandLineRunner {
 
     @Override
     public void run(String... args) {
-        seedDocumentCategoriesAndTypes();
+      //  seedDocumentCategoriesAndTypes();
         seedPermissions();
         seedRoles();
         seedRolePermissions();
@@ -81,7 +81,7 @@ public class DataSeederConfig implements CommandLineRunner {
         seedFieldsOfStudy();
         seedSingleOtherRecord();
         seedDefaultAdminUser(); 
-        seedBGVCategoriesAndCheckTypes();
+       // seedBGVCategoriesAndCheckTypes();
         setdefaultnavigationSeed();
         emailTemplateService.initializeTemplatesFromFiles();
 

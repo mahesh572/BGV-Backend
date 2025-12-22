@@ -60,6 +60,8 @@ public interface DocumentRepository extends JpaRepository<Document, Long> {
 
     // 15. Find documents by profileId and multiple categoryIds
     List<Document> findByProfile_ProfileIdAndCategory_CategoryIdIn(Long profileId, List<Long> categoryIds);
+    
+    
 
     // 16. Custom query for complex searches (fixed field name)
     @Query("SELECT d FROM Document d WHERE " +
@@ -91,4 +93,10 @@ public interface DocumentRepository extends JpaRepository<Document, Long> {
 
     // 21. Find latest documents by profileId ordered by uploadedAt
     List<Document> findByProfile_ProfileIdOrderByUploadedAtDesc(Long profileId);
+    
+    List<Document> findByCategory_CategoryIdAndDocTypeId_DocTypeIdAndCandidate_CandidateId(
+            Long categoryId,
+            Long docTypeId,
+            Long candidateId
+    );
 }

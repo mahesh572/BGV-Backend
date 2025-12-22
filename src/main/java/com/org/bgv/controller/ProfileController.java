@@ -344,14 +344,16 @@ public class ProfileController {
             @RequestParam("files") List<MultipartFile> files,
             @RequestParam("documentTypeId") Long documentTypeId,
             @RequestParam(value = "categoryId", required = false) Long categoryId,
-            @RequestParam(value = "objectId", required = false) Long objectId) {
+            @RequestParam(value = "objectId", required = false) Long objectId, 
+            @RequestParam(value = "candidateId", required = false) Long candidateId)
+          {
     	
     	logger.info("Received upload request for profile: {}", profileId);
     	
     	logger.info("DocumentTypeId: {}, CategoryId: {}", documentTypeId, categoryId);
         try {
         	DocumentCategoryDto uploadedDocuments = documentService.createDocuments(
-                files, profileId,categoryId,documentTypeId,objectId);
+                files, profileId,categoryId,documentTypeId,objectId,candidateId);
             logger.info("***************************uploaded successfully");
             return ResponseEntity.status(HttpStatus.CREATED)
                     .body(CustomApiResponse.success("Documents uploaded successfully", uploadedDocuments, HttpStatus.CREATED));

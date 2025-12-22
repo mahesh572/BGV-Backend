@@ -1,5 +1,7 @@
 package com.org.bgv.service;
 
+import com.org.bgv.config.SecurityUtils;
+import com.org.bgv.constants.CaseStatus;
 import com.org.bgv.controller.ProfileController;
 import com.org.bgv.dto.CheckCategoryGroup;
 import com.org.bgv.dto.DeleteResponse;
@@ -13,6 +15,7 @@ import com.org.bgv.dto.document.DocumentTypeDto;
 import com.org.bgv.dto.document.EducationDTO;
 import com.org.bgv.dto.document.FileDTO;
 import com.org.bgv.entity.BaseDocument;
+import com.org.bgv.entity.Candidate;
 import com.org.bgv.entity.CheckCategory;
 import com.org.bgv.entity.Document;
 import com.org.bgv.entity.DocumentType;
@@ -23,7 +26,11 @@ import com.org.bgv.entity.IdentityProof;
 import com.org.bgv.entity.Other;
 import com.org.bgv.entity.ProfessionalDocuments;
 import com.org.bgv.entity.Profile;
+import com.org.bgv.entity.VerificationCase;
+import com.org.bgv.entity.VerificationCaseCheck;
+import com.org.bgv.entity.VerificationCaseDocument;
 import com.org.bgv.entity.WorkExperience;
+import com.org.bgv.repository.CandidateRepository;
 import com.org.bgv.repository.CheckCategoryRepository;
 import com.org.bgv.repository.DocumentRepository;
 import com.org.bgv.repository.DocumentTypeRepository;
@@ -79,11 +86,13 @@ public class DocumentService {
     private final EducationHistoryRepository educationHistoryRepository;
     private final WorkExperienceRepository workExperienceRepository;
     private final OtherRepository otherRepository;
+    private final CandidateRepository candidateRepository;
+    private final VerificationCaseService verificationCaseService;
     
     private static final Logger logger = LoggerFactory.getLogger(DocumentService.class);
 
 	public DocumentCategoryDto createDocuments(List<MultipartFile> files, Long profileId, Long categoryId,
-			Long typeId,Long objectId) {
+			Long typeId,Long objectId,Long candidateId) {
 		DocumentCategoryDto documentCategoryDto = null;
 		// Validate inputs
 		if (files == null || files.isEmpty()) {
@@ -93,6 +102,9 @@ public class DocumentService {
 		if (files.size() > 10) { // Limit to prevent abuse
 			throw new RuntimeException("Maximum 10 files allowed per request");
 		}
+		
+	//	Long companyId = SecurityUtils.getCurrentUserCompanyId();
+		
 		DocumentType type = null;
 		Profile profile = profileRepository.findById(profileId)
 				.orElseThrow(() -> new RuntimeException("Profile not found: " + profileId));
@@ -100,6 +112,8 @@ public class DocumentService {
 				.orElseThrow(() -> new RuntimeException("Category not found: " + categoryId));
 		DocumentType documentType = documentTypeRepository.findById(typeId)
 		        .orElseThrow(() -> new RuntimeException("Doctype not found: " + profileId));
+		Candidate candidate = candidateRepository.findById(candidateId)
+		        .orElseThrow(() -> new RuntimeException("CandidateId not found: " + candidateId));
 		
 		
 		List<DocumentResponse> successfulUploads = new ArrayList<>();
@@ -120,7 +134,7 @@ public class DocumentService {
 
 				Pair<String, String> uploadResult = s3StorageService.uploadFile(file, category.getName());
 				
-				if(category.getName().contains("IDENTITY")) {
+				if(category.getName().contains("Identity")) {
 					
 					IdentityProof identityProof = IdentityProof.builder().profile(profile).build();
 					identityProof = identityProofRepository.save(identityProof);
@@ -129,11 +143,14 @@ public class DocumentService {
 							.fileUrl(uploadResult.getFirst()).fileSize(file.getSize()).awsDocKey(uploadResult.getSecond())
 							.status("UPLOADED").uploadedAt(LocalDateTime.now())
 							.objectId(identityProof.getId())
+							//.companyId(companyId)
+							.candidate(candidate)
+							.entityType("Identity")
 							.build();
 					Document saved = documentRepository.save(document);
 					//  successfulUploads.add(convertToDocumentResponse(document));
-					 documentCategoryDto = getDocumentsBySection(profileId, "IDENTITY_PROOF");
-				}else if (category.getName().contains("EDUCATION")) {
+					 documentCategoryDto = getDocumentsBySection(profileId, "Identity");
+				}else if (category.getName().contains("Education")) {
 					/*
 					EducationDocuments document = EducationDocuments.builder().profile(profile).category(category).docTypeId(documentType)
 							.fileUrl(uploadResult.getFirst()).fileSize(file.getSize()).awsDocKey(uploadResult.getSecond())
@@ -147,10 +164,13 @@ public class DocumentService {
 							.fileUrl(uploadResult.getFirst()).fileSize(file.getSize()).awsDocKey(uploadResult.getSecond())
 							.status("UPLOADED").uploadedAt(LocalDateTime.now())
 							.objectId(objectId)
+							//.companyId(companyId)
+							.candidate(candidate)
+							.entityType("Education")
 							.build();
 					Document saved = documentRepository.save(document);
-					documentCategoryDto = getDocumentsBySection(profileId, "EDUCATION");
-				}else if (category.getName().contains("WORK_EXPERIENCE")) {
+					documentCategoryDto = getDocumentsBySection(profileId, "Education");
+				}else if (category.getName().contains("Work Experience")) {
 					/*
 					ProfessionalDocuments document = ProfessionalDocuments.builder().profile(profile).category(category).docTypeId(documentType)
 							.fileUrl(uploadResult.getFirst()).fileSize(file.getSize()).awsDocKey(uploadResult.getSecond())
@@ -164,18 +184,24 @@ public class DocumentService {
 							.fileUrl(uploadResult.getFirst()).fileSize(file.getSize()).awsDocKey(uploadResult.getSecond())
 							.status("UPLOADED").uploadedAt(LocalDateTime.now())
 							.objectId(objectId)
+							//.companyId(companyId)
+							.candidate(candidate)
+							.entityType("Work Experience")
 							.build();
 					Document saved = documentRepository.save(document);
-					documentCategoryDto = getDocumentsBySection(profileId, "WORK_EXPERIENCE");
+					documentCategoryDto = getDocumentsBySection(profileId, "Work Experience");
 				}else {
 					Document document = Document.builder().profile(profile).category(category).docTypeId(documentType)
 							.fileUrl(uploadResult.getFirst()).fileSize(file.getSize()).awsDocKey(uploadResult.getSecond())
 							.status("UPLOADED").uploadedAt(LocalDateTime.now())
 							.objectId(objectId)
+							//.companyId(companyId)
+							.candidate(candidate)
+							.entityType("Other")
 							.build();
 					Document saved = documentRepository.save(document);
 					successfulUploads.add(convertToDocumentResponse(document));
-					documentCategoryDto = getDocumentsBySection(profileId, "OTHER");
+					documentCategoryDto = getDocumentsBySection(profileId, "Other");
 				}
 
 
@@ -675,29 +701,55 @@ public class DocumentService {
     }
     
     public DocumentCategoryDto getDocumentsBySection(Long profileId, String section) {
-        // Find category by section name (case insensitive)
+      
+    	// Find category by section name (case insensitive)
         Optional<CheckCategory> documentCategoryOpt = checkCategoryRepository.findByNameIgnoreCase(section);
+        CheckCategory documentCategory = documentCategoryOpt.get();
+        logger.info("Section:::::::::::::{}",section);
         
         if (documentCategoryOpt.isEmpty()) {
-            throw new RuntimeException("Section not found: " + section);
+            throw new RuntimeException("Section not found: " + section.length());
         }
-        
-        CheckCategory documentCategory = documentCategoryOpt.get();
+        List<DocumentType> candidatedocumentTypes = new ArrayList<>();
+       Long companyId = SecurityUtils.getCurrentUserCompanyId();
+       Long userId = SecurityUtils.getCurrentUserId();
+       Candidate candidate = candidateRepository.findByCompanyIdAndUserUserId(companyId, userId);
+       
+       VerificationCase verificationCase = verificationCaseService.getVerificationCaseByCompanyIdAndCandidateIdAndStatus(companyId, candidate.getCandidateId(), CaseStatus.CREATED);
+       logger.info("!!!!!!!!!!!!!!!!!!!!::verificationCase::{}",verificationCase);
+       if(verificationCase!=null) {
+        	VerificationCaseCheck verificationCaseCheck = verificationCaseService.getVerificationCaseChackByCategory(companyId, verificationCase.getCaseId(), section);
+        	
+        	
+        	logger.info("11111111::::::::::::companyId:::{}{}{}",companyId, userId, section);
+        	logger.info("11111111::::::::::::companyId:::{}",documentCategory.getCategoryId());
+        	// findByVerificationCaseCaseIdAndCheckCategoryCategoryId
+        	List<VerificationCaseDocument> verificationCaseDocuments = verificationCaseService.getVerificationCaseCaseIdAndCheckCategoryCategoryId(verificationCase.getCaseId(), documentCategory.getCategoryId());
+        	candidatedocumentTypes = verificationCaseDocuments.stream().map(m->m.getDocumentType()).collect(Collectors.toList());
+        	logger.info("22222222222:::::::::::::::{}",verificationCaseDocuments);
+        }
+       
         DocumentCategoryDto categoryDto = buildDocumentCategoryDto(documentCategory);
         List<DocumentType> documentTypes = documentTypeRepository.findByCategoryCategoryId(documentCategory.getCategoryId());
+        
+        logger.info("&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&:::candidatedocumentTypes:::::::{}",candidatedocumentTypes);
+        
+        if(candidatedocumentTypes!=null && candidatedocumentTypes.size()>0) {
+        	documentTypes = candidatedocumentTypes;
+        }
         
         logger.info("document service ::::::::documentTypes"+documentTypes.size());
         
         switch (documentCategory.getName().toUpperCase()) {
-            case "IDENTITY_PROOF":
+            case "Identity":
                 categoryDto.setDocumentTypes(buildIdentityProofDocumentTypes(profileId, documentCategory, documentTypes));
                 break;
                 
-            case "EDUCATION":
+            case "Education":
                 categoryDto.setEducation(buildEducationDocuments(profileId, documentCategory, documentTypes));
                 break;
                 
-            case "WORK_EXPERIENCE":
+            case "Work Experience":
                 categoryDto.setCompanies(buildWorkExperienceDocuments(profileId, documentCategory, documentTypes));
                 break;
                 

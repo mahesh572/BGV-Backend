@@ -14,4 +14,6 @@ public class PackageRuleTypeDTO {
     private Long ruleTypeId;
     private String ruleName;
     private String ruleCode;
+    private Integer minCount;
+    private Integer maxCount;
 }

@@ -14,7 +14,7 @@ import com.org.bgv.constants.VerificationStatus;
 @AllArgsConstructor
 @Builder
 public class VerificationCaseDocument {
-    
+
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     @Column(name = "case_document_id")
@@ -42,23 +42,9 @@ public class VerificationCaseDocument {
     private Double documentPrice;
 
     @Enumerated(EnumType.STRING)
-    @Builder.Default
-    private VerificationStatus verificationStatus = VerificationStatus.PENDING;
+    @Column(name = "verification_status", nullable = false)
+    private VerificationStatus verificationStatus;
 
-    private String documentUrl;
-    
-    private LocalDateTime uploadedAt;
-    private LocalDateTime verifiedAt;
-    private String verificationNotes;
-    
     @Builder.Default
     private LocalDateTime createdAt = LocalDateTime.now();
-    
-    @Builder.Default
-    private LocalDateTime updatedAt = LocalDateTime.now();
-
-    @PreUpdate
-    protected void onUpdate() {
-        updatedAt = LocalDateTime.now();
-    }
 }

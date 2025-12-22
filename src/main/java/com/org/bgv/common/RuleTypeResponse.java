@@ -14,4 +14,6 @@ public class RuleTypeResponse {
     private String name;
     private String code;
     private String label;
+    private Integer minCount;
+    private Integer maxCount;
 }

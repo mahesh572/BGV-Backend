@@ -16,7 +16,8 @@ import lombok.NoArgsConstructor;
 @NoArgsConstructor
 @AllArgsConstructor
 public class NavigationResponseDto {
-    private Long id;
+    
+	private Long id;
     private String name;
     private String href;
     private String icon;

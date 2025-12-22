@@ -191,7 +191,7 @@ public class IdentityProofService {
     
     private List<DocumentUploadRequest> createIdentityDocuments(Long candidateId) {
         
-        String category_section = "IDENTITY_PROOF";
+        String category_section = "Identity";
         
         Optional<CheckCategory> documentCategoryOpt = checkCategoryRepository.findByNameIgnoreCase(category_section);
         

@@ -65,9 +65,8 @@ public class CheckCategoryService {
     }
 
     
-    public Optional<CheckCategoryResponse> getCheckCategoryByCode(String code) {
-        return checkCategoryRepository.findByCode(code)
-                .map(this::mapToResponse);
+    public CheckCategoryResponse getCheckCategoryByCode(String code) {
+        return mapToResponse(checkCategoryRepository.findByCode(code));
     }
 
     
@@ -90,7 +89,9 @@ public class CheckCategoryService {
         return checkCategoryRepository.findById(id)
                 .map(existingCategory -> {
                     // Check if name is being changed and if it conflicts with existing
-                    if (!existingCategory.getName().equals(checkCategoryRequest.getName()) && 
+                    /*
+                	
+                	if (!existingCategory.getName().equals(checkCategoryRequest.getName()) && 
                         checkCategoryRepository.existsByName(checkCategoryRequest.getName())) {
                         throw new RuntimeException("Category with name '" + checkCategoryRequest.getName() + "' already exists");
                     }
@@ -100,7 +101,7 @@ public class CheckCategoryService {
                         checkCategoryRepository.existsByCode(checkCategoryRequest.getCode())) {
                         throw new RuntimeException("Category with code '" + checkCategoryRequest.getCode() + "' already exists");
                     }
-                    
+                    */
                     existingCategory.setName(checkCategoryRequest.getName());
                     existingCategory.setDescription(checkCategoryRequest.getDescription());
                     existingCategory.setLabel(checkCategoryRequest.getLabel());

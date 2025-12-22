@@ -70,6 +70,12 @@ public class Document implements BaseDocument {
     @ManyToOne
     @JoinColumn(name = "candidate_id")
     private Candidate candidate;
+    
+    @Column(name = "company_id")
+    private Long companyId;
+    
+    @Column(name = "entity_type")
+    private String entityType;
 
 	
 }

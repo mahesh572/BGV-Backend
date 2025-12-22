@@ -6,6 +6,7 @@ import com.org.bgv.common.CandidateCaseStatisticsResponse;
 import com.org.bgv.common.CaseDocumentSelection;
 import com.org.bgv.common.CategoryCase;
 import com.org.bgv.common.CategoryInfo;
+import com.org.bgv.common.CheckCategoryResponse;
 import com.org.bgv.common.DocumentTypeInfo;
 import com.org.bgv.common.DocumentUploadCaseRequest;
 import com.org.bgv.common.EmployerPackageInfo;
@@ -32,6 +33,7 @@ import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Optional;
 import java.util.stream.Collectors;
 
 @Service
@@ -45,6 +47,9 @@ public class VerificationCaseService {
     private final EmployerPackageDocumentRepository employerPackageDocumentRepository;
     private final CheckCategoryRepository checkCategoryRepository;
     private final VerificationCaseCheckRepository verificationCaseCheckRepository;
+    private final DocumentRepository documentRepository;
+    private final VerificationCaseDocumentLinkRepository verificationCaseDocumentLinkRepository;
+    private final CheckCategoryService checkCategoryService;
     
     @Transactional
     public VerificationCaseResponse createVerificationCase(VerificationCaseRequest request) {
@@ -60,8 +65,8 @@ public class VerificationCaseService {
         }
         
         // Check if candidate already has a case with this package
-        if (verificationCaseRepository.findByCandidateIdAndEmployerPackageId(
-                request.getCandidateId(), request.getEmployerPackageId()).isPresent()) {
+        if (verificationCaseRepository.findByCandidateIdAndEmployerPackageIdAndCompanyId(
+                request.getCandidateId(), request.getEmployerPackageId(),request.getCompanyId()).isPresent()) {
         	log.info("####################################################################################################################");
             throw new RuntimeException("Candidate already has a case with this package");
         }
@@ -202,14 +207,21 @@ public class VerificationCaseService {
         return mapToVerificationCaseResponse(updatedCase);
     }
     
+    public List<VerificationCaseDocument>  getVerificationCaseCaseIdAndCheckCategoryCategoryId(Long caseId,Long categoryId) {
+    	
+    	List<VerificationCaseDocument>  verificationCaseDocuments = verificationCaseDocumentRepository.findByVerificationCaseCaseIdAndCheckCategoryCategoryId(caseId,categoryId);
+       return verificationCaseDocuments;
+    
+    }
+    
     @Transactional
     public VerificationCaseDocumentResponse uploadDocument(DocumentUploadCaseRequest request) {
     	VerificationCaseDocument caseDocument = verificationCaseDocumentRepository.findById(request.getCaseDocumentId())
                 .orElseThrow(() -> new RuntimeException("Case document not found"));
         
-        caseDocument.setDocumentUrl(request.getDocumentUrl());
-        caseDocument.setVerificationStatus(VerificationStatus.UPLOADED);
-        caseDocument.setUploadedAt(java.time.LocalDateTime.now());
+       // caseDocument.setDocumentUrl(request.getDocumentUrl());
+       // caseDocument.setVerificationStatus(VerificationStatus.UPLOADED);
+      //  caseDocument.setUploadedAt(java.time.LocalDateTime.now());
         
         VerificationCaseDocument updatedDocument = verificationCaseDocumentRepository.save(caseDocument);
         
@@ -223,8 +235,8 @@ public class VerificationCaseService {
                 .orElseThrow(() -> new RuntimeException("Case document not found"));
         
         caseDocument.setVerificationStatus(request.getStatus());
-        caseDocument.setVerificationNotes(request.getVerificationNotes());
-        caseDocument.setVerifiedAt(java.time.LocalDateTime.now());
+      //  caseDocument.setVerificationNotes(request.getVerificationNotes());
+       // caseDocument.setVerifiedAt(java.time.LocalDateTime.now());
         
         VerificationCaseDocument updatedDocument = verificationCaseDocumentRepository.save(caseDocument);
         
@@ -300,11 +312,7 @@ public class VerificationCaseService {
             // Determine if this is an addon (not included in base package)
             boolean isAddOn = !employerDoc.getIncludedInBase() && isSelected;
             
-            // Determine if document is required
-          //  boolean required = employerDoc.getRequired() != null ? employerDoc.getRequired() : false;
-            
-            // Calculate document price
-          //  Double documentPrice = calculateDocumentPrice(employerDoc, isAddOn);
+           
             
             // Create case document
             VerificationCaseDocument caseDocument = VerificationCaseDocument.builder()
@@ -316,14 +324,42 @@ public class VerificationCaseService {
                    // .documentPrice(documentPrice)
                     .verificationStatus(VerificationStatus.PENDING)
                     .createdAt(LocalDateTime.now())
-                    .updatedAt(LocalDateTime.now())
                     .build();
             
             caseDocuments.add(caseDocument);
+            
+            
         }
+     // Save all case documents
+        List <VerificationCaseDocument> verificationCaseDocuments = verificationCaseDocumentRepository.saveAll(caseDocuments);
         
-        // Save all case documents
-        return verificationCaseDocumentRepository.saveAll(caseDocuments);
+        for (VerificationCaseDocument verCaseDocument : verificationCaseDocuments) {
+
+            List<Document> documents = documentRepository
+                .findByCategory_CategoryIdAndDocTypeId_DocTypeIdAndCandidate_CandidateId(
+                    verCaseDocument.getCheckCategory().getCategoryId(),
+                    verCaseDocument.getDocumentType().getDocTypeId(),
+                    verificationCase.getCandidateId()
+                );
+
+            if (!documents.isEmpty()) {
+
+                for (Document document : documents) {
+
+                    VerificationCaseDocumentLink link =
+                        VerificationCaseDocumentLink.builder()
+                            .caseDocument(verCaseDocument)
+                            .document(document)
+                            .build();
+
+                    verificationCaseDocumentLinkRepository.save(link);
+                }
+
+                // Optional: update status
+                verCaseDocument.setVerificationStatus(VerificationStatus.PENDING);
+            }
+        }
+        return verificationCaseDocuments;
     }
     
 
@@ -367,6 +403,18 @@ public class VerificationCaseService {
                 .map(this::updateVerificationStatus)
                 .collect(Collectors.toList());
     }
+   
+    @Transactional
+    public VerificationCase getVerificationCaseByCompanyIdAndCandidateIdAndStatus(Long companyId,Long candidateId,CaseStatus status) {
+    	return verificationCaseRepository.findByCompanyIdAndCandidateIdAndStatus(companyId, candidateId, status);
+    }
+    
+    public VerificationCaseCheck getVerificationCaseChackByCategory(Long companyId,Long caseId,String categoryCheck) {
+    	CheckCategoryResponse checkCategory = checkCategoryService.getCheckCategoryByName(categoryCheck).orElseThrow(()->new RuntimeException());
+    	
+    	return verificationCaseCheckRepository.findByVerificationCase_CaseIdAndCategory_CategoryId(caseId, checkCategory.getCategoryId()).orElseThrow(()->new RuntimeException());
+    }
+    
     
     
     public VerificationStatisticsResponse getVerificationStatistics(Long caseId) {
@@ -480,8 +528,6 @@ public class VerificationCaseService {
                 .required(document.getRequired())
                 .documentPrice(document.getDocumentPrice())
                 .verificationStatus(document.getVerificationStatus().name())
-                .documentUrl(document.getDocumentUrl())
-                .uploadedAt(document.getUploadedAt())
                 .build();
     }
     

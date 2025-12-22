@@ -26,6 +26,8 @@ import com.org.bgv.entity.Profile;
 import com.org.bgv.entity.Role;
 import com.org.bgv.entity.User;
 import com.org.bgv.entity.UserRole;
+import com.org.bgv.entity.UserType;
+import com.org.bgv.entity.Vendor;
 import com.org.bgv.mapper.UserMapper;
 import com.org.bgv.repository.CompanyRepository;
 import com.org.bgv.repository.CompanyUserRepository;
@@ -33,6 +35,7 @@ import com.org.bgv.repository.ProfileRepository;
 import com.org.bgv.repository.RoleRepository;
 import com.org.bgv.repository.UserRepository;
 import com.org.bgv.repository.UserRoleRepository;
+import com.org.bgv.repository.VendorRepository;
 
 import jakarta.persistence.criteria.Join;
 import jakarta.persistence.criteria.JoinType;
@@ -75,6 +78,7 @@ public class UserService {
     private final CandidateService candidateService;
     private final EmailService emailService;
     private final ProfileRepository profileRepository;
+    private final VendorRepository vendorRepository;
     
     private static final Logger logger = LoggerFactory.getLogger(UserService.class);
 
@@ -338,13 +342,14 @@ public class UserService {
     
     public UserDto getUserFromToken(String token) {
     	UserDto userDto = null;
-
+try {
         if (jwtUtil.validateToken(token)) {
             String email = jwtUtil.getUsernameFromToken(token);
             userDto = getUserByEmail(email);
 
             // Try setting profileId, skip if not found
             try {
+            	logger.info("userDto.getUserId()::::::::::::::::::::{}",userDto.getUserId());
                 Long profileId = profileService.getProfileIdByUserId(userDto.getUserId());
                 if (profileId != null) {
                     userDto.setProfileId(profileId);
@@ -368,8 +373,17 @@ public class UserService {
             	userDto.setHasConsentProvided(Boolean.TRUE);
             	
             }
+            
+            logger.info("############################################################################:::::::::::::{}",UserType.VENDOR.name());
+            if(userDto.getUserType()!=null && userDto.getUserType().equalsIgnoreCase(UserType.VENDOR.name())) {
+            	Vendor vendor = vendorRepository.findByUser_userId(userDto.getUserId());
+            	logger.info("in user service:::::::::::{}",vendor);
+            	userDto.setVendorId(vendor.getId());
+            }
         }
-
+			}catch (Exception e) {
+				e.printStackTrace();
+			}
         return userDto;
     }
     

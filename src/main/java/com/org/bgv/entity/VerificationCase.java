@@ -62,6 +62,9 @@ public class VerificationCase {
     @OneToMany(mappedBy = "verificationCase", cascade = CascadeType.ALL, fetch = FetchType.LAZY)
     @Builder.Default
     private List<VerificationCaseCheck> caseChecks = new ArrayList<>();
+    
+    @Column(name = "vendor_id")
+    private Long vendorId;
 
     @PreUpdate
     protected void onUpdate() {

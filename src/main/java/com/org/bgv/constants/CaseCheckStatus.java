@@ -4,5 +4,8 @@ public enum CaseCheckStatus {
     PENDING,
     IN_PROGRESS,
     COMPLETED,
-    REJECTED
+    REJECTED,
+    ON_HOLD,
+    DELAYED,
+    INSUFFICIENT
 }

@@ -1,5 +1,7 @@
 package com.org.bgv.entity;
 
+import java.time.LocalDateTime;
+
 import com.org.bgv.constants.CaseCheckStatus;
 
 import jakarta.persistence.*;
@@ -39,6 +41,22 @@ public class VerificationCaseCheck {
     @Enumerated(EnumType.STRING)
     @Column(name = "status", nullable = false)
     private CaseCheckStatus status;
+    
+    @Column(name = "updated_at")
+    @Builder.Default
+    private LocalDateTime updatedAt = LocalDateTime.now();
+    
+    @Column(name = "created_at")
+    @Builder.Default
+    private LocalDateTime createdAt = LocalDateTime.now();
+    
+    @Column(name = "vendor_id")
+    private Long vendorId;
+    
+    @PreUpdate
+    protected void onUpdate() {
+        updatedAt = LocalDateTime.now();
+    }
     
     
 }

@@ -48,6 +48,6 @@ public class RuleTypesDTO {
     @JsonAlias({"category_name", "checkCategoryName"})
     private String categoryName;
     
-    private Long minCount;
-    private Long maxCount;
+    private Integer minCount;
+    private Integer maxCount;
 }

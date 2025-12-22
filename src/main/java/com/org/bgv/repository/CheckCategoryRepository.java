@@ -18,7 +18,7 @@ public interface CheckCategoryRepository extends JpaRepository<CheckCategory, Lo
     Optional<CheckCategory> findByNameContainingIgnoreCase(String name);
     
     
-    Optional<CheckCategory> findByCode(String code);
+    CheckCategory findByCode(String code);
     boolean existsByName(String name);
     boolean existsByCode(String code);
     

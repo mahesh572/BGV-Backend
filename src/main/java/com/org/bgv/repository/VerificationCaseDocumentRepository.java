@@ -24,6 +24,8 @@ public interface VerificationCaseDocumentRepository extends JpaRepository<Verifi
     
     Optional<VerificationCaseDocument> findByVerificationCaseCaseIdAndDocumentTypeDocTypeId(Long caseId, Long documentTypeId);
     
+     List<VerificationCaseDocument> findByVerificationCaseCaseIdAndCheckCategoryCategoryId(Long caseId,Long categoryId);
+    
     @Query("SELECT COUNT(ccd) FROM VerificationCaseDocument ccd WHERE ccd.verificationCase.caseId = :caseId AND ccd.verificationStatus = :status")
     Long countByCaseIdAndVerificationStatus(@Param("caseId") Long caseId, 
                                           @Param("status") VerificationStatus status);

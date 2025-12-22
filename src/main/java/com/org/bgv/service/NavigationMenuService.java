@@ -1,25 +1,48 @@
 package com.org.bgv.service;
 
+import java.util.ArrayList;
+import java.util.HashSet;
 import java.util.List;
+import java.util.Map;
 import java.util.Objects;
+import java.util.Set;
 import java.util.stream.Collectors;
 
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 
+import com.org.bgv.common.VerificationCaseResponse;
 import com.org.bgv.common.navigation.CreateNavigationMenuDto;
 import com.org.bgv.common.navigation.NavigationResponseDto;
 import com.org.bgv.common.navigation.UpdateNavigationMenuDto;
 import com.org.bgv.config.SecurityUtils;
+import com.org.bgv.entity.Candidate;
+import com.org.bgv.entity.Company;
 import com.org.bgv.entity.NavigationMenu;
+import com.org.bgv.entity.User;
+import com.org.bgv.entity.UserType;
+import com.org.bgv.entity.VerificationCase;
+import com.org.bgv.repository.CandidateRepository;
 import com.org.bgv.repository.NavigationMenuRepository;
+import com.org.bgv.repository.UserRepository;
+import com.org.bgv.repository.VerificationCaseRepository;
 
 import jakarta.persistence.EntityNotFoundException;
 import jakarta.transaction.Transactional;
+import lombok.AllArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 
 @Transactional
 @Service
+@AllArgsConstructor
+@Slf4j
 public class NavigationMenuService {
+	
+	private final UserRepository userRepository;
+	// private final VerificationCaseRepository
+	private final CandidateRepository candidateRepository;
+	private final VerificationCaseService verificationCaseService;
+	private final VerificationCaseRepository verificationCaseRepository;
 
     @Autowired
     private NavigationMenuRepository navigationMenuRepository;
@@ -41,6 +64,45 @@ public class NavigationMenuService {
                     .map(menu -> filterMenuByPermissions(menu, authorities))
                     .filter(Objects::nonNull)
                     .collect(Collectors.toList());
+            
+            Set<String> defaultNaviSet = new HashSet<>();
+            defaultNaviSet.add("DashBoard");
+            defaultNaviSet.add("Basic Details");
+            defaultNaviSet.add("Documents");
+            
+            
+            Long userId = SecurityUtils.getCurrentCustomUserDetails().getUserId();
+            User user = userRepository.findById(userId).orElseThrow(() -> new RuntimeException("User not found with id: " + userId));
+            if(user!=null && user.getUserType().equalsIgnoreCase(UserType.CANDIDATE.name())) {
+            	Candidate candidate = candidateRepository.findByUserUserId(userId).orElseThrow(() -> new RuntimeException("Candidate not found with User_id: " + userId));
+		            if(candidate!=null && candidate.getSourceType().equalsIgnoreCase(UserType.COMPANY.name())) {
+		            	// List<VerificationCaseResponse> verificationCaseResponses =verificationCaseService.getVerificationCasesByCandidate(candidate.getCandidateId());
+		           log.info("###################################################################:::{}",resultMenus);
+		            	Set<String> checkTypes =
+		            	        verificationCaseRepository.findByCandidateId(candidate.getCandidateId())
+		            	                .stream()
+		            	                .flatMap(vc -> vc.getCaseChecks().stream())
+		            	                .map(check ->
+		            	                        check.getCategory() != null
+		            	                                ? check.getCategory().getName()
+		            	                                : "unknown"
+		            	                )
+		            	                .collect(Collectors.toSet());
+		            	
+		            	defaultNaviSet.addAll(checkTypes);
+		            	
+		            	log.info("defaultNaviSet:::::::::::{}",defaultNaviSet);
+		            	
+		            	resultMenus = resultMenus.stream()
+		            	        .filter(menu ->
+		            	                defaultNaviSet.contains(menu.getName())
+		            	        )
+		            	        .collect(Collectors.toList());
+		            	
+		            }
+            
+            }
+            
         }
 
         // Convert to DTOs
