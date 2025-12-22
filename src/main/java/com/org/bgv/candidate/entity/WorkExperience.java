@@ -49,7 +49,7 @@ public class WorkExperience {
     private LocalDate start_date;
     private LocalDate end_date;
     private String reason;
-    private Long employee_id;
+    private String employee_id;
     private String manager_email_id;
     private String hr_email_id;
     private String address;

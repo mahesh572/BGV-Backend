@@ -116,7 +116,7 @@ public class UserMapper implements BaseMapper<User, UserDto> {
             .city(addr.getCity())
             .state(addr.getState())
             .country(addr.getCountry())
-            .postalCode(addr.getPostalCode())
+            .zipCode(addr.getZipCode())
             .isDefault(addr.isDefault())
             .addressType(addr.getAddressType())
             .user(user)
@@ -129,7 +129,7 @@ public class UserMapper implements BaseMapper<User, UserDto> {
         addrDto.setCity(address.getCity());
         addrDto.setState(address.getState());
         addrDto.setCountry(address.getCountry());
-        addrDto.setPostalCode(address.getPostalCode());
+        addrDto.setZipCode(address.getZipCode());
         addrDto.setDefault(address.isDefault());
         addrDto.setAddressType(address.getAddressType());
         return addrDto;

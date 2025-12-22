@@ -1,6 +1,8 @@
 package com.org.bgv.service;
 
+import com.org.bgv.candidate.entity.Candidate;
 import com.org.bgv.candidate.entity.WorkExperience;
+import com.org.bgv.candidate.repository.CandidateRepository;
 import com.org.bgv.candidate.repository.WorkExperienceRepository;
 import com.org.bgv.controller.ProfileController;
 import com.org.bgv.dto.DocumentResponse;
@@ -40,20 +42,26 @@ public class WorkExperienceService {
 	private final ProfileRepository profileRepository;
 	private final ProfessionalDocumentsRepository professionalDocumentsRepository;
 	private final S3StorageService s3StorageService;
+	 private final CandidateRepository candidateRepository;
 	
 	private static final Logger logger = LoggerFactory.getLogger(WorkExperienceService.class);
 
 	@Transactional
-	public List<WorkExperienceDTO> saveWorkExperiences(List<WorkExperienceDTO> workExperienceDTOs, Long profileId) {
+	public List<WorkExperienceDTO> saveWorkExperiences(List<WorkExperienceDTO> workExperienceDTOs, Long candidateId) {
+		/*
 		Profile profile = profileRepository.findById(profileId)
 				.orElseThrow(() -> new RuntimeException("Profile not found: " + profileId));
+				*/
+		
+		Candidate candidate = candidateRepository.findById(candidateId)
+    	        .orElseThrow(() -> new RuntimeException("Profile not found: " + candidateId));
 
 		// Delete existing work experiences for this profile (optional - if you want to
 		// replace all)
 		// workExperienceRepository.deleteByProfile_ProfileId(profileId);
 
 		// Convert DTOs to entities and save
-		List<WorkExperience> workExperiences = workExperienceDTOs.stream().map(dto -> mapToEntity(dto, profile))
+		List<WorkExperience> workExperiences = workExperienceDTOs.stream().map(dto -> mapToEntity(dto, candidate))
 				.collect(Collectors.toList());
 
 		List<WorkExperience> savedExperiences = workExperienceRepository.saveAll(workExperiences);
@@ -62,8 +70,9 @@ public class WorkExperienceService {
 		return savedExperiences.stream().map(this::mapToDTO).collect(Collectors.toList());
 	}
 
-	public List<WorkExperienceDTO> getWorkExperiencesByProfile(Long profileId) {
-		List<WorkExperience> experiences = workExperienceRepository.findByProfile_ProfileId(profileId);
+	public List<WorkExperienceDTO> getWorkExperiencesByProfile(Long candidateId) {
+		
+		List<WorkExperience> experiences = workExperienceRepository.findByCandidateId(candidateId);
 		return experiences.stream().map(this::mapToDTO).collect(Collectors.toList());
 	}
 
@@ -107,9 +116,10 @@ public class WorkExperienceService {
 				.build();
 	}
 
-	private WorkExperience mapToEntity(WorkExperienceDTO dto, Profile profile) {
+	private WorkExperience mapToEntity(WorkExperienceDTO dto, Candidate candidate) {
 		return WorkExperience.builder()
-				.profile(profile)
+				//.profile(profile)
+				.candidateId(candidate.getCandidateId())
 				.company_name(dto.getCompanyName())
 				.position(dto.getPosition())
 				.start_date(dto.getStartDate()).end_date(dto.getEndDate()).reason(dto.getReasonForLeaving())
@@ -221,24 +231,27 @@ public class WorkExperienceService {
 		
 	}
 	
-	public void deleteWorkExperience(Long profileId, Long experienceId) {
-	    workExperienceRepository.findByProfile_ProfileIdAndExperienceId(profileId, experienceId)
+	public void deleteWorkExperience(Long candidateId, Long experienceId) {
+	    workExperienceRepository.findByCandidateIdAndExperienceId(candidateId, experienceId)
 	            .ifPresentOrElse(
 	                    workExperienceRepository::delete,
 	                    () -> {
 	                        throw new EntityNotFoundException(
-	                            "Work experience not found for profileId: " + profileId + " and experienceId: " + experienceId
+	                            "Work experience not found for profileId: " + candidateId + " and experienceId: " + experienceId
 	                        );
 	                    }
 	            );
 	}
 	
-	public List<WorkExperienceDTO> updateWorkExperiences(List<WorkExperienceDTO> workExperienceDTOs, Long profileId) {
+	public List<WorkExperienceDTO> updateWorkExperiences(List<WorkExperienceDTO> workExperienceDTOs, Long candidateId) {
         // Validate profile exists
 		List<WorkExperienceDTO> workList = new ArrayList<>();
-        Profile profile = profileRepository.findById(profileId)
+        /*
+		Profile profile = profileRepository.findById(profileId)
                 .orElseThrow(() -> new EntityNotFoundException("Profile not found with id: " + profileId));
-
+       */
+		Candidate candidate = candidateRepository.findById(candidateId)
+    	        .orElseThrow(() -> new RuntimeException("Candidate not found: " + candidateId));
         // Validate input
         if (workExperienceDTOs == null || workExperienceDTOs.isEmpty()) {
             throw new IllegalArgumentException("Work experiences list cannot be empty");
@@ -249,7 +262,7 @@ public class WorkExperienceService {
             	 WorkExperience workExperience = null;
             	
              	if(workExperienceDTO.getId()!=null) {
-             		workExperience = workExperienceRepository.findByProfile_ProfileIdAndExperienceId(profileId, workExperienceDTO.getId())
+             		workExperience = workExperienceRepository.findByCandidateIdAndExperienceId(candidateId, workExperienceDTO.getId())
                              .orElseThrow(() -> new RuntimeException("Work experience history not found: " + workExperienceDTO.getId()));
              	}else {
              		workExperience = new WorkExperience();
@@ -257,7 +270,8 @@ public class WorkExperienceService {
             	
                                           
                    
-                    workExperience.setProfile(profile);
+                  //  workExperience.setProfile(profile);
+             	    workExperience.setCandidateId(candidateId);
                     workExperience.setAddress(workExperienceDTO.getCompanyAddress());
                     workExperience.setCompany_name(workExperienceDTO.getCompanyName());
                     workExperience.setEmployee_id(workExperienceDTO.getEmployeeId());

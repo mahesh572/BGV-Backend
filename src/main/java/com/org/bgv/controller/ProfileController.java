@@ -118,7 +118,7 @@ public class ProfileController {
                     .body(CustomApiResponse.failure("Failed to delete profile: " + e.getMessage(), HttpStatus.INTERNAL_SERVER_ERROR));
         }
     }
-
+/*
     // Education History endpoints
     @PostMapping("/{profileId}/education")
     public ResponseEntity<CustomApiResponse<List<EducationHistoryDTO>>> saveEducationHistory(
@@ -184,6 +184,7 @@ public class ProfileController {
         }
     }
     
+    
     // Work Experiences endpoints
     @PostMapping("/{profileId}/work-experiences")
     public ResponseEntity<CustomApiResponse<List<WorkExperienceDTO>>> saveWorkExperiences(
@@ -248,6 +249,7 @@ public class ProfileController {
                     .body(CustomApiResponse.failure("Failed to delete work experience: " + e.getMessage(), HttpStatus.INTERNAL_SERVER_ERROR));
         }
     }
+    */
     // Addresses endpoints
     @PostMapping("/{profileId}/addresses")
     public ResponseEntity<CustomApiResponse<List<ProfileAddressDTO>>> saveProfileAddresses(

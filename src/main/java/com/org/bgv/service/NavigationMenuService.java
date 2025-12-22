@@ -70,6 +70,9 @@ public class NavigationMenuService {
             defaultNaviSet.add("Basic Details");
             defaultNaviSet.add("Documents");
             defaultNaviSet.add("Education");
+            defaultNaviSet.add("Work Experience");
+            defaultNaviSet.add("Address");
+            
             
             Long userId = SecurityUtils.getCurrentCustomUserDetails().getUserId();
             User user = userRepository.findById(userId).orElseThrow(() -> new RuntimeException("User not found with id: " + userId));

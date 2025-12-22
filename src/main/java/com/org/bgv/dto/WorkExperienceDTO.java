@@ -45,7 +45,7 @@ public class WorkExperienceDTO {
     private Boolean currentlyWorking;
     
     @Size(max = 50, message = "Employee ID cannot exceed 50 characters")
-    private Long employeeId;
+    private String employeeId;
     
     @Email(message = "Manager email should be valid")
     private String managerEmail;

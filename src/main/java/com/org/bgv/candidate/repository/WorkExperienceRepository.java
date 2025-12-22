@@ -20,7 +20,7 @@ public interface WorkExperienceRepository extends JpaRepository<WorkExperience, 
     List<WorkExperience> findByExperienceId(Long experienceId);
  // (Optional) Find a single work experience by profileId + experienceId for safe deletion
     Optional<WorkExperience> findByProfile_ProfileIdAndExperienceId(Long profileId, Long experienceId);
-    
+    Optional<WorkExperience> findByCandidateIdAndExperienceId(Long candidateId, Long experienceId);
     // Verification
     
     List<WorkExperience> findByCandidateId(Long candidateId);

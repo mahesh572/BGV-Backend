@@ -1,6 +1,9 @@
 package com.org.bgv.dto;
 
 
+import java.time.LocalDate;
+
+import com.fasterxml.jackson.annotation.JsonFormat;
 import com.fasterxml.jackson.annotation.JsonInclude;
 import com.org.bgv.entity.AddressType;
 
@@ -25,13 +28,22 @@ public class AddressDTO {
     private String city;
     private String state;
     private String country;
-    private String postalCode;
+    private String zipCode;
     private boolean isDefault;
     
+    @JsonFormat(pattern = "yyyy-MM-dd")
+    private LocalDate currentlyResidingFrom;
+    
     private boolean verified;
-    private String verificationStatus;
+    private String verificationStatus = "pending";
     private String verifiedBy;
     
     private AddressType addressType;
+    
+    private Boolean isMyPermanentAddress;
+    
+    private Boolean currentlyResidingAtThisAddress;
+
+	
 }
 
