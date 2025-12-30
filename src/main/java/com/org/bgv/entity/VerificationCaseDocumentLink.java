@@ -38,6 +38,8 @@ public class VerificationCaseDocumentLink {
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "document_id", nullable = false)
     private Document document;
+    
+    private String status;
 
     @Builder.Default
     private LocalDateTime linkedAt = LocalDateTime.now();

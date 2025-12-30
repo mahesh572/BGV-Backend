@@ -26,4 +26,6 @@ public class DocumentTypeDto {
     
     private List<FieldDTO> fields;
    // private UploadRuleDTO upload;
+    private boolean error;
+    private String errorMessage;
 }

@@ -460,7 +460,7 @@ public class IdentityProofService {
       //  dto.setIssuingAuthority(identity.getIssuingAuthority());
       //  dto.setIssuingCountry(identity.getIssuingCountry());
       //  dto.setPlaceOfIssue(identity.getPlaceOfIssue());
-        dto.setVerified(identity.getVerified());
+        dto.setVerified(identity.getVerified()==null?Boolean.FALSE:identity.getVerified());
         dto.setVerificationStatus(identity.getVerificationStatus());
         dto.setVerifiedBy(identity.getVerifiedBy());
         dto.setVerifiedAt(identity.getVerifiedAt());

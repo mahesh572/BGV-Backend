@@ -3,6 +3,7 @@ package com.org.bgv.entity;
 import java.time.LocalDateTime;
 
 import com.org.bgv.constants.CaseCheckStatus;
+import com.org.bgv.constants.CaseStatus;
 
 import jakarta.persistence.*;
 import lombok.*;
@@ -20,6 +21,9 @@ public class VerificationCaseCheck {
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     @Column(name = "case_check_id")
     private Long caseCheckId;
+    
+    @Column(name = "check_ref", unique = true, nullable = false)
+    private String checkRef; // CASE-25
 
     /**
      * Parent verification case
@@ -40,7 +44,7 @@ public class VerificationCaseCheck {
      */
     @Enumerated(EnumType.STRING)
     @Column(name = "status", nullable = false)
-    private CaseCheckStatus status;
+    private CaseStatus status;
     
     @Column(name = "updated_at")
     @Builder.Default
@@ -58,5 +62,6 @@ public class VerificationCaseCheck {
         updatedAt = LocalDateTime.now();
     }
     
-    
+    private LocalDateTime assignedAt;
+    private Long assignedBy;
 }

@@ -7,6 +7,8 @@ import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.stereotype.Repository;
 
 import com.org.bgv.constants.CaseCheckStatus;
+import com.org.bgv.constants.CaseStatus;
+import com.org.bgv.entity.VerificationCase;
 import com.org.bgv.entity.VerificationCaseCheck;
 
 @Repository
@@ -23,7 +25,7 @@ public interface VerificationCaseCheckRepository
      */
     List<VerificationCaseCheck> findByVerificationCase_CaseIdAndStatus(
             Long caseId,
-            CaseCheckStatus status
+            CaseStatus status
     );
 
     /**
@@ -42,7 +44,19 @@ public interface VerificationCaseCheckRepository
     /**
      * Count checks by status for dashboard
      */
-    long countByStatus(CaseCheckStatus status);
+    long countByStatus(CaseStatus status);
     
     List<VerificationCaseCheck> findTop10ByVendorIdOrderByUpdatedAtDesc(Long vendorId);
+    
+    List<VerificationCaseCheck> findByVerificationCase(VerificationCase verificationCase);
+    
+    long countByVendorIdAndStatusIn(
+            Long vendorId,
+            List<CaseStatus> statuses
+    );
+    
+    List<VerificationCaseCheck> findByVendorIdAndStatusIn(
+            Long vendorId, 
+            List<CaseStatus> statuses
+        );
 }

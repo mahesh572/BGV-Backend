@@ -1,6 +1,8 @@
 package com.org.bgv.repository;
 
 import com.org.bgv.constants.VerificationStatus;
+import com.org.bgv.entity.CheckCategory;
+import com.org.bgv.entity.VerificationCase;
 import com.org.bgv.entity.VerificationCaseDocument;
 
 import org.springframework.data.jpa.repository.JpaRepository;
@@ -32,4 +34,16 @@ public interface VerificationCaseDocumentRepository extends JpaRepository<Verifi
     
     @Query("SELECT ccd FROM VerificationCaseDocument ccd WHERE ccd.verificationCase.candidateId = :candidateId AND ccd.verificationStatus = 'PENDING'")
     List<VerificationCaseDocument> findPendingDocumentsByCandidate(@Param("candidateId") Long candidateId);
+    
+    Integer countByVerificationCase(VerificationCase verificationCase);
+    
+    List<VerificationCaseDocument> findByVerificationCaseAndCheckCategory(VerificationCase verificationCase, CheckCategory checkType);
+    
+    List<VerificationCaseDocument> findByVerificationCaseAndCheckCategory_Code(
+            VerificationCase verificationCase, String code);
+    
+    
+    Optional<VerificationCaseDocument> findByVerificationCase_CaseIdAndCheckCategory_CategoryIdAndDocumentType_DocTypeId(
+            Long caseId, Long categoryId, Long documentTypeId);
+    
 }

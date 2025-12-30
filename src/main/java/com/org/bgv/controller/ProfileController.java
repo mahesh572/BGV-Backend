@@ -118,138 +118,7 @@ public class ProfileController {
                     .body(CustomApiResponse.failure("Failed to delete profile: " + e.getMessage(), HttpStatus.INTERNAL_SERVER_ERROR));
         }
     }
-/*
-    // Education History endpoints
-    @PostMapping("/{profileId}/education")
-    public ResponseEntity<CustomApiResponse<List<EducationHistoryDTO>>> saveEducationHistory(
-            @PathVariable Long profileId,
-            @RequestBody List<EducationHistoryDTO> educationHistoryDTOs) {
-        try {
-            List<EducationHistoryDTO> savedEducation = educationHistoryService.saveEducationHistory(educationHistoryDTOs, profileId);
-            return ResponseEntity.status(HttpStatus.CREATED)
-                    .body(CustomApiResponse.success("Education history saved successfully", savedEducation, HttpStatus.CREATED));
-        } catch (RuntimeException e) {
-            return ResponseEntity.status(HttpStatus.NOT_FOUND)
-                    .body(CustomApiResponse.failure(e.getMessage(), HttpStatus.NOT_FOUND));
-        } catch (Exception e) {
-            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
-                    .body(CustomApiResponse.failure("Failed to save education history: " + e.getMessage(), HttpStatus.INTERNAL_SERVER_ERROR));
-        }
-    }
-    @PutMapping("/{profileId}/education")
-    public ResponseEntity<CustomApiResponse<List<EducationHistoryDTO>>> updateEducationHistory(
-            @PathVariable Long profileId,
-            @RequestBody List<EducationHistoryDTO> educationHistoryDTOs) {
-        try {
-        	logger.info("profile controller:::::::{}",profileId);
-            List<EducationHistoryDTO> updatedEducation = educationHistoryService.updateEducationHistories(educationHistoryDTOs, profileId);
-            return ResponseEntity.ok()
-                    .body(CustomApiResponse.success("Education history updated successfully", updatedEducation, HttpStatus.OK));
-        } catch (RuntimeException e) {
-            return ResponseEntity.status(HttpStatus.NOT_FOUND)
-                    .body(CustomApiResponse.failure(e.getMessage(), HttpStatus.NOT_FOUND));
-        } catch (Exception e) {
-            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
-                    .body(CustomApiResponse.failure("Failed to update education history: " + e.getMessage(), HttpStatus.INTERNAL_SERVER_ERROR));
-        }
-    }
-    
-    @GetMapping("/{profileId}/education")
-    public ResponseEntity<CustomApiResponse<List<EducationHistoryDTO>>> getEducationHistory(@PathVariable Long profileId) {
-        try {
-            List<EducationHistoryDTO> educationHistory = educationHistoryService.getEducationByProfile(profileId);
-            return ResponseEntity.ok(CustomApiResponse.success("Education history retrieved successfully", educationHistory, HttpStatus.OK));
-        } catch (RuntimeException e) {
-            return ResponseEntity.status(HttpStatus.NOT_FOUND)
-                    .body(CustomApiResponse.failure(e.getMessage(), HttpStatus.NOT_FOUND));
-        } catch (Exception e) {
-            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
-                    .body(CustomApiResponse.failure("Failed to retrieve education history: " + e.getMessage(), HttpStatus.INTERNAL_SERVER_ERROR));
-        }
-    }
-    
-    @DeleteMapping("/{profileId}/education/{educationId}")
-    public ResponseEntity<CustomApiResponse<Void>> deleteEducationHistory(@PathVariable Long profileId,
-            @PathVariable Long educationId) {
-        try {
-            educationHistoryService.deleteEducationHistory(profileId,educationId);
-            return ResponseEntity.ok()
-                    .body(CustomApiResponse.success("Education history deleted successfully", null, HttpStatus.OK));
-        } catch (RuntimeException e) {
-            return ResponseEntity.status(HttpStatus.NOT_FOUND)
-                    .body(CustomApiResponse.failure(e.getMessage(), HttpStatus.NOT_FOUND));
-        } catch (Exception e) {
-            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
-                    .body(CustomApiResponse.failure("Failed to delete education history: " + e.getMessage(), HttpStatus.INTERNAL_SERVER_ERROR));
-        }
-    }
-    
-    
-    // Work Experiences endpoints
-    @PostMapping("/{profileId}/work-experiences")
-    public ResponseEntity<CustomApiResponse<List<WorkExperienceDTO>>> saveWorkExperiences(
-            @PathVariable Long profileId,
-            @RequestBody List<WorkExperienceDTO> workExperienceDTOs) {
-        try {
-            List<WorkExperienceDTO> savedExperiences = workExperienceService.saveWorkExperiences(workExperienceDTOs, profileId);
-            return ResponseEntity.status(HttpStatus.CREATED)
-                    .body(CustomApiResponse.success("Work experiences saved successfully", savedExperiences, HttpStatus.CREATED));
-        } catch (RuntimeException e) {
-            return ResponseEntity.status(HttpStatus.NOT_FOUND)
-                    .body(CustomApiResponse.failure(e.getMessage(), HttpStatus.NOT_FOUND));
-        } catch (Exception e) {
-            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
-                    .body(CustomApiResponse.failure("Failed to save work experiences: " + e.getMessage(), HttpStatus.INTERNAL_SERVER_ERROR));
-        }
-    }
 
-    @GetMapping("/{profileId}/work-experiences")
-    public ResponseEntity<CustomApiResponse<List<WorkExperienceDTO>>> getWorkExperiences(@PathVariable Long profileId) {
-        try {
-            List<WorkExperienceDTO> experiences = workExperienceService.getWorkExperiencesByProfile(profileId);
-            return ResponseEntity.ok(CustomApiResponse.success("Work experiences retrieved successfully", experiences, HttpStatus.OK));
-        } catch (RuntimeException e) {
-            return ResponseEntity.status(HttpStatus.NOT_FOUND)
-                    .body(CustomApiResponse.failure(e.getMessage(), HttpStatus.NOT_FOUND));
-        } catch (Exception e) {
-            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
-                    .body(CustomApiResponse.failure("Failed to retrieve work experiences: " + e.getMessage(), HttpStatus.INTERNAL_SERVER_ERROR));
-        }
-    }
-    @PutMapping("/{profileId}/work-experiences")
-    public ResponseEntity<CustomApiResponse<List<WorkExperienceDTO>>> updateWorkExperiences(
-            @PathVariable Long profileId,
-            @RequestBody List<WorkExperienceDTO> workExperienceDTOs) {
-        try {
-            List<WorkExperienceDTO> updatedExperiences = workExperienceService.updateWorkExperiences(workExperienceDTOs, profileId);
-            return ResponseEntity.ok()
-                    .body(CustomApiResponse.success("Work experiences updated successfully", updatedExperiences, HttpStatus.OK));
-        } catch (RuntimeException e) {
-            return ResponseEntity.status(HttpStatus.NOT_FOUND)
-                    .body(CustomApiResponse.failure(e.getMessage(), HttpStatus.NOT_FOUND));
-        } catch (Exception e) {
-            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
-                    .body(CustomApiResponse.failure("Failed to update work experiences: " + e.getMessage(), HttpStatus.INTERNAL_SERVER_ERROR));
-        }
-    }
-    
-    @DeleteMapping("/{profileId}/work-experiences/{id}")
-    public ResponseEntity<CustomApiResponse<Void>> deleteWorkExperience(
-            @PathVariable Long profileId,
-            @PathVariable Long id) {
-        try {
-            workExperienceService.deleteWorkExperience(profileId, id);
-            return ResponseEntity.ok()
-                    .body(CustomApiResponse.success("Work experience deleted successfully", null, HttpStatus.OK));
-        } catch (RuntimeException e) {
-            return ResponseEntity.status(HttpStatus.NOT_FOUND)
-                    .body(CustomApiResponse.failure(e.getMessage(), HttpStatus.NOT_FOUND));
-        } catch (Exception e) {
-            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
-                    .body(CustomApiResponse.failure("Failed to delete work experience: " + e.getMessage(), HttpStatus.INTERNAL_SERVER_ERROR));
-        }
-    }
-    */
     // Addresses endpoints
     @PostMapping("/{profileId}/addresses")
     public ResponseEntity<CustomApiResponse<List<ProfileAddressDTO>>> saveProfileAddresses(
@@ -339,76 +208,6 @@ public class ProfileController {
         }
     }
   
- // Upload multiple documents endpoint
-    @PostMapping(value = "/{profileId}/documents/upload-multiple", consumes = "multipart/form-data")
-    public ResponseEntity<CustomApiResponse<DocumentCategoryDto>> uploadMultipleDocuments(
-            @PathVariable Long profileId,
-            @RequestParam("files") List<MultipartFile> files,
-            @RequestParam("documentTypeId") Long documentTypeId,
-            @RequestParam(value = "categoryId", required = false) Long categoryId,
-            @RequestParam(value = "objectId", required = false) Long objectId, 
-            @RequestParam(value = "candidateId", required = false) Long candidateId)
-          {
-    	
-    	logger.info("Received upload request for profile: {}", profileId);
-    	
-    	logger.info("DocumentTypeId: {}, CategoryId: {}", documentTypeId, categoryId);
-        try {
-        	DocumentCategoryDto uploadedDocuments = documentService.createDocuments(
-                files, profileId,categoryId,documentTypeId,objectId,candidateId);
-            logger.info("***************************uploaded successfully");
-            return ResponseEntity.status(HttpStatus.CREATED)
-                    .body(CustomApiResponse.success("Documents uploaded successfully", uploadedDocuments, HttpStatus.CREATED));
-                    
-        } catch (RuntimeException e) {
-        	logger.error("Upload error:", e);
-            return ResponseEntity.status(HttpStatus.BAD_REQUEST)
-                    .body(CustomApiResponse.failure(e.getMessage(), HttpStatus.BAD_REQUEST));
-        } catch (Exception e) {
-        	logger.error("Upload error:", e);
-            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
-                    .body(CustomApiResponse.failure("Failed to upload documents: " + e.getMessage(), HttpStatus.INTERNAL_SERVER_ERROR));
-        }
-    }
-    /*
-    @DeleteMapping("/documents/{documentId}")
-    public ResponseEntity<CustomApiResponse<DeleteResponse>> deleteDocument(
-            @PathVariable Long documentId) {
-        
-        try {
-            DeleteResponse deleteResponse = documentService.deleteDocument(documentId);
-            return ResponseEntity.ok(CustomApiResponse.success("Document deleted successfully", deleteResponse, HttpStatus.OK));
-            
-        } catch (RuntimeException e) {
-            return ResponseEntity.status(HttpStatus.NOT_FOUND)
-                    .body(CustomApiResponse.failure(e.getMessage(), HttpStatus.NOT_FOUND));
-        } catch (Exception e) {
-            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
-                    .body(CustomApiResponse.failure("Failed to delete document: " + e.getMessage(), HttpStatus.INTERNAL_SERVER_ERROR));
-        }
-    }
-   */
-    @DeleteMapping("/documents/{docId}")
-    public ResponseEntity<CustomApiResponse<DeleteResponse>> deleteDocument(
-    		
-    		@PathVariable Long docId
-            ) {
-    	// logger.info("Received upload request for profile: {}", profileId);
-    	
-    	// logger.info("DocumentTypeId: {}, CategoryId: {}", docTypeId, category);
-        try {
-            DeleteResponse deleteResponse = documentService.deleteDocument(docId);
-            return ResponseEntity.ok(CustomApiResponse.success("Document deleted successfully", deleteResponse, HttpStatus.OK));
-
-        } catch (RuntimeException e) {
-            return ResponseEntity.status(HttpStatus.NOT_FOUND)
-                    .body(CustomApiResponse.failure(e.getMessage(), HttpStatus.NOT_FOUND));
-        } catch (Exception e) {
-            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
-                    .body(CustomApiResponse.failure("Failed to delete document: " + e.getMessage(), HttpStatus.INTERNAL_SERVER_ERROR));
-        }
-    }
-    
     @GetMapping("/documents/types/{categoryId}")
     public ResponseEntity<CustomApiResponse<List<DocumentTypeResponse>>> getDocumentTypesByCategoryIgnoreCase(
             @PathVariable Long categoryId) {
@@ -481,7 +280,7 @@ public class ProfileController {
                     .body(CustomApiResponse.failure("Failed to update profile status: " + e.getMessage(), HttpStatus.INTERNAL_SERVER_ERROR));
         }
     }
-    
+    /*
  // Get documents for specific section
     @GetMapping("/{profileId}/section")
     public ResponseEntity<CustomApiResponse<DocumentCategoryDto>> getDocumentsBySection(
@@ -501,7 +300,7 @@ public class ProfileController {
         }
     }
     
-    
+    */
     
     
     

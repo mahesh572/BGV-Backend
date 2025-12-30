@@ -8,6 +8,7 @@ import com.org.bgv.candidate.dto.CandidateVerificationDTO;
 import com.org.bgv.candidate.dto.VerificationSectionDTO;
 import com.org.bgv.candidate.entity.CandidateVerification;
 import com.org.bgv.candidate.repository.CandidateVerificationRepository;
+import com.org.bgv.constants.SectionConstants;
 import com.org.bgv.constants.SectionStatus;
 import com.org.bgv.constants.VerificationStatus;
 import com.org.bgv.service.DocumentService;
@@ -16,7 +17,9 @@ import com.org.bgv.service.IdentityProofService;
 import com.org.bgv.service.ProfileAddressService;
 import com.org.bgv.service.ProfileService;
 import com.org.bgv.service.WorkExperienceService;
+import com.org.bgv.vendor.dto.BaseCheckDTO;
 
+import ch.qos.logback.classic.Logger;
 import jakarta.persistence.EntityNotFoundException;
 import jakarta.xml.bind.ValidationException;
 import lombok.RequiredArgsConstructor;
@@ -29,6 +32,7 @@ import org.springframework.transaction.annotation.Transactional;
 
 import java.time.LocalDateTime;
 import java.util.HashMap;
+import java.util.List;
 import java.util.Map;
 
 @Service
@@ -44,10 +48,11 @@ public class VerificationService {
     private final IdentityProofService identityService;
     private final ProfileAddressService addressService;
     private final DocumentService documentsService;
+   
     
     @Cacheable(value = "verification", key = "#candidateId")
-    public CandidateVerificationDTO getCandidateVerification(Long candidateId) {
-        log.info("Fetching verification for candidate: {}", candidateId);
+    public CandidateVerificationDTO getCandidateVerification(Long candidateId,Long caseId) {
+        log.info("Fetching verification for candidate: {}{}", candidateId,caseId);
         
         CandidateVerification verification = verificationRepository.findByCandidateId(candidateId)
             .orElseThrow(() -> new EntityNotFoundException("Verification not found for candidate: " + candidateId));
@@ -56,18 +61,19 @@ public class VerificationService {
         
         // Calculate progress
         dto.setProgressPercentage(calculateProgress(verification));
-        
+        log.info("before..................getSectionsWithStatus");
         // Get section requirements and status
         Map<String, VerificationSectionDTO> sections = getSectionsWithStatus(candidateId, verification);
         dto.setSections(sections);
         
+                
         return dto;
     }
     
     @Transactional
     @CacheEvict(value = "verification", key = "#candidateId")
     public CandidateVerificationDTO updateSectionStatus(Long candidateId, String section, 
-                                                        SectionStatus status, Object data) throws ValidationException {
+                                                        String status) throws ValidationException {
         log.info("Updating section {} status to {} for candidate: {}", section, status, candidateId);
         
         CandidateVerification verification = verificationRepository.findByCandidateId(candidateId)
@@ -79,9 +85,7 @@ public class VerificationService {
         
         sectionData.put("status", status.toString());
         sectionData.put("lastUpdated", LocalDateTime.now().toString());
-        if (data != null) {
-            sectionData.put("data", data);
-        }
+        
         
         sectionStatusMap.put(section, sectionData);
         
@@ -147,11 +151,11 @@ public class VerificationService {
         
         CandidateVerification verification = new CandidateVerification();
         verification.setCandidateId(candidateId);
-        verification.setPackageId(request.getPackageId());
-        verification.setPackageName(request.getPackageName());
-        verification.setEmployerName(request.getEmployerName());
-        verification.setEmployerId(request.getEmployerId());
-        verification.setDueDate(request.getDueDate());
+      //  verification.setPackageId(request.getPackageId());
+     //   verification.setPackageName(request.getPackageName());
+     //   verification.setEmployerName(request.getEmployerName());
+     //   verification.setEmployerId(request.getEmployerId());
+    //    verification.setDueDate(request.getDueDate());
         verification.setStartDate(LocalDateTime.now());
         verification.setStatus(VerificationStatus.IN_PROGRESS);
         verification.setProgressPercentage(0);
@@ -181,14 +185,27 @@ public class VerificationService {
                     
                     Map<String, Object> statusData = sectionStatusMap.get(entry.getKey());
                     if (statusData != null) {
-                        String status = (String) statusData.getOrDefault("status", SectionStatus.NOT_STARTED.toString());
+                       /*
+                    	String status = (String) statusData.getOrDefault("status", SectionStatus.NOT_STARTED.toString());
                         if (SectionStatus.COMPLETED.toString().equals(status) || 
                             SectionStatus.VERIFIED.toString().equals(status)) {
+                            completed++;
+                        }
+                        */
+                        String statusStr = (String) statusData.get("status");
+                        SectionStatus sectionStatus = SectionStatus.fromString(statusStr);
+                        
+                        log.info("statusStr:::::::::::sectionStatus:::::{}{}",statusStr,sectionStatus);
+
+                        if (sectionStatus == SectionStatus.COMPLETED ||
+                            sectionStatus == SectionStatus.VERIFIED) {
                             completed++;
                         }
                     }
                 }
             }
+            
+            log.info("totalRequired:::::completed:::::{}{}",totalRequired,completed);
             
             return totalRequired > 0 ? (completed * 100) / totalRequired : 0;
         } catch (Exception e) {
@@ -205,20 +222,23 @@ public class VerificationService {
             Map<String, Map<String, Object>> statusMap = getSectionStatusMap(verification);
             
             // Basic Details
-            addSection(sections, "basicDetails", "Basic Details", requirementsMap, statusMap, 
+            addSection(sections, SectionConstants.BASIC_DETAILS.getValue(), "Basic Details", requirementsMap, statusMap, 
                       () -> profileService.getBasicDetails(candidateId));
+            // Identity
+            addSection(sections, SectionConstants.IDENTITY.getValue(), "Identity", requirementsMap, statusMap, 
+                      () -> identityService.getIdentityInfo(candidateId));
             
             // Education
-            addSection(sections, "education", "Education", requirementsMap, statusMap, 
+            addSection(sections, SectionConstants.EDUCATION.getValue(), "Education", requirementsMap, statusMap, 
                       () -> educationService.getEducations(candidateId));
             
             // Work Experience
-            addSection(sections, "workExperience", "Work Experience", requirementsMap, statusMap, 
+            addSection(sections, SectionConstants.WORK_EXPERIENCE.getValue(), "Work Experience", requirementsMap, statusMap, 
                       () -> workExperienceService.getExperiences(candidateId));
-            
-            // Identity
-            addSection(sections, "identity", "Identity", requirementsMap, statusMap, 
-                      () -> identityService.getIdentityInfo(candidateId));
+         // Documents
+            addSection(sections, SectionConstants.DOCUMENTS.getValue(), "Documents", requirementsMap, statusMap, 
+                      null);
+           
            /* 
             // Addresses
             addSection(sections, "addresses", "Address History", requirementsMap, statusMap, 
@@ -227,9 +247,10 @@ public class VerificationService {
             // Documents
             addSection(sections, "documents", "Documents", requirementsMap, statusMap, 
                       () -> documentsService.getDocumentsByCandidate(candidateId));
-                      */
+              */        
             
         } catch (Exception e) {
+        	e.printStackTrace();
             log.error("Error getting sections with status: {}", e.getMessage());
         }
         
@@ -245,13 +266,19 @@ public class VerificationService {
         sectionDTO.setLabel(label);
         
         Map<String, Object> requirements = requirementsMap.get(sectionId);
+        
+        log.info("requirements::::::::::section:::sectionId::{}{}",requirements,sectionId);
         if (requirements != null) {
             sectionDTO.setRequired((boolean) requirements.getOrDefault("required", false));
+            sectionDTO.setOrder((Integer) requirements.getOrDefault("order", 0));
+            
         }
         
         Map<String, Object> statusData = statusMap.get(sectionId);
         if (statusData != null) {
-            sectionDTO.setStatus(SectionStatus.valueOf((String) statusData.getOrDefault("status", "NOT_STARTED")));
+           // sectionDTO.setStatus(SectionStatus.valueOf((String) statusData.getOrDefault("status", "NOT_STARTED")));
+        	String statusString = (String) statusData.getOrDefault("status", "NOT_STARTED");
+        	sectionDTO.setStatus(SectionStatus.fromString(statusString));
             Object lastUpdated = statusData.get("lastUpdated");
             if (lastUpdated != null) {
                 sectionDTO.setLastUpdated(LocalDateTime.parse(lastUpdated.toString()));
@@ -261,12 +288,14 @@ public class VerificationService {
         }
         
         try {
-            Object data = dataProvider.getData();
+        	
+            Object data = dataProvider!=null?dataProvider.getData():null;
             sectionDTO.setData(data);
         } catch (Exception e) {
+        	e.printStackTrace();
             log.warn("Error fetching data for section {}: {}", sectionId, e.getMessage());
         }
-        
+      //  sectionDTO.setStatus(SectionStatus.IN_PROGRESS);
         sections.put(sectionId, sectionDTO);
     }
     
@@ -278,18 +307,35 @@ public class VerificationService {
     private Map<String, Map<String, Object>> getRequirementsMap(CandidateVerification verification) {
         try {
             if (verification.getSectionRequirements() != null) {
-                return objectMapper.readValue(verification.getSectionRequirements(), 
-                    new TypeReference<Map<String, Map<String, Object>>>() {});
+                Map<String, Object> rootMap = objectMapper.readValue(
+                    verification.getSectionRequirements(), 
+                    new TypeReference<Map<String, Object>>() {}
+                );
+                
+                // Check if we have a nested "sections" structure
+                if (rootMap.containsKey("sections")) {
+                    return objectMapper.convertValue(
+                        rootMap.get("sections"), 
+                        new TypeReference<Map<String, Map<String, Object>>>() {}
+                    );
+                } else {
+                    // Already flat structure
+                    return objectMapper.convertValue(
+                        rootMap, 
+                        new TypeReference<Map<String, Map<String, Object>>>() {}
+                    );
+                }
             }
         } catch (Exception e) {
             log.error("Error parsing section requirements: {}", e.getMessage());
+            e.printStackTrace();
         }
         return new HashMap<>();
     }
-    
     @SuppressWarnings("unchecked")
     private Map<String, Map<String, Object>> getSectionStatusMap(CandidateVerification verification) {
         try {
+        	log.info("getSectionStatusMap::::::verification.getSectionStatus():::::::::::::{}",verification.getSectionStatus());
             if (verification.getSectionStatus() != null) {
                 return objectMapper.readValue(verification.getSectionStatus(), 
                     new TypeReference<Map<String, Map<String, Object>>>() {});
@@ -352,11 +398,11 @@ public class VerificationService {
         CandidateVerificationDTO dto = new CandidateVerificationDTO();
         dto.setId(verification.getId());
         dto.setCandidateId(verification.getCandidateId());
-        dto.setPackageId(verification.getPackageId());
-        dto.setPackageName(verification.getPackageName());
-        dto.setEmployerName(verification.getEmployerName());
-        dto.setEmployerId(verification.getEmployerId());
-        dto.setDueDate(verification.getDueDate());
+     //   dto.setPackageId(verification.getPackageId());
+     //   dto.setPackageName(verification.getPackageName());
+     //   dto.setEmployerName(verification.getEmployerName());
+     //   dto.setEmployerId(verification.getEmployerId());
+     //   dto.setDueDate(verification.getDueDate());
         dto.setStartDate(verification.getStartDate());
         dto.setStatus(verification.getStatus());
         dto.setProgressPercentage(verification.getProgressPercentage());
@@ -367,6 +413,7 @@ public class VerificationService {
         dto.setVerificationNotes(verification.getVerificationNotes());
         return dto;
     }
+    
     
     
 }

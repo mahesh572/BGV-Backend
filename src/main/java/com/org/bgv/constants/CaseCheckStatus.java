@@ -7,5 +7,6 @@ public enum CaseCheckStatus {
     REJECTED,
     ON_HOLD,
     DELAYED,
-    INSUFFICIENT
+    INSUFFICIENT,
+    ASSIGNED
 }

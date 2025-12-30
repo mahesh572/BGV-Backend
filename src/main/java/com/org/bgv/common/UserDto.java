@@ -33,5 +33,6 @@ public class UserDto {
     private Long candidateId;
     private Boolean passwordResetrequired;
     private Long vendorId;
+  //  private Long caseId;
     
 }

@@ -78,6 +78,7 @@ public class UserService {
     private final EmailService emailService;
     private final ProfileRepository profileRepository;
     private final VendorRepository vendorRepository;
+    private final VerificationCaseService verificationCaseService;
     
     private static final Logger logger = LoggerFactory.getLogger(UserService.class);
 
@@ -367,6 +368,7 @@ try {
             	if(candidate!=null) {
             		userDto.setHasConsentProvided(candidate.getIsConsentProvided()==null?Boolean.FALSE:candidate.getIsConsentProvided());
             		userDto.setCandidateId(candidate.getCandidateId());
+            		
             	}
             }else {
             	userDto.setHasConsentProvided(Boolean.TRUE);

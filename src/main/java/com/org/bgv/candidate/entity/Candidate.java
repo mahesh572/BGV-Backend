@@ -45,6 +45,9 @@ public class Candidate {
     @Column(name = "candidate_id")
     private Long candidateId;
     
+    @Column(name = "candidate_ref", nullable = false, unique = true)
+    private String candidateRef;
+    
     private String sourceType;
     
     @OneToOne(fetch = FetchType.LAZY)

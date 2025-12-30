@@ -21,6 +21,9 @@ public class VerificationCase {
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     @Column(name = "case_id")
     private Long caseId;
+    
+    @Column(name = "case_number", unique = true, nullable = false)
+    private String caseNumber; // CASE-25
 
     @Column(name = "candidate_id", nullable = false)
     private Long candidateId;
@@ -43,7 +46,6 @@ public class VerificationCase {
     private Double totalPrice;
     
     @Enumerated(EnumType.STRING)
-    @Builder.Default
     private CaseStatus status = CaseStatus.CREATED;
     
     @Builder.Default
@@ -63,9 +65,10 @@ public class VerificationCase {
     @Builder.Default
     private List<VerificationCaseCheck> caseChecks = new ArrayList<>();
     
+    /*
     @Column(name = "vendor_id")
     private Long vendorId;
-
+   */
     @PreUpdate
     protected void onUpdate() {
         updatedAt = LocalDateTime.now();

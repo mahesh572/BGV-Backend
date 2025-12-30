@@ -2,6 +2,14 @@ package com.org.bgv.service;
 
 import com.org.bgv.common.VerificationCaseDocumentResponse;
 import com.org.bgv.common.VerificationCaseResponse;
+import com.fasterxml.jackson.databind.ObjectMapper;
+import com.fasterxml.jackson.databind.node.ObjectNode;
+import com.org.bgv.candidate.dto.CaseStatisticsDTO;
+import com.org.bgv.candidate.dto.VerificationCaseDTO;
+import com.org.bgv.candidate.dto.VerificationCaseFilterDTO;
+import com.org.bgv.candidate.dto.VerificationCaseResponseDTO;
+import com.org.bgv.candidate.entity.CandidateVerification;
+import com.org.bgv.candidate.repository.CandidateVerificationRepository;
 import com.org.bgv.common.CandidateCaseStatisticsResponse;
 import com.org.bgv.common.CaseDocumentSelection;
 import com.org.bgv.common.CategoryCase;
@@ -13,9 +21,11 @@ import com.org.bgv.common.EmployerPackageInfo;
 import com.org.bgv.common.VerificationCaseRequest;
 import com.org.bgv.common.VerificationStatisticsResponse;
 import com.org.bgv.common.VerificationUpdateRequest;
+import com.org.bgv.config.SecurityUtils;
 import com.org.bgv.constants.CaseCheckStatus;
 import com.org.bgv.constants.CaseStatus;
 import com.org.bgv.constants.EmployerPackageStatus;
+import com.org.bgv.constants.SectionConstants;
 import com.org.bgv.constants.VerificationStatus;
 import com.org.bgv.dto.*;
 import com.org.bgv.entity.*;
@@ -25,6 +35,11 @@ import lombok.AllArgsConstructor;
 import lombok.Data;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.PageRequest;
+import org.springframework.data.domain.Pageable;
+import org.springframework.data.domain.Sort;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -34,6 +49,7 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
+import java.util.Set;
 import java.util.stream.Collectors;
 
 @Service
@@ -50,6 +66,12 @@ public class VerificationCaseService {
     private final DocumentRepository documentRepository;
     private final VerificationCaseDocumentLinkRepository verificationCaseDocumentLinkRepository;
     private final CheckCategoryService checkCategoryService;
+    private final CandidateVerificationRepository candidateVerificationRepository;
+    private final ObjectMapper objectMapper;
+    private final DocumentTypeRepository documentTypeRepository;
+    private final CompanyRepository companyRepository;
+    private final VendorAssignmentService vendorAssignmentService;
+    private final ReferenceNumberGenerator referenceNumberGenerator;
     
     @Transactional
     public VerificationCaseResponse createVerificationCase(VerificationCaseRequest request) {
@@ -102,6 +124,10 @@ public class VerificationCaseService {
                 .status(CaseStatus.CREATED)
                 .build();
         
+        String caseRef =
+                referenceNumberGenerator.generateCaseNumber();
+        verificationCase.setCaseNumber(caseRef);
+        
         VerificationCase savedCase = verificationCaseRepository.save(verificationCase);
         
         // Create verification case checks based on categories with selected documents
@@ -116,7 +142,13 @@ public class VerificationCaseService {
         savedCase.setCaseDocuments(caseDocuments);
         
         // Update verification case with checks and documents
-        verificationCaseRepository.save(savedCase);
+        savedCase = verificationCaseRepository.save(savedCase);
+        
+        // asssign vendor to Category Check
+        
+        vendorAssignmentService.assignVendorsToCaseChecks(caseChecks);
+        
+        createCandidateVerification(request.getCandidateId(), verificationCase, caseChecks, caseDocuments);
         
         log.info("Created candidate case with id: {} and {} documents, {} checks", 
                 savedCase.getCaseId(), caseDocuments.size(), caseChecks.size());
@@ -134,6 +166,7 @@ public class VerificationCaseService {
         
         List<VerificationCaseCheck> caseChecks = new ArrayList();
         
+        
         for (CategoryCase categoryData : categories) {
             // Get the check category
             CheckCategory checkCategory = checkCategoryRepository.findById(categoryData.getCategoryId())
@@ -150,9 +183,11 @@ public class VerificationCaseService {
                 VerificationCaseCheck caseCheck = VerificationCaseCheck.builder()
                         .verificationCase(verificationCase)
                         .category(checkCategory)
-                        .status(CaseCheckStatus.PENDING)
+                        .status(CaseStatus.PENDING)
                         .build();
                 
+                String checkRef = referenceNumberGenerator.generateCheckCaseNumber();
+                caseCheck.setCheckRef(checkRef);
                 caseChecks.add(caseCheck);
             }
         }
@@ -279,88 +314,130 @@ public class VerificationCaseService {
             List<EmployerPackageDocument> employerDocuments,
             List<Long> selectedDocumentIds,
             List<CategoryCase> categories) {
-    	
-    	// categories - selected by an employer while raising verification case
-        
+
         List<VerificationCaseDocument> caseDocuments = new ArrayList<>();
-        
-        // Create a map of document selections by category for quick lookup
-        Map<Long, List<CaseDocumentSelection>> categoryDocumentSelections = new HashMap();
-        
+
+        // categoryId -> selected documents
+        Map<Long, List<CaseDocumentSelection>> categoryDocumentSelections = new HashMap<>();
+
         if (categories != null) {
             for (CategoryCase category : categories) {
                 categoryDocumentSelections.put(category.getCategoryId(), category.getDocuments());
             }
         }
-        
+
+        log.info("categoryDocumentSelections: {}", categoryDocumentSelections);
+
+        // 🔹 Track package document IDs
+        Set<Long> packageDocumentIds = employerDocuments.stream()
+                .map(ed -> ed.getDocumentType().getDocTypeId())
+                .collect(Collectors.toSet());
+
+        /* =========================
+           PHASE 1: PACKAGE DOCUMENTS
+           ========================= */
         for (EmployerPackageDocument employerDoc : employerDocuments) {
+
             Long documentId = employerDoc.getDocumentType().getDocTypeId();
+            Long categoryId = employerDoc.getCheckCategory().getCategoryId();
+
             boolean isSelected = selectedDocumentIds.contains(documentId);
-            
-            // If categories are provided, use them to determine selection
+
             if (!categoryDocumentSelections.isEmpty()) {
-                List<CaseDocumentSelection> categoryDocs = categoryDocumentSelections.get(
-                        employerDoc.getCheckCategory().getCategoryId());
-                
+                List<CaseDocumentSelection> categoryDocs =
+                        categoryDocumentSelections.get(categoryId);
+
                 if (categoryDocs != null) {
                     isSelected = categoryDocs.stream()
-                            .anyMatch(doc -> doc.getDocumentId().equals(documentId) && 
-                                    doc.getSelected() != null && doc.getSelected());
+                            .anyMatch(doc ->
+                                    doc.getDocumentId().equals(documentId)
+                                    && Boolean.TRUE.equals(doc.getSelected()));
                 }
             }
-            
-            // Determine if this is an addon (not included in base package)
+
             boolean isAddOn = !employerDoc.getIncludedInBase() && isSelected;
-            
-           
-            
-            // Create case document
+
             VerificationCaseDocument caseDocument = VerificationCaseDocument.builder()
                     .verificationCase(verificationCase)
                     .checkCategory(employerDoc.getCheckCategory())
                     .documentType(employerDoc.getDocumentType())
                     .isAddOn(isAddOn)
-                    .required(true)
-                   // .documentPrice(documentPrice)
+                    .required(isSelected)
                     .verificationStatus(VerificationStatus.PENDING)
                     .createdAt(LocalDateTime.now())
                     .build();
-            
+
             caseDocuments.add(caseDocument);
-            
-            
         }
-     // Save all case documents
-        List <VerificationCaseDocument> verificationCaseDocuments = verificationCaseDocumentRepository.saveAll(caseDocuments);
-        
-        for (VerificationCaseDocument verCaseDocument : verificationCaseDocuments) {
 
-            List<Document> documents = documentRepository
-                .findByCategory_CategoryIdAndDocTypeId_DocTypeIdAndCandidate_CandidateId(
-                    verCaseDocument.getCheckCategory().getCategoryId(),
-                    verCaseDocument.getDocumentType().getDocTypeId(),
-                    verificationCase.getCandidateId()
-                );
+        /* =========================
+           PHASE 2: TRUE ADD-ON DOCS
+           ========================= */
+        for (Map.Entry<Long, List<CaseDocumentSelection>> entry : categoryDocumentSelections.entrySet()) {
 
-            if (!documents.isEmpty()) {
+            Long categoryId = entry.getKey();
 
-                for (Document document : documents) {
+            for (CaseDocumentSelection selection : entry.getValue()) {
 
-                    VerificationCaseDocumentLink link =
-                        VerificationCaseDocumentLink.builder()
-                            .caseDocument(verCaseDocument)
-                            .document(document)
-                            .build();
-
-                    verificationCaseDocumentLinkRepository.save(link);
+                if (!Boolean.TRUE.equals(selection.getSelected())) {
+                    continue;
                 }
 
-                // Optional: update status
-                verCaseDocument.setVerificationStatus(VerificationStatus.PENDING);
+                Long documentId = selection.getDocumentId();
+
+                // 🔥 Not part of employer package
+                if (!packageDocumentIds.contains(documentId)) {
+
+                    CheckCategory category = checkCategoryRepository.findById(categoryId)
+                            .orElseThrow(() -> new RuntimeException("Category not found"));
+
+                    DocumentType documentType = documentTypeRepository.findById(documentId)
+                            .orElseThrow(() -> new RuntimeException("Document type not found"));
+
+                    VerificationCaseDocument addOnDocument =
+                            VerificationCaseDocument.builder()
+                                    .verificationCase(verificationCase)
+                                    .checkCategory(category)
+                                    .documentType(documentType)
+                                    .isAddOn(true)          // ✅ TRUE ADD-ON
+                                    .required(true)
+                                    .verificationStatus(VerificationStatus.PENDING)
+                                    .createdAt(LocalDateTime.now())
+                                    .build();
+
+                    caseDocuments.add(addOnDocument);
+                }
             }
         }
-        return verificationCaseDocuments;
+
+        /* =========================
+           SAVE & LINK CANDIDATE DOCS
+           ========================= */
+        List<VerificationCaseDocument> savedCaseDocs =
+                verificationCaseDocumentRepository.saveAll(caseDocuments);
+
+        for (VerificationCaseDocument verCaseDocument : savedCaseDocs) {
+
+            List<Document> documents =
+                    documentRepository.findByCategory_CategoryIdAndDocTypeId_DocTypeIdAndCandidate_CandidateId(
+                            verCaseDocument.getCheckCategory().getCategoryId(),
+                            verCaseDocument.getDocumentType().getDocTypeId(),
+                            verificationCase.getCandidateId()
+                    );
+
+            for (Document document : documents) {
+                verificationCaseDocumentLinkRepository.save(
+                        VerificationCaseDocumentLink.builder()
+                                .caseDocument(verCaseDocument)
+                                .document(document)
+                                .build()
+                );
+            }
+        }
+
+        return savedCaseDocs;
     }
+
     
 
     // NEW METHOD: Get case documents by case ID
@@ -405,13 +482,14 @@ public class VerificationCaseService {
     }
    
     @Transactional
-    public VerificationCase getVerificationCaseByCompanyIdAndCandidateIdAndStatus(Long companyId,Long candidateId,CaseStatus status) {
-    	return verificationCaseRepository.findByCompanyIdAndCandidateIdAndStatus(companyId, candidateId, status);
+    public Optional<VerificationCase> getVerificationCaseByCompanyIdAndCandidateIdAndStatus(Long companyId,Long candidateId,CaseStatus status) {
+    	return verificationCaseRepository.findFirstByCompanyIdAndCandidateIdAndStatusOrderByCreatedAtDesc(companyId, candidateId, status);
     }
     
     public VerificationCaseCheck getVerificationCaseChackByCategory(Long companyId,Long caseId,String categoryCheck) {
+    	log.info("VerificationCaseService:::::::getVerificationCaseChackByCategory::companyId:caseId:::::categoryCheck:::{}{}{}",companyId,caseId,categoryCheck);
     	CheckCategoryResponse checkCategory = checkCategoryService.getCheckCategoryByName(categoryCheck).orElseThrow(()->new RuntimeException());
-    	
+    	log.info("getVerificationCaseChackByCategory::::::::checkCategory::::::{}",checkCategory);
     	return verificationCaseCheckRepository.findByVerificationCase_CaseIdAndCategory_CategoryId(caseId, checkCategory.getCategoryId()).orElseThrow(()->new RuntimeException());
     }
     
@@ -621,6 +699,291 @@ public class VerificationCaseService {
                 .cancelledCases(cancelledCases)
                 .completionRate(completionRate)
                 .build();
+    }
+    
+    public CandidateVerification createCandidateVerification(
+            Long candidateId,
+            VerificationCase verificationCase,
+            List<VerificationCaseCheck> caseChecks,
+            List<VerificationCaseDocument> caseDocuments) {
+
+        log.info("Creating CandidateVerification for candidateId={}", candidateId);
+
+        if (candidateVerificationRepository.existsByCandidateId(candidateId)) {
+            log.info("CandidateVerification already exists for candidateId={}", candidateId);
+            return null;
+        }
+
+        try {
+            ObjectNode requirementsNode = objectMapper.createObjectNode();
+            ObjectNode statusNode = objectMapper.createObjectNode();
+
+            // =====================================================
+            // 1️⃣ BASIC DETAILS — ALWAYS MANDATORY
+            // =====================================================
+            addSection(
+                    requirementsNode,
+                    statusNode,
+                    SectionConstants.BASIC_DETAILS,
+                    "Personal information verification"
+            );
+            addSection(
+                    requirementsNode,
+                    statusNode,
+                    SectionConstants.DOCUMENTS,
+                    "Documents"
+            );
+            
+            
+            
+
+            // =====================================================
+            // 2️⃣ DYNAMIC SECTIONS FROM CASE CHECKS
+            // =====================================================
+            for (VerificationCaseCheck check : caseChecks) {
+
+                CheckCategory category = check.getCategory();
+                if (category == null) {
+                    continue;
+                }
+
+                SectionConstants section =
+                        SectionConstants.fromNameOrValue(category.getName());
+
+                // Avoid duplicate BASIC_DETAILS
+                if (section == SectionConstants.BASIC_DETAILS) {
+                    continue;
+                }
+
+                String description =
+                        category.getDescription() != null
+                                ? category.getDescription()
+                                : section.getValue() + " verification";
+
+                addSection(
+                        requirementsNode,
+                        statusNode,
+                        section,
+                        description
+                );
+            }
+
+            LocalDateTime now = LocalDateTime.now();
+
+            CandidateVerification verification = CandidateVerification.builder()
+                    .candidateId(candidateId)
+                    .verificationCase(verificationCase)
+                    .startDate(now)
+                    .dueDate(now.plusDays(30))
+                    .status(VerificationStatus.PENDING)
+                    .progressPercentage(0)
+                    .instructions("Please complete all required sections.")
+                    .supportEmail("support@bgv.com")
+                    .sectionRequirements(requirementsNode.toString())
+                    .sectionStatus(statusNode.toString())
+                    .createdBy("system")
+                    .updatedBy("system")
+                    .build();
+
+            candidateVerificationRepository.save(verification);
+
+            log.info("CandidateVerification created successfully for candidateId={}", candidateId);
+            return verification;
+
+        } catch (Exception e) {
+            log.error("Failed to create CandidateVerification", e);
+            throw new RuntimeException("Failed to create CandidateVerification", e);
+        }
+    }
+
+    private void addSection(
+            ObjectNode requirementsNode,
+            ObjectNode statusNode,
+            SectionConstants section,
+            String description) {
+
+        String key = section.getValue(); // IDENTITY, EDUCATION, etc.
+
+        ObjectNode req = requirementsNode.putObject(key);
+        req.put("required", true);
+        req.put("order", section.getDisplayOrder());
+        req.put("label", section.getValue());
+        req.put("description", description);
+
+        ObjectNode status = statusNode.putObject(key);
+        status.put("status", "pending");
+        status.put("progress", 0);
+    }
+
+   
+    public List<String> getSectionsForDocumentVerificationCase(Long candidateId) {
+    	
+    	Long companyId = SecurityUtils.getCurrentUserCompanyId();
+    	log.info("getSectionsForDocumentVerificationCase:::::::::::companyId:::candidateId::{}{}",companyId,candidateId);
+    	VerificationCase verificationCase = getActiveVerificationCase(companyId, candidateId);
+    	log.info("getSectionsForDocumentVerificationCase:::::::::{}",verificationCase.getCaseId());
+    	return new ArrayList<>(
+    	        verificationCaseCheckRepository
+    	                .findByVerificationCase_CaseId(verificationCase.getCaseId())
+    	                .stream()
+    	                .map(VerificationCaseCheck::getCategory)
+    	                .map(check -> check.getName())
+    	                .distinct()
+    	                .toList()
+    	);
+    }
+    
+    public VerificationCase getActiveVerificationCase(Long companyId, Long candidateId) {
+
+        return verificationCaseRepository
+                .findByCompanyIdAndCandidateIdAndCompletedAtIsNull(companyId, candidateId)
+                .orElseThrow(() ->
+                        new RuntimeException("Active verification case not found"));
+    }
+    
+    
+    /**
+     * Get all verification cases for a candidate with filtering and pagination
+     */
+    
+    public VerificationCaseResponseDTO getCandidateVerificationCases(VerificationCaseFilterDTO filterDTO) {
+        log.info("Fetching verification cases for candidateId: {}", filterDTO.getCandidateId());
+        
+        // Create pageable object for pagination
+        Pageable pageable = createPageable(filterDTO);
+        
+        // Fetch verification cases with filtering
+        Page<VerificationCase> casesPage = verificationCaseRepository.findByCandidateIdWithFilters(
+            filterDTO.getCandidateId(),
+            filterDTO.getStatus(),
+            filterDTO.getSearchTerm(),
+            pageable
+        );
+        
+        // Convert to DTOs
+        List<VerificationCaseDTO> caseDTOs = casesPage.getContent().stream()
+            .map(this::convertToDTO)
+            .collect(Collectors.toList());
+        
+        // Get statistics
+        CaseStatisticsDTO statistics = getCaseStatistics(filterDTO.getCandidateId());
+        
+        // Build response
+        return VerificationCaseResponseDTO.builder()
+            .cases(caseDTOs)
+            .statistics(statistics)
+            .totalCount((int) casesPage.getTotalElements())
+            .page(casesPage.getNumber())
+            .pageSize(casesPage.getSize())
+            .totalPages(casesPage.getTotalPages())
+            .build();
+    }
+
+    /**
+     * Get a specific verification case by ID for a candidate
+     */
+    public VerificationCaseDTO getCandidateVerificationCase(Long candidateId, Long caseId) {
+        log.info("Fetching verification case {} for candidateId: {}", caseId, candidateId);
+        
+        VerificationCase verificationCase = verificationCaseRepository
+            .findByCaseIdAndCandidateId(caseId, candidateId)
+            .orElseThrow(() -> new RuntimeException(
+                String.format("Verification case %d not found for candidate %d", caseId, candidateId)
+            ));
+        
+        return convertToDTO(verificationCase);
+    }
+    
+    /**
+     * Get case statistics for a candidate
+     */
+    public CaseStatisticsDTO getCaseStatistics(Long candidateId) {
+        log.info("Fetching case statistics for candidateId: {}", candidateId);
+        
+        return CaseStatisticsDTO.builder()
+            .totalCases(verificationCaseRepository.countByCandidateId(candidateId))
+            .completedCases(verificationCaseRepository.countByCandidateIdAndStatus(
+                candidateId, com.org.bgv.constants.CaseStatus.COMPLETED))
+            .inProgressCases(verificationCaseRepository.countByCandidateIdAndStatus(
+                candidateId, com.org.bgv.constants.CaseStatus.IN_PROGRESS))
+            .pendingCases(verificationCaseRepository.countByCandidateIdAndStatus(
+                candidateId, com.org.bgv.constants.CaseStatus.PENDING))
+            .rejectedCases(verificationCaseRepository.countByCandidateIdAndStatus(
+                candidateId, com.org.bgv.constants.CaseStatus.REJECTED))
+            .build();
+    }
+    
+    /**
+     * Convert VerificationCase entity to DTO
+     */
+    private VerificationCaseDTO convertToDTO(VerificationCase verificationCase) {
+        // Get company details
+        Company company = companyRepository.findById(verificationCase.getCompanyId())
+            .orElse(null);
+        
+        // Get document count
+        Integer documentsCount = verificationCaseDocumentRepository.countByVerificationCase(verificationCase);
+        
+        // Get check statistics
+        List<VerificationCaseCheck> checks = verificationCaseCheckRepository.findByVerificationCase(verificationCase);
+        Integer totalChecks = checks.size();
+        Integer checksCompleted = (int) checks.stream()
+            .filter(check -> check.getStatus() == CaseStatus.COMPLETED)
+            .count();
+        /*
+        // Get package details from EmployerPackage
+        String packageName = verificationCase.getEmployerPackage() != null 
+            ? verificationCase.getEmployerPackage().getPackageName() 
+            : "Standard Verification";
+        
+        String verificationType = verificationCase.getEmployerPackage() != null 
+            ? verificationCase.getEmployerPackage().getVerificationType() 
+            : "Background Check";
+        */
+        return VerificationCaseDTO.builder()
+            .caseId(verificationCase.getCaseId())
+            .candidateId(verificationCase.getCandidateId())
+            .companyId(verificationCase.getCompanyId())
+            .companyName(company != null ? company.getCompanyName() : "Unknown Company")
+            .companyLogo(company != null ? company.getAdminProfilePicturePath() : null)
+            .status(verificationCase.getStatus())
+            .createdAt(verificationCase.getCreatedAt())
+            .updatedAt(verificationCase.getUpdatedAt())
+            .completedAt(verificationCase.getCompletedAt())
+           // .verificationType(verificationType)
+           // .packageName(packageName)
+            .documentsCount(documentsCount)
+            .checksCompleted(checksCompleted)
+            .totalChecks(totalChecks)
+           // .vendorId(verificationCase.getVendorId())
+          //  .vendorName(getVendorName(verificationCase.getVendorId()))
+            .build();
+    }
+    
+    /**
+     * Helper method to get vendor name (you might need to implement this)
+     */
+    private String getVendorName(Long vendorId) {
+        if (vendorId == null) return null;
+        // Implement logic to fetch vendor name from vendor service/repository
+        return "VerifyPro Inc."; // Placeholder
+    }
+    
+    /**
+     * Create Pageable object from filter DTO
+     */
+    private Pageable createPageable(VerificationCaseFilterDTO filterDTO) {
+        // Set default values
+        int page = filterDTO.getPage() != null ? filterDTO.getPage() : 0;
+        int size = filterDTO.getPageSize() != null ? filterDTO.getPageSize() : 10;
+        String sortBy = filterDTO.getSortBy() != null ? filterDTO.getSortBy() : "createdAt";
+        String direction = filterDTO.getSortDirection() != null ? filterDTO.getSortDirection() : "desc";
+        
+        Sort sort = direction.equalsIgnoreCase("asc") 
+            ? Sort.by(sortBy).ascending() 
+            : Sort.by(sortBy).descending();
+        
+        return PageRequest.of(page, size, sort);
     }
     
 }

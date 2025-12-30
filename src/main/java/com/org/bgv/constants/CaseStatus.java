@@ -12,5 +12,25 @@ public enum CaseStatus {
     REJECTED,
     AWAITING,
     VERIFIED,
-    PENDING
+    PENDING,
+    ON_HOLD,
+    DELAYED,
+    INSUFFICIENT,
+    REASSIGNED,
+    SUBMITTED;
+	
+	
+    
+    public static CaseStatus fromString(String value) {
+	    if (value == null || value.trim().isEmpty()) {
+	        return null;
+	    }
+
+	    try {
+	        return CaseStatus.valueOf(value.trim().toUpperCase());
+	    } catch (IllegalArgumentException ex) {
+	        throw new IllegalArgumentException("Invalid CaseStatus: " + value);
+	    }
+	}
+
 }

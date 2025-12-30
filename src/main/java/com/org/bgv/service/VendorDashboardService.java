@@ -2,10 +2,12 @@ package com.org.bgv.service;
 
 import com.org.bgv.candidate.entity.Candidate;
 import com.org.bgv.candidate.repository.CandidateRepository;
-import com.org.bgv.constants.CaseCheckStatus;
+import com.org.bgv.constants.CaseStatus;
 import com.org.bgv.constants.CaseStatus;
 import com.org.bgv.entity.*;
 import com.org.bgv.repository.*;
+import com.org.bgv.vendor.service.VerificationCheckService;
+
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -25,66 +27,87 @@ public class VendorDashboardService {
     private final CompanyRepository companyRepository;
     private final CandidateRepository candidateRepository;
     
+    
+    private static final int DEFAULT_SLA_DAYS = 14;
+    
+   
     @Transactional(readOnly = true)
     public Map<String, Object> getVendorDashboardData(Long vendorId) {
-        // Get all cases assigned to this vendor
-        List<VerificationCase> vendorCases = verificationCaseRepository
-            .findByVendorIdOrStatusIn(vendorId, 
-                Arrays.asList(CaseStatus.ASSIGNED, CaseStatus.IN_PROGRESS, CaseStatus.PENDING));
+        // Get all checks assigned to this vendor with specific statuses
+        List<VerificationCaseCheck> vendorChecks = verificationCaseCheckRepository
+            .findByVendorIdAndStatusIn(
+                vendorId,
+                Arrays.asList(CaseStatus.ASSIGNED, CaseStatus.IN_PROGRESS, CaseStatus.PENDING)
+            );
+        
+        // Extract unique cases from checks
+        List<VerificationCase> vendorCases = vendorChecks.stream()
+            .map(VerificationCaseCheck::getVerificationCase)
+            .distinct()
+            .collect(Collectors.toList());
         
         return Map.of(
-            "workload", getWorkloadData(vendorCases),
-            "verificationStats", getVerificationStats(vendorCases),
+            "workload", getWorkloadData(vendorChecks),
+            "verificationStats", getVerificationStats(vendorChecks),
             "activeCases", getActiveCases(vendorCases),
-            "verificationQueue", getVerificationQueue(vendorCases),
-            "recentVerifications", getRecentVerifications(vendorId)
+            "verificationQueue", getVerificationQueue(vendorChecks),
+            "recentVerifications", getRecentVerifications(vendorChecks)
         );
     }
     
-    private Map<String, Object> getWorkloadData(List<VerificationCase> cases) {
-        long totalAssigned = cases.size();
-        long inProgress = cases.stream()
+    private Map<String, Object> getWorkloadData(List<VerificationCaseCheck> checks) {
+        long totalAssigned = checks.size();
+        long inProgress = checks.stream()
             .filter(c -> c.getStatus() == CaseStatus.IN_PROGRESS)
             .count();
-        long completed = cases.stream()
+        long completed = checks.stream()
             .filter(c -> c.getStatus() == CaseStatus.COMPLETED)
             .count();
-        long pending = cases.stream()
+        long pending = checks.stream()
             .filter(c -> c.getStatus() == CaseStatus.PENDING)
             .count();
-        
-        // Calculate SLA metrics
-        List<VerificationCase> slaRiskCases = cases.stream()
-            .filter(c -> isSlaAtRisk(c))
-            .collect(Collectors.toList());
-        
-        List<VerificationCase> slaBreachedCases = cases.stream()
-            .filter(c -> isSlaBreached(c))
-            .collect(Collectors.toList());
         
         return Map.of(
             "totalAssigned", totalAssigned,
             "inProgress", inProgress,
             "completed", completed,
-            "pending", pending,
-            "slaAtRisk", slaRiskCases.size(),
-            "slaBreached", slaBreachedCases.size()
+            "pending", pending
         );
     }
     
-    private Map<String, Map<String, Object>> getVerificationStats(List<VerificationCase> cases) {
-        // Get all check categories
-        List<CheckCategory> categories = checkCategoryRepository.findAll();
+    private Map<String, Map<String, Object>> getVerificationStats(List<VerificationCaseCheck> checks) {
         Map<String, Map<String, Object>> stats = new HashMap<>();
         
-        for (CheckCategory category : categories) {
+        // Group by check category
+        Map<CheckCategory, List<VerificationCaseCheck>> checksByCategory = checks.stream()
+            .filter(check -> check.getCategory() != null)
+            .collect(Collectors.groupingBy(VerificationCaseCheck::getCategory));
+        
+        for (Map.Entry<CheckCategory, List<VerificationCaseCheck>> entry : checksByCategory.entrySet()) {
+            CheckCategory category = entry.getKey();
+            List<VerificationCaseCheck> categoryChecks = entry.getValue();
+            
             String categoryCode = category.getCode().toLowerCase();
-            Map<String, Object> categoryStats = getCategoryStats(cases, category);
+            
+            Map<String, Object> categoryStats = Map.of(
+                "assigned", categoryChecks.size(),
+                "completed", categoryChecks.stream()
+                    .filter(check -> check.getStatus() == CaseStatus.COMPLETED)
+                    .count(),
+                "inProgress", categoryChecks.stream()
+                    .filter(check -> check.getStatus() == CaseStatus.IN_PROGRESS)
+                    .count(),
+                "pending", categoryChecks.stream()
+                    .filter(check -> check.getStatus() == CaseStatus.PENDING)
+                    .count()
+            );
+            
             stats.put(categoryCode, categoryStats);
         }
         
         return stats;
     }
+    
     
     private Map<String, Object> getCategoryStats(List<VerificationCase> cases, CheckCategory category) {
         // Get all checks for this category across all cases
@@ -99,13 +122,13 @@ public class VendorDashboardService {
         
         long assigned = categoryChecks.size();
         long completed = categoryChecks.stream()
-            .filter(check -> check.getStatus() == CaseCheckStatus.COMPLETED)
+            .filter(check -> check.getStatus() == CaseStatus.COMPLETED)
             .count();
         long inProgress = categoryChecks.stream()
-            .filter(check -> check.getStatus() == CaseCheckStatus.IN_PROGRESS)
+            .filter(check -> check.getStatus() == CaseStatus.IN_PROGRESS)
             .count();
         long pending = categoryChecks.stream()
-            .filter(check -> check.getStatus() == CaseCheckStatus.PENDING)
+            .filter(check -> check.getStatus() == CaseStatus.PENDING)
             .count();
         
         return Map.of(
@@ -144,7 +167,8 @@ public class VendorDashboardService {
                         "type", checkType,
                         "status", status,
                         "sla", sla,
-                        "checkId",String.valueOf(check.getCaseCheckId())
+                        "checkId",String.valueOf(check.getCaseCheckId()),
+                        "check-ref",check.getCheckRef()!=null?check.getCheckRef():""
                     );
                 })
                 .collect(Collectors.toList());
@@ -159,7 +183,7 @@ public class VendorDashboardService {
             String priority = determinePriority(verificationCase, checks);
             
             Map<String, Object> caseData = Map.of(
-                "id", "CASE-" + verificationCase.getCaseId(),
+                "id", verificationCase.getCaseId(),
                 "candidate", candidate != null ? 
                     candidate.getProfile().getFirstName() + " " + candidate.getProfile().getLastName() : 
                     "Unknown Candidate",
@@ -167,7 +191,8 @@ public class VendorDashboardService {
                 "checks", checks,
                 "slaStatus", slaStatus,
                 "daysRemaining", daysRemaining,
-                "priority", priority
+                "priority", priority,
+                "caseRef", verificationCase.getCaseNumber()!=null?verificationCase.getCaseNumber():""
             );
             
             activeCases.add(caseData);
@@ -176,79 +201,69 @@ public class VendorDashboardService {
         return activeCases;
     }
     
-    private List<Map<String, Object>> getVerificationQueue(List<VerificationCase> cases) {
-        List<Map<String, Object>> queue = new ArrayList<>();
-        int queueId = 1;
-        
-        for (VerificationCase verificationCase : cases) {
-            if (verificationCase.getStatus() != CaseStatus.IN_PROGRESS) {
-                continue;
-            }
-            
-            for (VerificationCaseCheck check : verificationCase.getCaseChecks()) {
-                if (check.getStatus() == CaseCheckStatus.PENDING || 
-                    check.getStatus() == CaseCheckStatus.IN_PROGRESS) {
-                    
-                    String priority = determineCheckPriority(verificationCase, check);
-                    String waitTime = calculateWaitTime(check);
-                    
-                    Map<String, Object> queueItem = Map.of(
-                        "id", "VQ-" + String.format("%03d", queueId++),
-                        "checkType", check.getCategory() != null ? 
-                            check.getCategory().getCode().toLowerCase() : "unknown",
-                        "caseId", "CASE-" + verificationCase.getCaseId(),
-                        "priority", priority,
-                        "waitTime", waitTime
-                    );
-                    
-                    queue.add(queueItem);
-                }
-            }
-        }
-        
-        // Sort by priority (high first) and then by wait time
-        queue.sort((a, b) -> {
-            int priorityCompare = getPriorityValue((String) b.get("priority")) - 
-                                getPriorityValue((String) a.get("priority"));
-            if (priorityCompare != 0) return priorityCompare;
-            
-            // Parse wait time (e.g., "2h", "1h", "4h")
-            return extractWaitTimeMinutes((String) a.get("waitTime")) - 
-                   extractWaitTimeMinutes((String) b.get("waitTime"));
-        });
-        
-        return queue;
+    private List<Map<String, String>> getVerificationQueue(List<VerificationCaseCheck> checks) {
+        return checks.stream()
+            .filter(check -> check.getStatus() == CaseStatus.PENDING || 
+                            check.getStatus() == CaseStatus.IN_PROGRESS)
+            .map(check -> {
+                String priority = determineCheckPriority(check);
+                String waitTime = calculateWaitTime(check);
+                
+                return Map.of(
+                    "id", "VQ-" + check.getCaseCheckId(),
+                    "checkType", check.getCategory() != null ? 
+                        check.getCategory().getCode().toLowerCase() : "unknown",
+                    "caseId", "CASE-" + check.getVerificationCase().getCaseId(),
+                    "priority", priority,
+                    "waitTime", waitTime
+                );
+            })
+            .sorted((a, b) -> {
+                int priorityCompare = getPriorityValue((String) b.get("priority")) - 
+                                    getPriorityValue((String) a.get("priority"));
+                if (priorityCompare != 0) return priorityCompare;
+                
+                return extractWaitTimeMinutes((String) a.get("waitTime")) - 
+                       extractWaitTimeMinutes((String) b.get("waitTime"));
+            })
+            .collect(Collectors.toList());
     }
     
-    private List<Map<String, Object>> getRecentVerifications(Long vendorId) {
-        // Get recent verification activities for this vendor
-        List<VerificationCaseCheck> recentChecks = verificationCaseCheckRepository
-            .findTop10ByVendorIdOrderByUpdatedAtDesc(vendorId);
+    private List<Map<String, String>> getRecentVerifications(List<VerificationCaseCheck> recentChecks) {
+        return recentChecks.stream()
+            .map(check -> {
+                String status = getStatusMapping(check.getStatus());
+                String timeAgo = getTimeAgo(check.getUpdatedAt());
+                
+                return Map.of(
+                    "id", String.valueOf(check.getCaseCheckId()),
+                    "checkType", check.getCategory() != null ? 
+                        check.getCategory().getCode().toLowerCase() : "unknown",
+                    "caseId", "CASE-" + check.getVerificationCase().getCaseId(),
+                    "status", status,
+                    "time", timeAgo
+                );
+            })
+            .collect(Collectors.toList());
+    }
+    
+ // Helper method remains the same
+    private String determineCheckPriority(VerificationCaseCheck check) {
+        String slaStatus = calculateSlaStatus(check);
+        long daysRemaining = calculateDaysRemaining(check);
         
-        List<Map<String, Object>> recentVerifications = new ArrayList<>();
-        int verificationId = 1;
-        
-        for (VerificationCaseCheck check : recentChecks) {
-            String status = getStatusMapping(check.getStatus());
-            String timeAgo = getTimeAgo(check.getUpdatedAt());
-            
-            Map<String, Object> verification = Map.of(
-                "id", String.valueOf(check.getCaseCheckId()),
-                "checkType", check.getCategory() != null ? 
-                    check.getCategory().getCode().toLowerCase() : "unknown",
-                "caseId", "CASE-" + check.getVerificationCase().getCaseId(),
-                "status", status,
-                "time", timeAgo
-            );
-            
-            recentVerifications.add(verification);
-        }
-        
-        return recentVerifications;
+        if ("critical".equals(slaStatus) || daysRemaining <= 1) return "high";
+        if ("warning".equals(slaStatus) || daysRemaining <= 3) return "medium";
+        return "low";
+    }
+    private long calculateDaysRemaining(VerificationCaseCheck check) {
+        // Calculate based on check's creation time
+        LocalDateTime slaDeadline = check.getCreatedAt().plusDays(14);
+        return ChronoUnit.DAYS.between(LocalDateTime.now(), slaDeadline);
     }
     
     // Helper methods
-    private String getStatusMapping(CaseCheckStatus status) {
+    private String getStatusMapping(CaseStatus status) {
         if (status == null) return "pending";
         
         switch (status) {
@@ -264,9 +279,9 @@ public class VendorDashboardService {
     
     private String calculateSlaStatus(VerificationCaseCheck check) {
         // Implement SLA calculation logic
-        if (check.getStatus() == CaseCheckStatus.DELAYED) {
+        if (check.getStatus() == CaseStatus.DELAYED) {
             return "critical";
-        } else if (check.getStatus() == CaseCheckStatus.ON_HOLD) {
+        } else if (check.getStatus() == CaseStatus.ON_HOLD) {
             return "warning";
         } else {
             return "normal";

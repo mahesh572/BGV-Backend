@@ -15,7 +15,7 @@ import com.org.bgv.dto.BasicDetailsDTO;
 import com.org.bgv.service.ProfileService;
 
 @RestController
-@RequestMapping("/api/candidate")
+@RequestMapping("/api/basicdetails/candidate")
 @RequiredArgsConstructor
 @Slf4j
 @Tag(name = "Basic Details", description = "APIs for managing candidate basic details")

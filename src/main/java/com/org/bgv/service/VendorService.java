@@ -5,6 +5,7 @@ import org.springframework.stereotype.Service;
 
 import com.org.bgv.common.Status;
 import com.org.bgv.dto.VendorDTO;
+import com.org.bgv.entity.CheckCategory;
 import com.org.bgv.entity.CheckType;
 import com.org.bgv.entity.Profile;
 import com.org.bgv.entity.Role;
@@ -12,6 +13,7 @@ import com.org.bgv.entity.User;
 import com.org.bgv.entity.UserRole;
 import com.org.bgv.entity.Vendor;
 import com.org.bgv.entity.VendorCheckMapping;
+import com.org.bgv.repository.CheckCategoryRepository;
 import com.org.bgv.repository.CheckTypeRepository;
 import com.org.bgv.repository.ProfileRepository;
 import com.org.bgv.repository.RoleRepository;
@@ -35,7 +37,8 @@ public class VendorService {
     private final RoleRepository roleRepository;
     private final UserRoleRepository userRoleRepository;
     private final VendorRepository vendorRepository;
-    private final CheckTypeRepository checkTypeRepository;
+   // private final CheckCategory checkCategory;
+    private final CheckCategoryRepository checkCategoryRepository;
     private final VendorCheckMappingRepository vendorCheckMappingRepository;
     private final ProfileRepository profileRepository;
 
@@ -114,12 +117,12 @@ public class VendorService {
     private void saveVendorServicesWithStream(final Vendor vendor, List<Long> serviceIds) {
         List<VendorCheckMapping> mappings = serviceIds.stream()
             .map(checkTypeId -> {
-                CheckType checkType = checkTypeRepository.findById(checkTypeId)
-                        .orElseThrow(() -> new RuntimeException("CheckType not found: " + checkTypeId));
+            	CheckCategory checkType = checkCategoryRepository.findByCategoryId(checkTypeId);
+                        
                 
                 return VendorCheckMapping.builder()
                         .vendor(vendor) // vendor is effectively final now
-                        .checkType(checkType)
+                        .category(checkType)
                         .isActive(true)
                         .build();
             })

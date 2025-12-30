@@ -42,4 +42,7 @@ public interface CandidateRepository extends JpaRepository<Candidate, Long>, Jpa
     @Query("SELECT c FROM Candidate c WHERE c.company.id = :companyId AND c.candidateId = :candidateId")
     Optional<Candidate> findByCompanyIdAndCandidateId(@Param("companyId") Long companyId, 
                                                       @Param("candidateId") Long candidateId);
+    
+    Optional<Candidate> findByCandidateRef(String candidateRef);
+    
 }

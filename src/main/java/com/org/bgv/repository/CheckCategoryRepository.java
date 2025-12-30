@@ -22,5 +22,7 @@ public interface CheckCategoryRepository extends JpaRepository<CheckCategory, Lo
     boolean existsByName(String name);
     boolean existsByCode(String code);
     
+    CheckCategory findByCategoryId(Long categoryId);
+    
     
 }

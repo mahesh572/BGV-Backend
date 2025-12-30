@@ -8,6 +8,8 @@ import com.org.bgv.service.VerificationCaseService;
 
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
+
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
@@ -17,6 +19,7 @@ import java.util.List;
 @RestController
 @RequestMapping("/api/verification-cases")
 @RequiredArgsConstructor
+@Slf4j
 public class VerificationCaseController {
     
     private final VerificationCaseService verificationCaseService;
@@ -36,7 +39,7 @@ public class VerificationCaseController {
         }
     }
     
-    @GetMapping("/{caseId}")
+    @GetMapping("/case/{caseId}")
     public ResponseEntity<CustomApiResponse<VerificationCaseResponse>> getCandidateCase(@PathVariable Long caseId) {
         try {
             VerificationCaseResponse response = verificationCaseService.getVerificationCase(caseId);
@@ -136,4 +139,36 @@ public class VerificationCaseController {
                     .body(CustomApiResponse.failure("Failed to retrieve completed verification cases: " + e.getMessage(), HttpStatus.INTERNAL_SERVER_ERROR));
         }
     }
+    
+    @GetMapping("/candidate/{candidateId}/documents/sections")
+    public ResponseEntity<CustomApiResponse<List<String>>> 
+    getCandidateVerificationSectionsDocuments(@PathVariable Long candidateId) {
+        try {
+        	
+        	log.info("getCandidateVerificationSectionsDocuments:::::::::::{}",candidateId);
+            List<String> sectionsList =
+                    verificationCaseService.getSectionsForDocumentVerificationCase(candidateId);
+          //  sectionsList.add("Other");
+            return ResponseEntity.ok(
+                    CustomApiResponse.success(
+                            "Verification document sections retrieved successfully",
+                            sectionsList,
+                            HttpStatus.OK
+                    )
+            );
+
+        } catch (Exception e) {
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
+                    .body(
+                            CustomApiResponse.failure(
+                                    "Failed to retrieve verification document sections: " + e.getMessage(),
+                                    HttpStatus.INTERNAL_SERVER_ERROR
+                            )
+                    );
+        }
+    }
+
+    
+    
+    
 }

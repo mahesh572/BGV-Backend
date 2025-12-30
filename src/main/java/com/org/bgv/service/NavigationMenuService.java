@@ -72,6 +72,8 @@ public class NavigationMenuService {
             defaultNaviSet.add("Education");
             defaultNaviSet.add("Work Experience");
             defaultNaviSet.add("Address");
+            defaultNaviSet.add("verification");
+            defaultNaviSet.add("Cases");
             
             
             Long userId = SecurityUtils.getCurrentCustomUserDetails().getUserId();
