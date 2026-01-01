@@ -2,8 +2,11 @@ package com.org.bgv.entity;
 
 import java.time.LocalDateTime;
 
+import com.org.bgv.common.DocumentStatus;
+
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
+import jakarta.persistence.Enumerated;
 import jakarta.persistence.GeneratedValue;
 import jakarta.persistence.GenerationType;
 import jakarta.persistence.Id;
@@ -48,8 +51,9 @@ public class ProfessionalDocuments implements BaseDocument{
     @Column(name = "file_size")
     private Long fileSize;
 
+    @Enumerated
     @Column(name = "status")
-    private String status;
+    private DocumentStatus status;
 
     @Column(name = "uploaded_at")
     private LocalDateTime uploadedAt;

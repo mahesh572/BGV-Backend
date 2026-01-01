@@ -8,6 +8,8 @@ import java.time.LocalDateTime;
 import java.util.Date;
 
 import com.org.bgv.entity.Profile;
+import com.org.bgv.entity.VerificationCase;
+import com.org.bgv.entity.VerificationCaseCheck;
 
 @Entity
 @Table(name = "identity_proofs")
@@ -29,6 +31,17 @@ public class IdentityProof {
     @ManyToOne
     @JoinColumn(name = "candidate_id")
     private Candidate candidate;
+    
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "case_check_id", nullable = false)
+    private VerificationCaseCheck verificationCaseCheck;
+    
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "case_id", nullable = false)
+    private VerificationCase verificationCase;
+    
+    @Column(name = "company_id", nullable = false)
+    private Long companyId;
     
     @ManyToOne
     @JoinColumn(name = "profile_id")

@@ -11,7 +11,7 @@ import lombok.NoArgsConstructor;
 @NoArgsConstructor
 @AllArgsConstructor
 public class VerificationDocumentDTO {
-	private String id;
+	private Long id;
     private String name;
     private String originalName;
     private String type;

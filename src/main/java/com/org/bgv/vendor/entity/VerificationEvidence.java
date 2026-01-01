@@ -2,10 +2,12 @@ package com.org.bgv.vendor.entity;
 
 import java.time.LocalDateTime;
 
+import com.org.bgv.constants.VerificationStatus;
 import com.org.bgv.entity.VerificationCaseCheck;
 
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
+import jakarta.persistence.Enumerated;
 import jakarta.persistence.FetchType;
 import jakarta.persistence.GeneratedValue;
 import jakarta.persistence.GenerationType;
@@ -49,8 +51,9 @@ public class VerificationEvidence {
     @Column(name = "verified_at")
     private LocalDateTime verifiedAt;
     
+    @Enumerated
     @Column(name = "status")
-    private String status; // verified, pending, rejected
+    private VerificationStatus status; // verified, pending, rejected
     
     @Column(name = "notes", columnDefinition = "TEXT")
     private String notes;

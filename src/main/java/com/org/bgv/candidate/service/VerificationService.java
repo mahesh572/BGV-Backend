@@ -54,7 +54,7 @@ public class VerificationService {
     public CandidateVerificationDTO getCandidateVerification(Long candidateId,Long caseId) {
         log.info("Fetching verification for candidate: {}{}", candidateId,caseId);
         
-        CandidateVerification verification = verificationRepository.findByCandidateId(candidateId)
+        CandidateVerification verification = verificationRepository.findByCandidateIdAndVerificationCaseCaseId(candidateId,caseId)
             .orElseThrow(() -> new EntityNotFoundException("Verification not found for candidate: " + candidateId));
         
         CandidateVerificationDTO dto = convertToDTO(verification);

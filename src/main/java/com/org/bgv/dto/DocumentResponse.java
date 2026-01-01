@@ -2,6 +2,8 @@ package com.org.bgv.dto;
 
 import java.time.LocalDateTime;
 
+import com.org.bgv.common.DocumentStatus;
+
 import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Data;
@@ -15,7 +17,7 @@ public class DocumentResponse {
     private Long doc_type_id;
     private String file_url;
     private Long file_size;
-    private String status;
+    private DocumentStatus status;
     private LocalDateTime uploadedAt;
     private LocalDateTime verifiedAt;
     private String comments;

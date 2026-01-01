@@ -816,15 +816,18 @@ public class VerificationCaseService {
     }
 
    
-    public List<String> getSectionsForDocumentVerificationCase(Long candidateId) {
+    public List<String> getSectionsForDocumentVerificationCase(Long candidateId,Long caseId) {
     	
     	Long companyId = SecurityUtils.getCurrentUserCompanyId();
     	log.info("getSectionsForDocumentVerificationCase:::::::::::companyId:::candidateId::{}{}",companyId,candidateId);
-    	VerificationCase verificationCase = getActiveVerificationCase(companyId, candidateId);
-    	log.info("getSectionsForDocumentVerificationCase:::::::::{}",verificationCase.getCaseId());
+    	// VerificationCase verificationCase = getActiveVerificationCase(companyId, candidateId);
+    	
+    	VerificationCaseDTO  verificationCaseDTO = getCandidateVerificationCase(candidateId, caseId);
+    	
+    	log.info("getSectionsForDocumentVerificationCase:::::::::{}",verificationCaseDTO.getCaseId());
     	return new ArrayList<>(
     	        verificationCaseCheckRepository
-    	                .findByVerificationCase_CaseId(verificationCase.getCaseId())
+    	                .findByVerificationCase_CaseId(verificationCaseDTO.getCaseId())
     	                .stream()
     	                .map(VerificationCaseCheck::getCategory)
     	                .map(check -> check.getName())
@@ -840,7 +843,6 @@ public class VerificationCaseService {
                 .orElseThrow(() ->
                         new RuntimeException("Active verification case not found"));
     }
-    
     
     /**
      * Get all verification cases for a candidate with filtering and pagination

@@ -8,6 +8,8 @@ import com.org.bgv.candidate.repository.CandidateRepository;
 import com.org.bgv.candidate.repository.EducationHistoryRepository;
 import com.org.bgv.candidate.repository.IdentityProofRepository;
 import com.org.bgv.candidate.repository.WorkExperienceRepository;
+import com.org.bgv.common.DocumentStatus;
+import com.org.bgv.common.Status;
 import com.org.bgv.config.SecurityUtils;
 import com.org.bgv.constants.CaseStatus;
 import com.org.bgv.constants.SectionConstants;
@@ -128,7 +130,7 @@ public class DocumentService {
             uploadSingleFile(file, candidate, category, documentType, section, objectId,caseId);
         }
 
-        return getDocumentsBySection(candidateId, section.getValue());
+        return getDocumentsBySection(candidateId,caseId, section.getValue());
     }
     
     private void validateFiles(List<MultipartFile> files) {
@@ -160,20 +162,24 @@ public class DocumentService {
         Pair<String, String> upload =
                 s3StorageService.uploadFile(file, section.getValue());
 
-        Long resolvedObjectId = resolveObjectId(section, candidate, objectId);
+       // Long resolvedObjectId = resolveObjectId(section, candidate, objectId);
 
         Document document = Document.builder()
                 .candidate(candidate)
                 .category(category)
                 .docTypeId(documentType)
+                .originalFileName(file.getOriginalFilename())
                 .fileUrl(upload.getFirst())
                 .awsDocKey(upload.getSecond())
                 .fileSize(file.getSize())
-                .status("UPLOADED")
+                .status(DocumentStatus.UPLOADED)
                 .uploadedAt(LocalDateTime.now())
-                .objectId(resolvedObjectId)
+                .objectId(objectId)
                 .entityType(section.getValue())
+                .uploadedBy(SecurityUtils.getCurrentCustomUserDetails().getUserType())
                 .build();
+        
+       
 
         document = documentRepository.save(document);
         
@@ -216,7 +222,7 @@ public class DocumentService {
                 
                 // 3. Soft delete all document links (update status to DELETED)
                 for (VerificationCaseDocumentLink link : documentLinks) {
-                    link.setStatus("DELETED");
+                    link.setStatus(DocumentStatus.DELETED);
                     verificationCaseDocumentLinkRepository.save(link);
                     
                     // 4. Optionally, update VerificationCaseDocument status if needed
@@ -224,7 +230,7 @@ public class DocumentService {
                 }
                 
                 // 5. Soft delete the document (instead of hard delete)
-                document.setStatus("DELETED");
+                document.setStatus(DocumentStatus.DELETED);
                 document.setDeletedAt(LocalDateTime.now());
                 documentRepository.save(document);
                 
@@ -418,6 +424,7 @@ public class DocumentService {
     
     private FileDTO convertToFileDTO(BaseDocument document) {
     	try {
+    		logger.info("document:::::::::::::status:::::::::::::::::::::::::::::::::::::::::::::::::::::::{}",document.getStatus());
     		return FileDTO.builder()
     				.fileId(document.getDocId())
     				.fileName(extractFileName(document.getFileUrl()))
@@ -701,7 +708,7 @@ public class DocumentService {
         return CategoriesDTO.builder().categories(documentCategoryDtos).build();
     }
     
-    public DocumentCategoryDto getDocumentsBySection(Long candidateId, String section) {
+    public DocumentCategoryDto getDocumentsBySection(Long candidateId,Long caseId, String section) {
       
     	// Find category by section name (case insensitive)
         Optional<CheckCategory> documentCategoryOpt = checkCategoryRepository.findByName(section);
@@ -719,10 +726,12 @@ public class DocumentService {
        Long userId = SecurityUtils.getCurrentUserId();
       // Candidate candidate = candidateRepository.findByCompanyIdAndUserUserId(companyId, userId);
        Candidate candidate = candidateRepository.findById(candidateId).orElse(null);
+       
        logger.info("getDocumentsBySection:::::::::::::::::::::::::::::::::555555555555");
        logger.info("companyId::::::candidate.getCandidateId()::{}{}",companyId,candidate.getCandidateId());
       VerificationCase verificationCase = verificationCaseService.getVerificationCaseByCompanyIdAndCandidateIdAndStatus(companyId, candidate.getCandidateId(), CaseStatus.CREATED).orElse(null);
        logger.info("!!!!!!!!!!!!!!!!!!!!::verificationCase::{}",verificationCase.getCaseId());
+       
        if(verificationCase!=null) {
         	VerificationCaseCheck verificationCaseCheck = verificationCaseService.getVerificationCaseChackByCategory(companyId, verificationCase.getCaseId(), section);
         	
@@ -822,6 +831,7 @@ public class DocumentService {
                 
                 List<Document> documents = documentRepository.findByCandidate_CandidateIdAndCategory_CategoryIdAndDocTypeId_DocTypeId(
                     candidateId, category.getCategoryId(), documentType.getDocTypeId());
+                
                 dto.setFiles(convertDocumentsToFileDTOs(documents));
                 return dto;
             })
@@ -965,6 +975,7 @@ public class DocumentService {
     // Generic Document to FileDTO converter
     private List<FileDTO> convertDocumentsToFileDTOs(List<Document> documents) {
         return documents.stream()
+            .filter(doc -> doc.getStatus() != DocumentStatus.DELETED)
             .map(this::convertToFileDTO)
             .collect(Collectors.toList());
     }

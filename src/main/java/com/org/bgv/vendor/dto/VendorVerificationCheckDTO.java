@@ -17,7 +17,8 @@ import com.org.bgv.entity.VerificationCaseDocument;
 @AllArgsConstructor
 public class VendorVerificationCheckDTO {
     // Common fields for all verification types
-    private String checkId;
+    private Long checkId;
+    private String checkRef;
     private String caseId;
     private String caseRef;
     private String checkType; // education, employment, identity, criminal, reference

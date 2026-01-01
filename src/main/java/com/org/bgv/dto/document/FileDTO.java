@@ -2,6 +2,8 @@ package com.org.bgv.dto.document;
 
 import java.time.LocalDateTime;
 
+import com.org.bgv.common.DocumentStatus;
+
 import lombok.Builder;
 import lombok.Data;
 
@@ -14,7 +16,7 @@ public class FileDTO {
 	private String fileUrl;
 	private Long fileSize;
 	private LocalDateTime uploadedAt;
-	private String status;
+	private DocumentStatus status;
 	private String fileType;
 	private String thumbnailUrl;
 	

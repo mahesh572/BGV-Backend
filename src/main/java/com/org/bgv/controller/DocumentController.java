@@ -31,13 +31,14 @@ public class DocumentController {
 	 private final DocumentService documentService;
 	
 	// Get documents for specific section
-    @GetMapping("/candidate/{candidateId}/section")
+    @GetMapping("/candidate/{candidateId}/case/{caseId}/section")
     public ResponseEntity<CustomApiResponse<DocumentCategoryDto>> getDocumentsBySection(
             @PathVariable Long candidateId,
+            @PathVariable Long caseId,
             @RequestParam String section) {
     	log.info("DocumentController:::::getDocumentsBySection:::::candidateId:::::section::::{}{}",candidateId,section);
         try {
-        	DocumentCategoryDto categories = documentService.getDocumentsBySection(candidateId, section);
+        	DocumentCategoryDto categories = documentService.getDocumentsBySection(candidateId,caseId, section);
             return ResponseEntity.ok(
                     CustomApiResponse.success("Documents retrieved successfully for section: " + section, categories, HttpStatus.OK)
             );

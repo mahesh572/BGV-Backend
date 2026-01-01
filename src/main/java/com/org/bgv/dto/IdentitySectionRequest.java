@@ -13,6 +13,8 @@ public class IdentitySectionRequest {
 
 	private String section;  // Identity
     private String label;   //  Identity
+    private Long checkId;
+    private String checkRef;
     private List<DocumentUploadRequest> documents;
 	
 }

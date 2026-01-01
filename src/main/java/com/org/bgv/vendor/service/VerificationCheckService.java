@@ -2,6 +2,7 @@ package com.org.bgv.vendor.service;
 
 import com.org.bgv.candidate.entity.Candidate;
 import com.org.bgv.candidate.repository.CandidateRepository;
+import com.org.bgv.common.DocumentStatus;
 import com.org.bgv.constants.CaseStatus;
 import com.org.bgv.entity.*;
 import com.org.bgv.repository.*;
@@ -264,7 +265,8 @@ public class VerificationCheckService {
                                                     Candidate candidate,
                                                     Company company) {
         return VendorVerificationCheckDTO.builder()
-                .checkId("CHK-" + check.getCategory().getCode().toUpperCase() + "-" + check.getCaseCheckId())
+                .checkId(check.getCaseCheckId())
+                .checkRef(check.getCheckRef())
                 .caseId(String.valueOf(verificationCase.getCaseId()))
                 .caseRef(getCaseReference(verificationCase))
                 .checkType(check.getCategory().getCode().toLowerCase())
@@ -481,15 +483,16 @@ public class VerificationCheckService {
                 .findByCaseDocument(caseDocument);
         
         return links.stream()
-                .map(VerificationCaseDocumentLink::getDocument)
-                .collect(Collectors.toList());
+        	    .map(VerificationCaseDocumentLink::getDocument)
+        	    .filter(Objects::nonNull)
+        	    .filter(doc -> doc.getStatus() != DocumentStatus.DELETED)
+        	    .collect(Collectors.toList());
     }
     
     private VerificationDocumentDTO mapToDocumentDTO(Document document) {
         return VerificationDocumentDTO.builder()
-                .id("DOC-" + document.getDocId())
-                .name(document.getOriginalFileName() != null ? 
-                      document.getOriginalFileName() : document.getFileName())
+                .id(document.getDocId())
+                .name(buildDisplayName(document))   // ✅ PAN Card (abc.jpg)
                 .type(getDocumentTypeName(document))
                 .size(formatFileSize(document.getFileSize()))
                 .uploadedBy(document.getUploadedBy())
@@ -507,6 +510,18 @@ public class VerificationCheckService {
                 .updatedAt(document.getUpdatedAt())
                 .build();
     }
+    private String buildDisplayName(Document document) {
+        String docType = getDocumentTypeName(document); // PAN Card
+        String fileName = document.getOriginalFileName() != null
+                ? document.getOriginalFileName()
+                : document.getFileName();
+
+        if (docType != null && fileName != null) {
+            return docType + " (" + fileName + ")";
+        }
+
+        return fileName != null ? fileName : docType;
+    }
     private String getDocumentTypeName(Document document) {
         if (document.getDocTypeId() != null) {
             return document.getDocTypeId().getName(); // Assuming DocumentType has a 'name' field
@@ -518,7 +533,7 @@ public class VerificationCheckService {
         if (document.isVerified()) {
             return "verified";
         }
-        return document.getStatus() != null ? document.getStatus() : "uploaded";
+        return document.getStatus() != null ? document.getStatus().name() : DocumentStatus.UPLOADED.name();
     }
     
     private String formatFileSize(Long bytes) {

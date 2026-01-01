@@ -6,9 +6,13 @@ import org.hibernate.annotations.CreationTimestamp;
 import org.hibernate.annotations.UpdateTimestamp;
 
 import com.org.bgv.candidate.entity.Candidate;
+import com.org.bgv.common.DocumentStatus;
+import com.org.bgv.constants.CaseStatus;
 
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
+import jakarta.persistence.EnumType;
+import jakarta.persistence.Enumerated;
 import jakarta.persistence.GeneratedValue;
 import jakarta.persistence.GenerationType;
 import jakarta.persistence.Id;
@@ -62,8 +66,13 @@ public class Document implements BaseDocument {
     @Column(name = "file_size")
     private Long fileSize;
 
-    @Column(name = "status")
-    private String status = "active";
+	/*
+	 * @Column(name = "status") private String status = "active";
+	 */
+    
+    @Enumerated(EnumType.STRING)
+    @Column(name = "status", nullable = false)
+    private DocumentStatus status;
 
     @Column(name = "uploaded_at")
     private LocalDateTime uploadedAt;

@@ -43,10 +43,10 @@ public class IdentityController {
 	}
 	
 
-	@GetMapping("/candidate/{candidateId}")
-	public ResponseEntity<CustomApiResponse<IdentitySectionRequest>> getIdentitySection( @PathVariable Long candidateId) {
+	@GetMapping("/candidate/{candidateId}/case/{caseId}")
+	public ResponseEntity<CustomApiResponse<IdentitySectionRequest>> getIdentitySection( @PathVariable Long candidateId,@PathVariable Long caseId) {
 	    try {
-	        IdentitySectionRequest identitySectionRequest = identityProofService.createIdentitySectionResponse(candidateId);
+	        IdentitySectionRequest identitySectionRequest = identityProofService.createIdentitySectionResponse(candidateId,caseId);
 	        return ResponseEntity.ok(CustomApiResponse.success(
 	            "Identity section retrieved successfully", 
 	            identitySectionRequest, 
@@ -64,9 +64,11 @@ public class IdentityController {
 	    }
 	}
 	
-	@PutMapping("/candidate/{candidateId}/fields")
+	@PutMapping("/candidate/{candidateId}/case/{caseId}/check/{checkId}/fields")
 	public ResponseEntity<CustomApiResponse<?>> updateIdentityFields(
             @PathVariable Long candidateId,
+            @PathVariable Long caseId,
+            @PathVariable Long checkId,
             @RequestBody List<DocumentUploadRequest> updateRequests) {
         try {
         	log.info("Identity Controller:::::::{}{}",updateRequests,candidateId);
@@ -76,7 +78,7 @@ public class IdentityController {
                         .body(CustomApiResponse.failure("No update data provided", HttpStatus.BAD_REQUEST));
             }
 
-            identityProofService.updateIdentityFields(candidateId, updateRequests);
+            identityProofService.updateIdentityFields(candidateId,caseId,checkId,updateRequests);
 
             return ResponseEntity.ok(CustomApiResponse.success(
                 "Identity fields updated successfully", 

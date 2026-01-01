@@ -15,6 +15,8 @@ import com.org.bgv.dto.UploadRuleDTO;
 @NoArgsConstructor
 @AllArgsConstructor
 public class DocumentTypeDto {
+	
+	private Long id;
     private Long typeId;
     private String typeName;
     private String typeLabel;

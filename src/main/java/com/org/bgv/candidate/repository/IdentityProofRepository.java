@@ -2,6 +2,9 @@ package com.org.bgv.candidate.repository;
 
 import com.org.bgv.candidate.entity.IdentityProof;
 import com.org.bgv.entity.Profile;
+import com.org.bgv.entity.VerificationCase;
+import com.org.bgv.entity.VerificationCaseCheck;
+
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
@@ -35,10 +38,24 @@ public interface IdentityProofRepository extends JpaRepository<IdentityProof, Lo
             Long candidateId,
             Long docTypeId
     );
+    
+    Optional<IdentityProof> findByCandidate_CandidateIdAndDocTypeIdAndVerificationCase(
+            Long candidateId,
+            Long docTypeId,
+            VerificationCase verificationCase
+    );
 
     boolean existsByCandidate_CandidateIdAndDocumentNumber(
             Long candidateId,
             String documentNumber
+    );
+    
+    Optional<IdentityProof> findByCandidate_CandidateIdAndDocTypeIdAndVerificationCaseAndVerificationCaseCheckAndCompanyId(
+            Long candidateId,
+            Long docTypeId,
+            VerificationCase verificationCase,
+            VerificationCaseCheck verificationCaseCheck,
+            Long companyId
     );
 
 

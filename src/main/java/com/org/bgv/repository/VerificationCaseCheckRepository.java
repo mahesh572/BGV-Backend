@@ -8,6 +8,7 @@ import org.springframework.stereotype.Repository;
 
 import com.org.bgv.constants.CaseCheckStatus;
 import com.org.bgv.constants.CaseStatus;
+import com.org.bgv.entity.CheckCategory;
 import com.org.bgv.entity.VerificationCase;
 import com.org.bgv.entity.VerificationCaseCheck;
 
@@ -49,6 +50,12 @@ public interface VerificationCaseCheckRepository
     List<VerificationCaseCheck> findTop10ByVendorIdOrderByUpdatedAtDesc(Long vendorId);
     
     List<VerificationCaseCheck> findByVerificationCase(VerificationCase verificationCase);
+    
+    Optional<VerificationCaseCheck>
+    findByVerificationCaseAndCategory(
+            VerificationCase verificationCase,
+            CheckCategory category
+    );
     
     long countByVendorIdAndStatusIn(
             Long vendorId,

@@ -140,14 +140,17 @@ public class VerificationCaseController {
         }
     }
     
-    @GetMapping("/candidate/{candidateId}/documents/sections")
+    @GetMapping("/candidate/{candidateId}/case/{caseId}/documents/sections")
     public ResponseEntity<CustomApiResponse<List<String>>> 
-    getCandidateVerificationSectionsDocuments(@PathVariable Long candidateId) {
+    getCandidateVerificationSectionsDocuments(
+    		@PathVariable Long candidateId,
+    		@PathVariable Long caseId
+    		) {
         try {
         	
         	log.info("getCandidateVerificationSectionsDocuments:::::::::::{}",candidateId);
             List<String> sectionsList =
-                    verificationCaseService.getSectionsForDocumentVerificationCase(candidateId);
+                    verificationCaseService.getSectionsForDocumentVerificationCase(candidateId,caseId);
           //  sectionsList.add("Other");
             return ResponseEntity.ok(
                     CustomApiResponse.success(

@@ -30,6 +30,7 @@ public class CustomUserDetails implements UserDetails {
     private String lastName;
     private boolean active;
     private String department;
+    private String userType;
     
    
 }

@@ -11,7 +11,7 @@ import lombok.Data;
 @Builder
 public class DocumentUploadRequest {
 	
-	
+	    private Long id;
 	    private String type;  // AADHAR
         private String label; // display name
         private Long typeId;

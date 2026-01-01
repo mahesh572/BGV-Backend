@@ -2,8 +2,12 @@ package com.org.bgv.entity;
 
 import java.time.LocalDateTime;
 
+import com.org.bgv.common.DocumentStatus;
+
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
+import jakarta.persistence.EnumType;
+import jakarta.persistence.Enumerated;
 import jakarta.persistence.FetchType;
 import jakarta.persistence.GeneratedValue;
 import jakarta.persistence.GenerationType;
@@ -39,7 +43,9 @@ public class VerificationCaseDocumentLink {
     @JoinColumn(name = "document_id", nullable = false)
     private Document document;
     
-    private String status;
+    @Enumerated(EnumType.STRING)
+    @Column(name = "status", nullable = false)
+    private DocumentStatus status;
 
     @Builder.Default
     private LocalDateTime linkedAt = LocalDateTime.now();

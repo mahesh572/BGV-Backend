@@ -89,6 +89,7 @@ public class CustomUserDetailsService implements UserDetailsService {
                 .companyId(companyId)
                 .userId(user.getUserId())
                 .username(user.getEmail())
+                .userType(user.getUserType())
              //   .enabled(user.isActive()) // Make sure you have this field in User entity
                 .build();
     }

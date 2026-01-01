@@ -4,6 +4,7 @@ import com.org.bgv.candidate.entity.Candidate;
 import com.org.bgv.candidate.entity.IdentityProof;
 import com.org.bgv.candidate.repository.CandidateRepository;
 import com.org.bgv.candidate.repository.IdentityProofRepository;
+import com.org.bgv.common.DocumentStatus;
 import com.org.bgv.dto.DocumentResponse;
 import com.org.bgv.dto.DocumentStats;
 import com.org.bgv.dto.DocumentUploadRequest;
@@ -16,10 +17,14 @@ import com.org.bgv.entity.CheckCategory;
 import com.org.bgv.entity.DocumentType;
 import com.org.bgv.entity.IdentityDocuments;
 import com.org.bgv.entity.Profile;
+import com.org.bgv.entity.VerificationCase;
+import com.org.bgv.entity.VerificationCaseCheck;
 import com.org.bgv.repository.CheckCategoryRepository;
 import com.org.bgv.repository.DocumentTypeRepository;
 import com.org.bgv.repository.IdentityDocumentsRepository;
 import com.org.bgv.repository.ProfileRepository;
+import com.org.bgv.repository.VerificationCaseCheckRepository;
+import com.org.bgv.repository.VerificationCaseRepository;
 import com.org.bgv.s3.S3StorageService;
 
 import jakarta.persistence.EntityNotFoundException;
@@ -54,6 +59,8 @@ public class IdentityProofService {
     private final CheckCategoryRepository checkCategoryRepository;
     private final CandidateRepository candidateRepository;
     private final DocumentTypeRepository documentTypeRepository;
+    private final VerificationCaseRepository verificationCaseRepository;
+    private final VerificationCaseCheckRepository verificationCaseCheckRepository;
     /**
      * Fetch all identity proofs with their related documents for a given profile.
      */
@@ -128,13 +135,24 @@ public class IdentityProofService {
     }
 
     private DocumentStats calculateStats(List<DocumentResponse> docs) {
+
         long total = docs.size();
-        long verified = docs.stream().filter(d -> "VERIFIED".equalsIgnoreCase(d.getStatus())).count();
-        long pending = docs.stream().filter(d -> "PENDING".equalsIgnoreCase(d.getStatus())).count();
-        long rejected = docs.stream().filter(d -> "REJECTED".equalsIgnoreCase(d.getStatus())).count();
+
+        long verified = docs.stream()
+            .filter(d -> d.getStatus() == DocumentStatus.VERIFIED)
+            .count();
+
+        long pending = docs.stream()
+            .filter(d -> d.getStatus() == DocumentStatus.PENDING)
+            .count();
+
+        long rejected = docs.stream()
+            .filter(d -> d.getStatus() == DocumentStatus.REJECTED)
+            .count();
 
         return new DocumentStats(total, verified, pending, rejected);
     }
+
 /*
     private DocumentStats calculateSummary(List<IdentityProofDTO> proofDetails) {
         long total = proofDetails.stream().mapToLong(p -> p.getDocumentStats().getTotalDocuments()).sum();
@@ -171,60 +189,72 @@ public class IdentityProofService {
     
     
     
-    public IdentitySectionRequest createIdentitySectionResponse(Long candidateId) {
-    	
-    	/*
-    	String section = "IDENTITY_PROOF";
-    	
-    	 Optional<DocumentCategory> documentCategoryOpt = documentCategoryRepository.findByNameIgnoreCase(section);
-         
-         if (documentCategoryOpt.isEmpty()) {
-             throw new RuntimeException("Section not found: " + section);
-         }
-    	
-    	*/
-    	
+    public IdentitySectionRequest createIdentitySectionResponse(Long candidateId, Long caseId) {
+
+        final String CATEGORY_NAME = "Identity";
+
+        // Fetch category
+        CheckCategory category = checkCategoryRepository
+                .findByNameIgnoreCase(CATEGORY_NAME)
+                .orElseThrow(() -> new RuntimeException("Category not found: " + CATEGORY_NAME));
+
+        // Fetch case
+        VerificationCase verificationCase = verificationCaseRepository.findById(caseId)
+                .orElseThrow(() -> new RuntimeException("Verification case not found"));
+
+        // Fetch case check
+        VerificationCaseCheck identityCheck = verificationCaseCheckRepository
+                .findByVerificationCaseAndCategory(verificationCase, category)
+                .orElseThrow(() -> new RuntimeException("Identity check not created"));
+
         return IdentitySectionRequest.builder()
-                .section("Identity")
-                .label("Identity")
-                .documents(createIdentityDocuments(candidateId))
+                .section(category.getName())
+                .label(category.getName())
+                .checkId(identityCheck.getCaseCheckId())   // ✅ FIXED
+                .checkRef(identityCheck.getCheckRef())     // ✅ FIXED
+                .documents(createIdentityDocuments(candidateId, verificationCase, identityCheck))
                 .build();
     }
     
-    private List<DocumentUploadRequest> createIdentityDocuments(Long candidateId) {
-        
-        String category_section = "Identity";
-        
-        Optional<CheckCategory> documentCategoryOpt = checkCategoryRepository.findByNameIgnoreCase(category_section);
-        
-        if (documentCategoryOpt.isEmpty()) {
-            throw new RuntimeException("Section not found: " + category_section);
-        }
-        
-        CheckCategory documentCategory = documentCategoryOpt.get();
-        
-        // Step 2: Find document types by category ID
-        List<DocumentType> documentTypes = documentTypeRepository.findByCategoryCategoryId(documentCategory.getCategoryId());
-        
+    private List<DocumentUploadRequest> createIdentityDocuments(
+            Long candidateId,
+            VerificationCase verificationCase,
+            VerificationCaseCheck identityCheck) {
+
+        CheckCategory category = identityCheck.getCategory();
+
+        List<DocumentType> documentTypes =
+                documentTypeRepository.findByCategoryCategoryId(category.getCategoryId());
+
         if (documentTypes.isEmpty()) {
-            throw new RuntimeException("No document types found for category: " + documentCategory.getName());
+            return Collections.emptyList();
         }
-        
+
         List<DocumentUploadRequest> documentList = new ArrayList<>();
-        
+
         for (DocumentType documentType : documentTypes) {
-        	Optional<IdentityProof> identityProof = identityProofRepository
-                     .findByCandidateIdAndDocumentType(candidateId,documentType.getDocTypeId())
-                     .stream()
-                     .findFirst();
-            DocumentUploadRequest documentRequest = createDocumentByType(documentType,identityProof.orElse(null));
-            if (documentRequest != null) {
-                documentList.add(documentRequest);
+
+            Optional<IdentityProof> identityProofOpt =
+                    identityProofRepository
+                            .findByCandidate_CandidateIdAndDocTypeIdAndVerificationCaseAndVerificationCaseCheckAndCompanyId(
+                                    candidateId,
+                                    documentType.getDocTypeId(),
+                                    verificationCase,
+                                    identityCheck,
+                                    verificationCase.getCompanyId()
+                            );
+
+            DocumentUploadRequest request =
+                    createDocumentByType(documentType, identityProofOpt.orElse(null));
+
+            if (request != null) {
+                documentList.add(request);
             }
         }
-        
+
         return documentList;
     }
+
     
     private DocumentUploadRequest createDocumentByType(DocumentType documentType,IdentityProof identityProof) {
         switch (documentType.getName().toUpperCase()) {
@@ -246,7 +276,8 @@ public class IdentityProofService {
     
     private static DocumentUploadRequest createAadharDocument(DocumentType documentType, IdentityProof identityProof) {
         return DocumentUploadRequest.builder()
-                .type("AADHAR")
+                .id(identityProof!=null?identityProof.getId():null)
+        		.type("AADHAR")
                 .label("Aadhar Card")
                 .typeId(documentType.getDocTypeId())
                 .fields(createAadharFields(identityProof))
@@ -345,48 +376,52 @@ public class IdentityProofService {
     }
     
     
-    public void updateIdentityFields(Long candidateId, List<DocumentUploadRequest> updateRequests) {
-        try {
-            Candidate candidate = candidateRepository.findById(candidateId)
-                    .orElseThrow(() -> new RuntimeException("Candidate not found with id: " + candidateId));
-/*
-            Profile profile = profileRepository.findByCandidate(candidate)
-                    .orElseThrow(() -> new RuntimeException("Profile not found for candidate: " + candidateId));
+    @Transactional
+    public void updateIdentityFields(
+            Long candidateId,
+            Long caseId,
+            Long checkId,
+            List<DocumentUploadRequest> updateRequests) {
 
-            List<IdentityProof> updatedProofs = new ArrayList<>();
-            List<String> processedDocuments = new ArrayList<>();
-*/
-            for (DocumentUploadRequest documentRequest : updateRequests) {
-                String documentType = documentRequest.getType();
-              
+        Candidate candidate = candidateRepository.findById(candidateId)
+                .orElseThrow(() -> new RuntimeException("Candidate not found: " + candidateId));
 
-                // Find existing identity proof or create new one
-                IdentityProof identityProof = identityProofRepository
-                        .findByCandidateIdAndDocumentType(candidateId,documentRequest.getTypeId())
-                        .stream()
-                        .findFirst()
-                        .orElse(IdentityProof.builder()
-                                .candidate(candidate)
-                               // .profile(profile)
-                               // .documentType(documentType)
-                                .status("PENDING")
-                                .uploadedAt(LocalDateTime.now())
-                                .docTypeId(documentRequest.getTypeId())
-                                .build());
+        VerificationCase verificationCase = verificationCaseRepository.findById(caseId)
+                .orElseThrow(() -> new RuntimeException("Verification case not found: " + caseId));
 
-                // Update fields from the request
-                updateIdentityProofFromRequest(identityProof, documentRequest);
+        VerificationCaseCheck caseCheck = verificationCaseCheckRepository.findById(checkId)
+                .orElseThrow(() -> new RuntimeException("Verification case check not found: " + checkId));
 
-                // Save the identity proof
-                IdentityProof savedProof = identityProofRepository.save(identityProof);
-               
-            }
-           
+        Long companyId = verificationCase.getCompanyId();
 
-        } catch (Exception e) {
-            throw new RuntimeException("Failed to update identity fields: " + e.getMessage(), e);
+        for (DocumentUploadRequest request : updateRequests) {
+
+            IdentityProof identityProof = identityProofRepository
+                    .findByCandidate_CandidateIdAndDocTypeIdAndVerificationCaseAndVerificationCaseCheckAndCompanyId(
+                            candidateId,
+                            request.getTypeId(),
+                            verificationCase,
+                            caseCheck,
+                            companyId
+                    )
+                    .orElseGet(() -> IdentityProof.builder()
+                            .candidate(candidate)
+                            .verificationCase(verificationCase)
+                            .verificationCaseCheck(caseCheck)
+                            .companyId(companyId)
+                            .docTypeId(request.getTypeId())
+                            .status(DocumentStatus.PENDING.name())
+                            .verificationStatus("pending")
+                            .verified(false)
+                            .build()
+                    );
+
+            updateIdentityProofFromRequest(identityProof, request);
+
+            identityProofRepository.save(identityProof);
         }
     }
+
     
     private void updateIdentityProofFromRequest(IdentityProof identityProof, DocumentUploadRequest documentRequest) {
         for (FieldDTO field : documentRequest.getFields()) {
