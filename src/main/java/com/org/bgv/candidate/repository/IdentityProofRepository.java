@@ -58,6 +58,9 @@ public interface IdentityProofRepository extends JpaRepository<IdentityProof, Lo
             Long companyId
     );
 
+    
+
+    
 
     /* ---------------- VERIFICATION ---------------- */
 

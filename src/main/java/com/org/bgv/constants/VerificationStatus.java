@@ -13,6 +13,8 @@ public enum VerificationStatus {
     CANCELLED("Cancelled"),
 	UPLOADED("Uploaded"),
 	VERIFIED("Verified"),
+	ACTIVE("ACTIVE"),
+    DELETED("DELETED"),
 	NOT_UPLOADED("Not Uploaded");
 	
 private final String displayName;

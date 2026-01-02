@@ -9,6 +9,7 @@ import java.time.LocalDateTime;
 import java.util.List;
 import java.util.Map;
 
+import com.org.bgv.common.DocumentTypeInfo;
 import com.org.bgv.entity.VerificationCaseDocument;
 
 @Data
@@ -44,4 +45,10 @@ public class VendorVerificationCheckDTO {
     
     // Employer information (for context)
     private EmployerInfoDTO employer;
+    
+    
+    // for evidence section
+    
+    private List<EvidenceTypeDTO> evidenceTypeList;
+    private List<DocumentTypeInfo> documentTypeInfos;
 }

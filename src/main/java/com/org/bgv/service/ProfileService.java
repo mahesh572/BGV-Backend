@@ -74,7 +74,7 @@ public class ProfileService {
         return ProfileDTO.builder()
                .basicDetails(basicdetailsDTO)
                // .workExperiences(workExperienceService.getWorkExperiencesByProfile(profileId))
-                .workExperiences(workExperienceService.getWorkExperiencesWithDocuments(profileId).getWorkExperiences())
+              //  .workExperiences(workExperienceService.getWorkExperiencesWithDocuments(profileId).getWorkExperiences())
                 .addresses(profileAddressService.getAddressesByProfile(profileId)) 
              //   .educationHistory(educationHistoryService.getEducationByProfile(profileId))
                 .Identity(identityProofService.getIdentityProofsWithDocuments(profileId).getProofs())
@@ -113,7 +113,7 @@ public class ProfileService {
         // education history
         educationHistoryService.deleteAllEducationByProfile(profileId);
         // work history
-        workExperienceService.deleteWorkexperience(profileId);
+      //  workExperienceService.deleteWorkexperience(profileId);
         // address
         profileAddressService.deleteProfileAddressByProfileId(profileId);
         

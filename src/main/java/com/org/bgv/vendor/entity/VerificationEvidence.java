@@ -2,11 +2,18 @@ package com.org.bgv.vendor.entity;
 
 import java.time.LocalDateTime;
 
+import com.org.bgv.candidate.entity.Candidate;
+import com.org.bgv.common.EvidenceLevel;
+import com.org.bgv.common.EvidenceStatus;
 import com.org.bgv.constants.VerificationStatus;
+import com.org.bgv.entity.CheckCategory;
+import com.org.bgv.entity.DocumentType;
+import com.org.bgv.entity.VerificationCase;
 import com.org.bgv.entity.VerificationCaseCheck;
 
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
+import jakarta.persistence.EnumType;
 import jakarta.persistence.Enumerated;
 import jakarta.persistence.FetchType;
 import jakarta.persistence.GeneratedValue;
@@ -14,6 +21,7 @@ import jakarta.persistence.GenerationType;
 import jakarta.persistence.Id;
 import jakarta.persistence.JoinColumn;
 import jakarta.persistence.ManyToOne;
+import jakarta.persistence.PrePersist;
 import jakarta.persistence.Table;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
@@ -29,38 +37,85 @@ import lombok.Setter;
 @AllArgsConstructor
 @Builder
 public class VerificationEvidence {
-    
+
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
-    @Column(name = "evidence_id")
-    private Long evidenceId;
-    
+    private Long id;
+
+    /* ===== Context ===== */
+
     @ManyToOne(fetch = FetchType.LAZY)
-    @JoinColumn(name = "case_check_id", nullable = false)
+    @JoinColumn(name = "verification_case_id", nullable = false)
+    private VerificationCase verificationCase;
+
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "verification_case_check_id", nullable = false)
     private VerificationCaseCheck verificationCaseCheck;
-    
-    @Column(name = "type")
-    private String type; // university_verification, email_verification, etc.
-    
-    @Column(name = "source")
-    private String source;
-    
-    @Column(name = "verified_by")
-    private String verifiedBy;
-    
-    @Column(name = "verified_at")
-    private LocalDateTime verifiedAt;
-    
-    @Enumerated
+
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "candidate_id", nullable = false)
+    private Candidate candidate;
+
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "category_id", nullable = false)
+    private CheckCategory category;
+
+    /* ===== Optional Binding ===== */
+
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "doc_type_id")
+    private DocumentType documentType; // nullable
+
+    @Column(name = "object_id")
+    private Long objectId; // nullable (docType object like IdentityProof id)
+
+    /* ===== Evidence File ===== */
+
+    @Column(name = "file_name", nullable = false)
+    private String fileName;
+
+    @Column(name = "original_file_name")
+    private String originalFileName;
+
+    @Column(name = "file_url", nullable = false)
+    private String fileUrl;
+
+    @Column(name = "file_type")
+    private String fileType;
+
+    @Column(name = "file_size")
+    private Long fileSize;
+
+    @Column(name = "aws_doc_key")
+    private String awsDocKey;
+
+    /* ===== Metadata ===== */
+
+    @Enumerated(EnumType.STRING)
+    @Column(name = "evidence_level", nullable = false)
+    private EvidenceLevel evidenceLevel; 
+    // SECTION / DOC_TYPE
+
+    @Column(name = "remarks", length = 1000)
+    private String remarks;
+
+    @Column(name = "uploaded_by", nullable = false)
+    private String uploadedBy;
+
+    @Column(name = "uploaded_by_role")
+    private String uploadedByRole; // VENDOR / SYSTEM / ADMIN
+
+    @Column(name = "uploaded_at")
+    private LocalDateTime uploadedAt;
+
+    @Enumerated(EnumType.STRING)
     @Column(name = "status")
-    private VerificationStatus status; // verified, pending, rejected
-    
-    @Column(name = "notes", columnDefinition = "TEXT")
-    private String notes;
-    
-    @Column(name = "evidence_path")
-    private String evidencePath; // Path to evidence file
-    
-    @Column(name = "created_at")
-    private LocalDateTime createdAt;
+    private VerificationStatus status;
+
+    @PrePersist
+    public void prePersist() {
+        this.uploadedAt = LocalDateTime.now();
+        this.status = VerificationStatus.ACTIVE;
+    }
 }
+

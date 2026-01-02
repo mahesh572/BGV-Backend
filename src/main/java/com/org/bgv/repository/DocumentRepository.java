@@ -9,6 +9,7 @@ import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 import org.springframework.stereotype.Repository;
 
+import com.org.bgv.common.DocumentStatus;
 import com.org.bgv.entity.Document;
 import com.org.bgv.entity.VerificationCase;
 
@@ -157,5 +158,10 @@ public interface DocumentRepository extends JpaRepository<Document, Long> {
         List<Document> findByCandidate_CandidateIdAndDocIdInAndStatusNot(
                 Long candidateId, Collection<Long> documentIds, String status);
         
+        List<Document> findByObjectIdAndCategory_CategoryIdAndStatusNot(
+                Long objectId,
+                Long categoryId,
+                DocumentStatus status
+        );
         
 }

@@ -8,7 +8,9 @@ import com.org.bgv.candidate.repository.CandidateRepository;
 import com.org.bgv.candidate.repository.EducationHistoryRepository;
 import com.org.bgv.candidate.repository.IdentityProofRepository;
 import com.org.bgv.candidate.repository.WorkExperienceRepository;
+import com.org.bgv.common.DocumentEntityType;
 import com.org.bgv.common.DocumentStatus;
+import com.org.bgv.common.EvidenceLevel;
 import com.org.bgv.common.Status;
 import com.org.bgv.config.SecurityUtils;
 import com.org.bgv.constants.CaseStatus;
@@ -33,7 +35,6 @@ import com.org.bgv.entity.DocumentType;
 //import com.org.bgv.entity.EducationDocuments;
 import com.org.bgv.entity.IdentityDocuments;
 import com.org.bgv.entity.Other;
-import com.org.bgv.entity.ProfessionalDocuments;
 import com.org.bgv.entity.Profile;
 import com.org.bgv.entity.VerificationCase;
 import com.org.bgv.entity.VerificationCaseCheck;
@@ -44,13 +45,17 @@ import com.org.bgv.repository.DocumentRepository;
 import com.org.bgv.repository.DocumentTypeRepository;
 import com.org.bgv.repository.IdentityDocumentsRepository;
 import com.org.bgv.repository.OtherRepository;
-import com.org.bgv.repository.ProfessionalDocumentsRepository;
 import com.org.bgv.repository.ProfileRepository;
 import com.org.bgv.repository.VerificationCaseCheckRepository;
 import com.org.bgv.repository.VerificationCaseDocumentLinkRepository;
 import com.org.bgv.repository.VerificationCaseDocumentRepository;
 import com.org.bgv.repository.VerificationCaseRepository;
 import com.org.bgv.s3.S3StorageService;
+import com.org.bgv.vendor.entity.CategoryEvidenceType;
+import com.org.bgv.vendor.entity.EvidenceType;
+import com.org.bgv.vendor.entity.VerificationEvidence;
+import com.org.bgv.vendor.repository.CategoryEvidenceTypeRepository;
+import com.org.bgv.vendor.repository.VerificationEvidenceRepository;
 
 import jakarta.persistence.EntityNotFoundException;
 import lombok.RequiredArgsConstructor;
@@ -84,7 +89,7 @@ import java.util.stream.Collectors;
 public class DocumentService {
 
     private final DocumentRepository documentRepository;
-    private final ProfessionalDocumentsRepository professionalDocumentsRepository;
+   // private final ProfessionalDocumentsRepository professionalDocumentsRepository;
     private final IdentityDocumentsRepository identityDocumentsRepository;
     private final S3StorageService s3StorageService;
     private final ProfileRepository profileRepository;
@@ -101,6 +106,8 @@ public class DocumentService {
     private final VerificationCaseDocumentRepository verificationCaseDocumentRepository;
     private final VerificationCaseDocumentLinkRepository verificationCaseDocumentLinkRepository;
     private final VerificationCaseCheckRepository verificationCaseCheckRepository;
+    private final CategoryEvidenceTypeRepository categoryEvidenceTypeRepository;
+    private final VerificationEvidenceRepository verificationEvidenceRepository;
     
     private static final Logger logger = LoggerFactory.getLogger(DocumentService.class);
 
@@ -175,7 +182,7 @@ public class DocumentService {
                 .status(DocumentStatus.UPLOADED)
                 .uploadedAt(LocalDateTime.now())
                 .objectId(objectId)
-                .entityType(section.getValue())
+                .entityType(DocumentEntityType.PRIMARY)
                 .uploadedBy(SecurityUtils.getCurrentCustomUserDetails().getUserType())
                 .build();
         
@@ -674,6 +681,7 @@ public class DocumentService {
     
     
     */
+    /*
     public CategoriesDTO getDocuments(Long profileId) {
         List<CheckCategory> documentCategories = checkCategoryRepository.findAll();
         List<DocumentCategoryDto> documentCategoryDtos = new ArrayList<>();
@@ -707,80 +715,86 @@ public class DocumentService {
         
         return CategoriesDTO.builder().categories(documentCategoryDtos).build();
     }
-    
-    public DocumentCategoryDto getDocumentsBySection(Long candidateId,Long caseId, String section) {
-      
-    	// Find category by section name (case insensitive)
-        Optional<CheckCategory> documentCategoryOpt = checkCategoryRepository.findByName(section);
-        
-        CheckCategory documentCategory = documentCategoryOpt.get();
-        logger.info("Section:::::::::::::{}",section);
-        logger.info("documentCategoryOpt  empty::::123:::::::::{}",documentCategoryOpt);
-        
-        if (documentCategoryOpt.isEmpty()) {
-        	logger.info("documentCategoryOpt  empty:::::::::::::{}",documentCategoryOpt);
-            throw new RuntimeException("Section not found: " + section.length());
+    */
+    public DocumentCategoryDto getDocumentsBySection(Long candidateId, Long caseId, String section) {
+
+        Long companyId = SecurityUtils.getCurrentUserCompanyId();
+
+        // 1️⃣ Resolve category
+        CheckCategory category = checkCategoryRepository.findByNameIgnoreCase(section)
+                .orElseThrow(() -> new RuntimeException("Section not found: " + section));
+
+        // 2️⃣ Resolve candidate
+        Candidate candidate = candidateRepository.findById(candidateId)
+                .orElseThrow(() -> new RuntimeException("Candidate not found: " + candidateId));
+
+        // 3️⃣ Resolve verification case (use caseId explicitly)
+        VerificationCase verificationCase = verificationCaseRepository.findById(caseId)
+                .orElseThrow(() -> new RuntimeException("Verification case not found: " + caseId));
+
+        if (!verificationCase.getCompanyId().equals(companyId)) {
+            throw new RuntimeException("Unauthorized access to verification case");
         }
-        List<DocumentType> candidatedocumentTypes = new ArrayList<>();
-       Long companyId = SecurityUtils.getCurrentUserCompanyId();
-       Long userId = SecurityUtils.getCurrentUserId();
-      // Candidate candidate = candidateRepository.findByCompanyIdAndUserUserId(companyId, userId);
-       Candidate candidate = candidateRepository.findById(candidateId).orElse(null);
-       
-       logger.info("getDocumentsBySection:::::::::::::::::::::::::::::::::555555555555");
-       logger.info("companyId::::::candidate.getCandidateId()::{}{}",companyId,candidate.getCandidateId());
-      VerificationCase verificationCase = verificationCaseService.getVerificationCaseByCompanyIdAndCandidateIdAndStatus(companyId, candidate.getCandidateId(), CaseStatus.CREATED).orElse(null);
-       logger.info("!!!!!!!!!!!!!!!!!!!!::verificationCase::{}",verificationCase.getCaseId());
-       
-       if(verificationCase!=null) {
-        	VerificationCaseCheck verificationCaseCheck = verificationCaseService.getVerificationCaseChackByCategory(companyId, verificationCase.getCaseId(), section);
-        	
-        	
-        	logger.info("11111111::::::::::::companyId:::{}{}{}",companyId, userId, section);
-        	logger.info("11111111::::::::::::companyId:::{}",documentCategory.getCategoryId());
-        	// findByVerificationCaseCaseIdAndCheckCategoryCategoryId
-        	List<VerificationCaseDocument> verificationCaseDocuments = verificationCaseService.getVerificationCaseCaseIdAndCheckCategoryCategoryId(verificationCase.getCaseId(), documentCategory.getCategoryId());
-        	candidatedocumentTypes = verificationCaseDocuments.stream()
-        			.map(m->m.getDocumentType())
-        			.collect(Collectors.toList());
-        	logger.info("22222222222:::::::::::::::{}",verificationCaseDocuments);
+
+        // 4️⃣ Resolve case check (optional)
+        Optional<VerificationCaseCheck> caseCheckOpt =
+                verificationCaseCheckRepository.findByVerificationCaseAndCategory(
+                        verificationCase, category
+                );
+
+        // 5️⃣ Resolve document types
+        List<DocumentType> documentTypes;
+        if (caseCheckOpt.isPresent()) {
+            List<VerificationCaseDocument> caseDocuments =
+                    verificationCaseService.getVerificationCaseCaseIdAndCheckCategoryCategoryId(
+                            verificationCase.getCaseId(),
+                            category.getCategoryId()
+                    );
+
+            documentTypes = caseDocuments.stream()
+                    .map(VerificationCaseDocument::getDocumentType)
+                    .distinct()
+                    .toList();
+        } else {
+            documentTypes = documentTypeRepository
+                    .findByCategoryCategoryId(category.getCategoryId());
         }
-       
-        DocumentCategoryDto categoryDto = buildDocumentCategoryDto(documentCategory);
-        List<DocumentType> documentTypes = documentTypeRepository.findByCategoryCategoryId(documentCategory.getCategoryId());
-        
-        logger.info("&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&:::candidatedocumentTypes:::::::{}",candidatedocumentTypes);
-        
-        if(candidatedocumentTypes!=null && candidatedocumentTypes.size()>0) {
-        	documentTypes = candidatedocumentTypes;
+
+        // 6️⃣ Build category DTO
+        DocumentCategoryDto categoryDto = buildDocumentCategoryDto(category);
+
+        switch (category.getName()) {
+
+            case "Identity" ->
+                    categoryDto.setDocumentTypes(
+                            buildIdentityProofDocumentTypes(
+                                    candidateId,
+                                    verificationCase,
+                                    companyId,
+                                    category,
+                                    documentTypes
+                            )
+                    );
+
+            case "Education" ->
+                    categoryDto.setEducation(
+                            buildEducationDocuments(candidateId, category, documentTypes)
+                    );
+
+            case "Work Experience" ->
+                    categoryDto.setCompanies(
+                            buildWorkExperienceDocuments(candidateId, category, documentTypes)
+                    );
+
+            default ->
+                    categoryDto.setDocumentTypes(
+                            buildGenericDocumentTypes(candidateId, category, documentTypes)
+                    );
         }
-        
-        logger.info("document service ::::::::documentTypes"+documentTypes.size());
-        
-        switch (documentCategory.getName()) {
-            case "Identity":
-                categoryDto.setDocumentTypes(buildIdentityProofDocumentTypes(candidateId, documentCategory, documentTypes));
-                break;
-                
-            case "Education":
-            	logger.info("Education::::::::::::::::::::::::::::mahesh");
-                categoryDto.setEducation(buildEducationDocuments(candidateId, documentCategory, documentTypes));
-                break;
-                
-            case "Work Experience":
-            	logger.info("Work Experience:::::::::::::::::::::");
-                categoryDto.setCompanies(buildWorkExperienceDocuments(candidateId, documentCategory, documentTypes));
-                break;
-                
-            default:
-            	logger.info("OTHER:::::::::::::::::::::");
-                categoryDto.setDocumentTypes(buildGenericDocumentTypes(candidateId, documentCategory, documentTypes));
-                break;
-        }
-       
+
         return categoryDto;
     }
-         
+
     	
     	
     
@@ -814,29 +828,54 @@ public class DocumentService {
    
     
     // Identity Proof Documents
-    private List<DocumentTypeDto> buildIdentityProofDocumentTypes(Long candidateId, 
-    		CheckCategory category, 
-                                                                 List<DocumentType> documentTypes) {
-        return documentTypes.stream()
-            .map(documentType -> {
-                DocumentTypeDto dto = buildDocumentTypeDto(documentType);
-                if(documentType!=null && documentType.getName().equalsIgnoreCase("AADHAR")) {
-                	dto.setFields(createAadharFields());
-                }else if(documentType!=null && documentType.getName().equalsIgnoreCase("PANCARD")) {
-                	dto.setFields(createPanFields());
-                }else if(documentType!=null && documentType.getName().equalsIgnoreCase("PASSPORT")) {
-                	dto.setFields(createPassportFields());
-                }
-                
-                
-                List<Document> documents = documentRepository.findByCandidate_CandidateIdAndCategory_CategoryIdAndDocTypeId_DocTypeId(
-                    candidateId, category.getCategoryId(), documentType.getDocTypeId());
-                
-                dto.setFiles(convertDocumentsToFileDTOs(documents));
-                return dto;
-            })
-            .collect(Collectors.toList());
+    private List<DocumentTypeDto> buildIdentityProofDocumentTypes(
+            Long candidateId,
+            VerificationCase verificationCase,
+            Long companyId,
+            CheckCategory category,
+            List<DocumentType> documentTypes) {
+
+        return documentTypes.stream().map(documentType -> {
+
+            // 1️⃣ Find IdentityProof for this doc type
+            Optional<IdentityProof> identityProofOpt =
+                    identityProofRepository.findByCandidate_CandidateIdAndDocTypeIdAndVerificationCase(
+                            candidateId,
+                            documentType.getDocTypeId(),
+                            verificationCase
+                    );
+
+            DocumentTypeDto dto = buildDocumentTypeDto(documentType);
+
+            // 2️⃣ Set ID from IdentityProof table
+            identityProofOpt.ifPresent(identityProof ->
+                    dto.setId(identityProof.getId())
+            );
+
+            // 3️⃣ Set dynamic fields
+            switch (documentType.getName().toUpperCase()) {
+                case "AADHAR" -> dto.setFields(createAadharFields());
+                case "PANCARD", "PAN" -> dto.setFields(createPanFields());
+                case "PASSPORT" -> dto.setFields(createPassportFields());
+            }
+
+            // 4️⃣ Fetch documents using objectId = IdentityProof.id
+            List<Document> documents = identityProofOpt
+                    .map(identityProof ->
+                            documentRepository.findByObjectIdAndCategory_CategoryIdAndStatusNot(
+                                    identityProof.getId(),
+                                    category.getCategoryId(),
+                                    DocumentStatus.DELETED
+                            )
+                    )
+                    .orElse(List.of());
+
+            dto.setFiles(convertDocumentsToFileDTOs(documents));
+
+            return dto;
+        }).toList();
     }
+
     
     // Education Documents
     private List<EducationDTO> buildEducationDocuments(Long candidateId, 
@@ -1120,4 +1159,126 @@ public class DocumentService {
 	        verificationCaseCheckRepository.save(caseCheck);
 	    }
 	}
+	
+	// EVIDENCE
+	
+	@Transactional
+	public void uploadEvidence(
+	        Long candidateId,
+	        Long caseId,
+	        Long caseCheckId,
+	        Long docTypeId,
+	        Long objectId,
+	        Long evidenceTypeId,
+	        String description,
+	        MultipartFile file
+	) {
+
+	    /* ===============================
+	       1. Load Verification Context
+	       =============================== */
+
+	    VerificationCaseCheck check =
+	            verificationCaseCheckRepository.findById(caseCheckId)
+	                    .orElseThrow(() -> new IllegalArgumentException("Invalid caseCheckId"));
+
+	    CheckCategory category = check.getCategory();
+
+	    /* ===============================
+	       2. Validate EvidenceType for Category
+	       =============================== */
+
+	    CategoryEvidenceType categoryEvidenceType =
+	            categoryEvidenceTypeRepository
+	                    .findByCategoryCategoryIdAndEvidenceTypeIdAndActiveTrue(
+	                            category.getCategoryId(),
+	                            evidenceTypeId
+	                    )
+	                    .orElseThrow(() ->
+	                            new IllegalArgumentException(
+	                                    "Evidence type not allowed for this category"
+	                            )
+	                    );
+
+	    EvidenceType evidenceType = categoryEvidenceType.getEvidenceType();
+
+	    /* ===============================
+	       3. Validate rules
+	       =============================== */
+
+	    if (Boolean.TRUE.equals(evidenceType.getRequiresFile()) && file == null) {
+	        throw new IllegalArgumentException("File is mandatory for this evidence type");
+	    }
+
+	    if (Boolean.TRUE.equals(evidenceType.getRequiresRemarks())
+	            && (description == null || description.isBlank())) {
+	        throw new IllegalArgumentException("Remarks are mandatory for this evidence type");
+	    }
+
+	    /* ===============================
+	       4. Determine Evidence Level
+	       =============================== */
+
+	    EvidenceLevel evidenceLevel =
+	            (docTypeId == null)
+	                    ? EvidenceLevel.SECTION
+	                    : EvidenceLevel.DOC_TYPE;
+
+	    /* ===============================
+	       5. Upload file to S3
+	       =============================== */
+
+	    Pair<String, String> upload =
+	            s3StorageService.uploadFile(
+	                    file,
+	                    "evidence/" + caseId
+	            );
+
+	    /* ===============================
+	       6. Build VerificationEvidence
+	       =============================== */
+
+	    VerificationEvidence evidence = VerificationEvidence.builder()
+	            .verificationCase(
+	                    verificationCaseRepository.getReferenceById(caseId)
+	            )
+	            .verificationCaseCheck(check)
+	            .candidate(
+	                    candidateRepository.getReferenceById(candidateId)
+	            )
+	            .category(category)
+
+	            .documentType(
+	                    docTypeId != null
+	                            ? documentTypeRepository.getReferenceById(docTypeId)
+	                            : null
+	            )
+	            .objectId(
+	                    evidenceLevel == EvidenceLevel.DOC_TYPE ? objectId : null
+	            )
+
+	            .fileName(file.getOriginalFilename())
+	            .originalFileName(file.getOriginalFilename())
+	            .fileUrl(upload.getFirst())
+	            .awsDocKey(upload.getSecond())
+	            .fileSize(file.getSize())
+	            .fileType(file.getContentType())
+
+	            .evidenceLevel(evidenceLevel)
+	            .remarks(description)
+
+	            .uploadedBy(SecurityUtils.getCurrentUsername())
+	            .uploadedByRole("VENDOR")
+	            .status(VerificationStatus.ACTIVE)
+	            .build();
+
+	    /* ===============================
+	       7. Save
+	       =============================== */
+
+	    verificationEvidenceRepository.save(evidence);
+	}
+	
+	
+	
 }

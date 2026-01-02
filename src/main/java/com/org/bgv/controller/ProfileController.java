@@ -193,7 +193,7 @@ public class ProfileController {
                     .body(CustomApiResponse.failure("Failed to delete address", HttpStatus.INTERNAL_SERVER_ERROR));
         }
     }
-    
+    /*
     @GetMapping("/{profileId}/documents")
     public ResponseEntity<CustomApiResponse<CategoriesDTO>> getDocuments(@PathVariable Long profileId) {
         try {
@@ -207,7 +207,7 @@ public class ProfileController {
                     .body(CustomApiResponse.failure("Failed to retrieve documents: " + e.getMessage(), HttpStatus.INTERNAL_SERVER_ERROR));
         }
     }
-  
+  */
     @GetMapping("/documents/types/{categoryId}")
     public ResponseEntity<CustomApiResponse<List<DocumentTypeResponse>>> getDocumentTypesByCategoryIgnoreCase(
             @PathVariable Long categoryId) {

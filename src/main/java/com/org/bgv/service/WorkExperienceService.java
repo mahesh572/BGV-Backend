@@ -11,9 +11,9 @@ import com.org.bgv.dto.DocumentSummary;
 import com.org.bgv.dto.WorkExperienceDTO;
 import com.org.bgv.dto.WorkExperienceResponse;
 import com.org.bgv.entity.BaseDocument;
-import com.org.bgv.entity.ProfessionalDocuments;
+//import com.org.bgv.entity.ProfessionalDocuments;
 import com.org.bgv.entity.Profile;
-import com.org.bgv.repository.ProfessionalDocumentsRepository;
+//import com.org.bgv.repository.ProfessionalDocumentsRepository;
 import com.org.bgv.repository.ProfileRepository;
 import com.org.bgv.s3.S3StorageService;
 
@@ -40,7 +40,7 @@ public class WorkExperienceService {
 
 	private final WorkExperienceRepository workExperienceRepository;
 	private final ProfileRepository profileRepository;
-	private final ProfessionalDocumentsRepository professionalDocumentsRepository;
+	// private final ProfessionalDocumentsRepository professionalDocumentsRepository;
 	private final S3StorageService s3StorageService;
 	 private final CandidateRepository candidateRepository;
 	
@@ -75,7 +75,7 @@ public class WorkExperienceService {
 		List<WorkExperience> experiences = workExperienceRepository.findByCandidateId(candidateId);
 		return experiences.stream().map(this::mapToDTO).collect(Collectors.toList());
 	}
-
+/*
 	public WorkExperienceResponse getWorkExperiencesWithDocuments(Long profileId) {
 		// Verify profile exists
 		logger.info("IN WORKEXPERIENCE SERVICE::::::::::::START");
@@ -115,6 +115,7 @@ public class WorkExperienceService {
 				// .summary(summary)
 				.build();
 	}
+	*/
 
 	private WorkExperience mapToEntity(WorkExperienceDTO dto, Candidate candidate) {
 		return WorkExperience.builder()
@@ -151,7 +152,7 @@ public class WorkExperienceService {
 				.employmentType(entity.getEmploymentType())
 				.build();
 	}
-
+/*
 	private WorkExperienceDTO convertToWorkExperienceDetail(WorkExperience experience,
 			List<ProfessionalDocuments> documents) {
 		// Filter documents for this specific experience
@@ -181,6 +182,7 @@ public class WorkExperienceService {
 				.status(document.getStatus()).uploadedAt(document.getUploadedAt()).verifiedAt(document.getVerifiedAt())
 				.comments(document.getComments()).awsDocKey(document.getAwsDocKey()).build();
 	}
+	*/
 
 	private DocumentStats calculateDocumentStats(List<DocumentResponse> documents) {
 		long total = documents.size();
@@ -216,7 +218,7 @@ public class WorkExperienceService {
 		return dotIndex > 0 ? fileUrl.substring(dotIndex + 1).toUpperCase() : "UNKNOWN";
 	}
 	
-	
+	/*
 	public void deleteWorkexperience(Long profileId) {
 		
 		List<ProfessionalDocuments> allDocuments = professionalDocumentsRepository.findByProfile_ProfileId(profileId);
@@ -230,7 +232,7 @@ public class WorkExperienceService {
 		workExperienceRepository.deleteByProfile_ProfileId(profileId);
 		
 	}
-	
+	*/
 	public void deleteWorkExperience(Long candidateId, Long experienceId) {
 	    workExperienceRepository.findByCandidateIdAndExperienceId(candidateId, experienceId)
 	            .ifPresentOrElse(

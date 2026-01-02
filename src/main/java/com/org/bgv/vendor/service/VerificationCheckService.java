@@ -3,6 +3,7 @@ package com.org.bgv.vendor.service;
 import com.org.bgv.candidate.entity.Candidate;
 import com.org.bgv.candidate.repository.CandidateRepository;
 import com.org.bgv.common.DocumentStatus;
+import com.org.bgv.common.DocumentTypeInfo;
 import com.org.bgv.constants.CaseStatus;
 import com.org.bgv.entity.*;
 import com.org.bgv.repository.*;
@@ -16,6 +17,7 @@ import com.org.bgv.vendor.dto.EmployerInfoDTO;
 import com.org.bgv.vendor.dto.EmploymentCheckDTO;
 import com.org.bgv.vendor.dto.EmploymentContextDTO;
 import com.org.bgv.vendor.dto.EvidenceDTO;
+import com.org.bgv.vendor.dto.EvidenceTypeDTO;
 import com.org.bgv.vendor.dto.IdentityCheckDTO;
 import com.org.bgv.vendor.dto.IdentityContextDTO;
 import com.org.bgv.vendor.dto.RequirementDTO;
@@ -25,10 +27,14 @@ import com.org.bgv.vendor.dto.VendorNoteDTO;
 import com.org.bgv.vendor.dto.VendorVerificationCheckDTO;
 import com.org.bgv.vendor.dto.VerificationDocumentDTO;
 import com.org.bgv.vendor.dto.VerificationHistoryDTO;
+import com.org.bgv.vendor.entity.CategoryEvidenceType;
+import com.org.bgv.vendor.entity.EvidenceType;
 import com.org.bgv.vendor.entity.VendorNote;
 import com.org.bgv.vendor.entity.VerificationCheckHistory;
 import com.org.bgv.vendor.entity.VerificationEvidence;
 import com.org.bgv.vendor.entity.VerificationTimeline;
+import com.org.bgv.vendor.repository.CategoryEvidenceTypeRepository;
+import com.org.bgv.vendor.repository.EvidenceTypeRepository;
 import com.org.bgv.vendor.repository.VendorNoteRepository;
 import com.org.bgv.vendor.repository.VerificationCheckHistoryRepository;
 import com.org.bgv.vendor.repository.VerificationEvidenceRepository;
@@ -59,38 +65,93 @@ public class VerificationCheckService {
     private final VerificationTimelineRepository timelineRepository;
     private final VerificationCheckHistoryRepository historyRepository;
     private final VerificationCaseDocumentLinkRepository verificationCaseDocumentLinkRepository;
+    private final EvidenceTypeRepository evidenceTypeRepository;
+    private final DocumentTypeRepository documentTypeRepository;
+    private final CategoryEvidenceTypeRepository categoryEvidenceTypeRepository;
     
     /**
      * Get verification check details by type
      */
     @Transactional(readOnly = true)
     public VendorVerificationCheckDTO getVerificationCheck(Long checkId, Long vendorId) {
+
         log.info("Fetching verification check {} for vendor {}", checkId, vendorId);
-        
+
         VerificationCaseCheck check = verificationCaseCheckRepository.findById(checkId)
                 .orElseThrow(() -> new RuntimeException("Verification check not found"));
-        
-        // Verify vendor has access
-        if (!check.getVendorId().equals(vendorId)) {
+
+        // 1️⃣ Vendor authorization
+        if (!Objects.equals(check.getVendorId(), vendorId)) {
             throw new RuntimeException("Vendor not authorized to access this check");
         }
-        
+
         VerificationCase verificationCase = check.getVerificationCase();
+
         Candidate candidate = candidateRepository.findById(verificationCase.getCandidateId())
                 .orElseThrow(() -> new RuntimeException("Candidate not found"));
+
+        Company company = companyRepository.findById(verificationCase.getCompanyId()).orElse(null);
+
+        // 2️⃣ Base DTO
+        VendorVerificationCheckDTO dto =
+                buildCommonCheckDTO(check, verificationCase, candidate, company);
+
+        // 3️⃣ Declared + Context
+        dto.setDeclaredInfo(getDeclaredInfo(check, candidate));
+        dto.setContext(getCheckContext(check, check.getCategory().getCode()));
+
+        // 4️⃣ Evidence already uploaded
+        dto.setEvidence(getEvidence(check));
+
+        // 5️⃣ Evidence types allowed for this category
+        dto.setEvidenceTypeList(getAllowedEvidenceTypes(check.getCategory().getCategoryId()));
+
+        // 6️⃣ Document types applicable for this category
+        dto.setDocumentTypeInfos(getDocumentTypesForCategory(check));
+
+        return dto;
+    }
+
+    
+    private List<EvidenceTypeDTO> getAllowedEvidenceTypes(Long categoryId) {
+        return categoryEvidenceTypeRepository
+                .findByCategoryCategoryIdAndActiveTrue(categoryId)
+                .stream()
+                .map(CategoryEvidenceType::getEvidenceType) // extract EvidenceType
+                .map(this::toDTO)
+                .toList();
         
-        Company company = companyRepository.findById(verificationCase.getCompanyId())
-                .orElse(null);
         
-        // Build common DTO parts
-        VendorVerificationCheckDTO baseDTO = buildCommonCheckDTO(check, verificationCase, candidate, company);
+    }
+
+    private EvidenceTypeDTO toDTO(EvidenceType et) {
+        return EvidenceTypeDTO.builder()
+                .id(et.getId())
+                .name(et.getLabel())
+                .value(et.getCode())
+                .build();
+    }
+    
+    private List<DocumentTypeInfo> getDocumentTypesForCategory(VerificationCaseCheck check) {
+       // Long categoryId = check.getCategory().getId(); // get category ID from check
         
-        // Add type-specific information
-        String checkType = check.getCategory().getCode().toLowerCase();
-        baseDTO.setDeclaredInfo(getDeclaredInfo(check, candidate));
-        baseDTO.setContext(getCheckContext(check, checkType));
-        
-        return baseDTO;
+        return verificationCaseDocumentRepository
+                .findByVerificationCaseCaseIdAndCheckCategoryCategoryId(
+                        check.getVerificationCase().getCaseId(), 
+                        check.getCategory().getCategoryId())
+                .stream()
+                .map(VerificationCaseDocument::getDocumentType) // extract DocumentType
+                .map(this::toDocumentTypeInfo)
+                .toList(); // Java 16+, otherwise use Collectors.toList()
+    }
+
+    private DocumentTypeInfo toDocumentTypeInfo(DocumentType dt) {
+        return DocumentTypeInfo.builder()
+                .docTypeId(dt.getDocTypeId())
+                .name(dt.getName())
+                .code(dt.getCode())
+               // .price(dt.getPrice())
+                .build();
     }
     
     /**
@@ -379,7 +440,7 @@ public class VerificationCheckService {
         vendorNoteRepository.save(note);
         saveTimelineEvent(check, "note_added", "Note added", "Vendor Agent");
     }
-    
+    /*
     @Transactional
     public void uploadEvidence(Long checkId, Long vendorId, EvidenceDTO evidenceDTO) {
         VerificationCaseCheck check = verificationCaseCheckRepository.findById(checkId)
@@ -391,13 +452,13 @@ public class VerificationCheckService {
         
         VerificationEvidence evidence = VerificationEvidence.builder()
                 .verificationCaseCheck(check)
-                .type(evidenceDTO.getType())
-                .source(evidenceDTO.getSource())
-                .verifiedBy(evidenceDTO.getVerifiedBy())
-                .verifiedAt(LocalDateTime.now())
-                .status(evidenceDTO.getStatus())
-                .notes(evidenceDTO.getNotes())
-                .evidencePath(evidenceDTO.getEvidencePath())
+              //  .type(evidenceDTO.getType())
+              //  .source(evidenceDTO.getSource())
+              //  .verifiedBy(evidenceDTO.getVerifiedBy())
+              //  .verifiedAt(LocalDateTime.now())
+              //  .status(evidenceDTO.getStatus())
+              //  .notes(evidenceDTO.getNotes())
+              //  .evidencePath(evidenceDTO.getEvidencePath())
                 .createdAt(LocalDateTime.now())
                 .build();
         
@@ -407,7 +468,7 @@ public class VerificationCheckService {
                 check.getCategory().getCode(), evidenceDTO.getType());
         saveTimelineEvent(check, "evidence_uploaded", eventDescription, "Vendor Agent");
     }
-    
+    */
     @Transactional
     public void completeCheck(Long checkId, Long vendorId, String finalStatus, String summary) {
         VerificationCaseCheck check = verificationCaseCheckRepository.findById(checkId)
@@ -467,9 +528,9 @@ public class VerificationCheckService {
     public List<VerificationDocumentDTO> getDocuments(VerificationCaseCheck check) {
         // First, get the VerificationCaseDocument records for this case and check type
         List<VerificationCaseDocument> caseDocuments = verificationCaseDocumentRepository
-                .findByVerificationCaseAndCheckCategory_Code(
-                        check.getVerificationCase(), 
-                        check.getCategory().getCode());
+                .findByVerificationCaseCaseIdAndCheckCategoryCategoryId(
+                        check.getVerificationCase().getCaseId(), 
+                        check.getCategory().getCategoryId());
         
         return caseDocuments.stream()
                 .flatMap(caseDoc -> getLinkedDocuments(caseDoc).stream())
@@ -701,18 +762,60 @@ public class VerificationCheckService {
     private List<EvidenceDTO> getEvidence(VerificationCaseCheck check) {
         return evidenceRepository.findByVerificationCaseCheck(check)
                 .stream()
-                .map(ev -> EvidenceDTO.builder()
-                        .id("EVD-" + ev.getEvidenceId())
-                        .type(ev.getType())
-                        .source(ev.getSource())
-                        .verifiedBy(ev.getVerifiedBy())
-                        .verifiedAt(ev.getVerifiedAt())
-                        .status(ev.getStatus())
-                        .notes(ev.getNotes())
-                        .evidencePath(ev.getEvidencePath())
-                        .build())
-                .collect(Collectors.toList());
+                .map(this::mapToEvidenceDTO)
+                .toList();
     }
+    
+    private EvidenceDTO mapToEvidenceDTO(VerificationEvidence ev) {
+
+        return EvidenceDTO.builder()
+
+            /* ===== Identity ===== */
+            .evidenceId(ev.getId())
+
+            /* ===== Classification ===== */
+            .categoryId(getId(ev.getCategory()))
+            .docTypeId(getId(ev.getDocumentType()))
+            .objectId(ev.getObjectId())
+            .level(ev.getEvidenceLevel())
+
+            /* ===== Evidence Type ===== */
+            // If you introduce EvidenceType entity later, plug it here
+            .evidenceTypeId(null)
+            .evidenceTypeCode(null)
+            .evidenceTypeLabel(null)
+
+            /* ===== File Info ===== */
+            .fileName(ev.getFileName())
+            .originalFileName(ev.getOriginalFileName())
+            .fileType(ev.getFileType())
+            .fileSize(ev.getFileSize())
+            .evidencePath(ev.getFileUrl())
+
+            /* ===== Verification ===== */
+            .status(ev.getStatus())
+            .verifiedBy(null)
+            .verifiedAt(null)
+            .notes(ev.getRemarks())
+
+            /* ===== Audit ===== */
+            .uploadedBy(ev.getUploadedBy())
+            .uploadedAt(ev.getUploadedAt())
+
+            .build();
+    }
+    
+    private Long getId(Object entity) {
+        if (entity == null) return null;
+
+        if (entity instanceof CheckCategory c) return c.getCategoryId();
+        if (entity instanceof DocumentType d) return d.getDocTypeId();
+
+        return null;
+    }
+
+    
+
     private String getCaseReference(VerificationCase verificationCase) {
         // Generate or fetch case reference
         // For now, use pattern CASE-{id}

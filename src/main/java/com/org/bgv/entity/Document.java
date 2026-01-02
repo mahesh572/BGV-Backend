@@ -6,6 +6,7 @@ import org.hibernate.annotations.CreationTimestamp;
 import org.hibernate.annotations.UpdateTimestamp;
 
 import com.org.bgv.candidate.entity.Candidate;
+import com.org.bgv.common.DocumentEntityType;
 import com.org.bgv.common.DocumentStatus;
 import com.org.bgv.constants.CaseStatus;
 
@@ -109,8 +110,9 @@ public class Document implements BaseDocument {
     @Column(name = "company_id")
     private Long companyId;
     
-    @Column(name = "entity_type")
-    private String entityType;
+    @Enumerated(EnumType.STRING)
+    @Column(name = "entity_type", nullable = false)
+    private DocumentEntityType entityType;
 
     @CreationTimestamp
     @Column(name = "created_at", updatable = false)
