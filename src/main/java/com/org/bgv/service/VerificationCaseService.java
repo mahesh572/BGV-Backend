@@ -5,6 +5,7 @@ import com.org.bgv.common.VerificationCaseResponse;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.node.ObjectNode;
 import com.org.bgv.candidate.dto.CaseStatisticsDTO;
+import com.org.bgv.candidate.dto.SectionNamesDisplayDTO;
 import com.org.bgv.candidate.dto.VerificationCaseDTO;
 import com.org.bgv.candidate.dto.VerificationCaseFilterDTO;
 import com.org.bgv.candidate.dto.VerificationCaseResponseDTO;
@@ -816,26 +817,27 @@ public class VerificationCaseService {
     }
 
    
-    public List<String> getSectionsForDocumentVerificationCase(Long candidateId,Long caseId) {
-    	
-    	Long companyId = SecurityUtils.getCurrentUserCompanyId();
-    	log.info("getSectionsForDocumentVerificationCase:::::::::::companyId:::candidateId::{}{}",companyId,candidateId);
-    	// VerificationCase verificationCase = getActiveVerificationCase(companyId, candidateId);
-    	
-    	VerificationCaseDTO  verificationCaseDTO = getCandidateVerificationCase(candidateId, caseId);
-    	
-    	log.info("getSectionsForDocumentVerificationCase:::::::::{}",verificationCaseDTO.getCaseId());
-    	return new ArrayList<>(
-    	        verificationCaseCheckRepository
-    	                .findByVerificationCase_CaseId(verificationCaseDTO.getCaseId())
-    	                .stream()
-    	                .map(VerificationCaseCheck::getCategory)
-    	                .map(check -> check.getName())
-    	                .distinct()
-    	                .toList()
-    	);
+    public List<SectionNamesDisplayDTO> getSectionsForDocumentVerificationCase(
+            Long candidateId,
+            Long caseId
+    ) {
+        log.info("getSectionsForDocumentVerificationCase ::: candidateId={}", candidateId);
+
+        VerificationCaseDTO verificationCaseDTO =
+                getCandidateVerificationCase(candidateId, caseId);
+
+        return verificationCaseCheckRepository
+                .findByVerificationCase_CaseId(verificationCaseDTO.getCaseId())
+                .stream()
+                .map(check -> SectionNamesDisplayDTO.builder()
+                        .sectionName(check.getCategory().getName())
+                        .categoryId(check.getCategory().getCategoryId())
+                        .checkId(check.getCaseCheckId())
+                        .build()
+                )
+                .toList();
     }
-    
+
     public VerificationCase getActiveVerificationCase(Long companyId, Long candidateId) {
 
         return verificationCaseRepository

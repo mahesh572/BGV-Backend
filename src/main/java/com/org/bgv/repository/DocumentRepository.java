@@ -164,4 +164,7 @@ public interface DocumentRepository extends JpaRepository<Document, Long> {
                 DocumentStatus status
         );
         
+        
+        List<Document> findByCandidate_CandidateIdAndVerificationCaseCheck_CaseCheckIdAndObjectIdAndStatusNot(Long candidateId, Long caseCheckId,Long objectId,DocumentStatus status);
+        
 }

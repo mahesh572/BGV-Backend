@@ -1,7 +1,11 @@
 package com.org.bgv.vendor.service;
 
 import com.org.bgv.candidate.entity.Candidate;
+import com.org.bgv.candidate.entity.EducationHistory;
+import com.org.bgv.candidate.entity.IdentityProof;
 import com.org.bgv.candidate.repository.CandidateRepository;
+import com.org.bgv.candidate.repository.IdentityProofRepository;
+import com.org.bgv.common.DocumentEntityType;
 import com.org.bgv.common.DocumentStatus;
 import com.org.bgv.common.DocumentTypeInfo;
 import com.org.bgv.constants.CaseStatus;
@@ -11,6 +15,7 @@ import com.org.bgv.vendor.dto.CandidateInfoDTO;
 import com.org.bgv.vendor.dto.DeclaredEducationInfoDTO;
 import com.org.bgv.vendor.dto.DeclaredEmploymentInfoDTO;
 import com.org.bgv.vendor.dto.DeclaredIdentityInfoDTO;
+import com.org.bgv.vendor.dto.DocumentTypeVerificationDTO;
 import com.org.bgv.vendor.dto.EducationCheckDTO;
 import com.org.bgv.vendor.dto.EducationContextDTO;
 import com.org.bgv.vendor.dto.EmployerInfoDTO;
@@ -20,12 +25,15 @@ import com.org.bgv.vendor.dto.EvidenceDTO;
 import com.org.bgv.vendor.dto.EvidenceTypeDTO;
 import com.org.bgv.vendor.dto.IdentityCheckDTO;
 import com.org.bgv.vendor.dto.IdentityContextDTO;
+import com.org.bgv.vendor.dto.ObjectDTO;
 import com.org.bgv.vendor.dto.RequirementDTO;
 import com.org.bgv.vendor.dto.SlaInfoDTO;
 import com.org.bgv.vendor.dto.TimelineEventDTO;
 import com.org.bgv.vendor.dto.VendorNoteDTO;
 import com.org.bgv.vendor.dto.VendorVerificationCheckDTO;
+import com.org.bgv.vendor.dto.VerificationCheckResponseDTO;
 import com.org.bgv.vendor.dto.VerificationDocumentDTO;
+import com.org.bgv.vendor.dto.VerificationFileDTO;
 import com.org.bgv.vendor.dto.VerificationHistoryDTO;
 import com.org.bgv.vendor.entity.CategoryEvidenceType;
 import com.org.bgv.vendor.entity.EvidenceType;
@@ -68,10 +76,13 @@ public class VerificationCheckService {
     private final EvidenceTypeRepository evidenceTypeRepository;
     private final DocumentTypeRepository documentTypeRepository;
     private final CategoryEvidenceTypeRepository categoryEvidenceTypeRepository;
+    private final IdentityProofRepository identityProofRepository;
+    private final DocumentRepository documentRepository;
     
     /**
      * Get verification check details by type
      */
+    /*
     @Transactional(readOnly = true)
     public VendorVerificationCheckDTO getVerificationCheck(Long checkId, Long vendorId) {
 
@@ -111,7 +122,302 @@ public class VerificationCheckService {
 
         return dto;
     }
+*/
+    
+    @Transactional(readOnly = true)
+    public VerificationCheckResponseDTO getVerificationCheck(Long checkId, Long vendorId) {
 
+        log.info("Fetching verification check {} for vendor {}", checkId, vendorId);
+
+        VerificationCaseCheck check = verificationCaseCheckRepository.findByVendorIdAndCaseCheckId(vendorId,checkId);
+              //  .orElseThrow(() -> new RuntimeException("Verification check not found"));
+
+        // 1️⃣ Vendor authorization
+        if (!Objects.equals(check.getVendorId(), vendorId)) {
+            throw new RuntimeException("Vendor not authorized to access this check");
+        }
+
+        VerificationCase verificationCase = check.getVerificationCase();
+
+        Candidate candidate = candidateRepository.findById(verificationCase.getCandidateId())
+                .orElseThrow(() -> new RuntimeException("Candidate not found"));
+
+        // 2️⃣ Build base response
+        VerificationCheckResponseDTO response =
+                buildVerificationCheckResponse(check, verificationCase, candidate);
+
+        // 3️⃣ Objects (SECTION-WISE DATA)
+        response.setObjects(buildObjects(check));
+
+        // 4️⃣ Static / unchanged lists
+        response.setEvidenceTypeList(
+                getAllowedEvidenceTypes(check.getCategory().getCategoryId())
+        );
+
+        response.setDocumentTypeInfos(
+                getDocumentTypesForCategory(check)
+        );
+
+        return response;
+    }
+    
+    
+    
+    private VerificationCheckResponseDTO buildVerificationCheckResponse(
+            VerificationCaseCheck check,
+            VerificationCase verificationCase,
+            Candidate candidate
+    ) {
+
+        return VerificationCheckResponseDTO.builder()
+                .caseId(String.valueOf(verificationCase.getCaseId()))
+                .caseRef(getCaseReference(verificationCase))
+                .checkId(String.valueOf(check.getCaseCheckId()))
+                .checkRef(check.getCheckRef())
+                .checkType(check.getCategory().getCode().toLowerCase())
+                .checkName(check.getCategory().getName())
+                .status(mapCheckStatus(check.getStatus()))
+                .candidate(mapCandidateInfo(candidate))
+              //  .audit(buildAudit(check))
+                .build();
+    }
+    
+    private List<ObjectDTO> buildObjects(VerificationCaseCheck check) {
+
+	    List<ObjectDTO> objects = new ArrayList<>();
+
+	    objects.addAll(buildIdentityObjects(check));
+	  //  objects.addAll(buildEducationObjects(check));
+	  //  objects.addAll(buildWorkExperienceObjects(check));
+
+	    return objects;
+
+}
+
+    private List<ObjectDTO> buildIdentityObjects(VerificationCaseCheck check) {
+
+        List<IdentityProof> identities =
+                identityProofRepository.findByVerificationCaseCheckCaseCheckId(
+                        check.getCaseCheckId()
+                );
+
+        return identities.stream()
+                .map(identity -> ObjectDTO.builder()
+                        .objectId(identity.getId())
+                        .objectType("IDENTITY")
+                        .displayName(resolveIdentityName(identity))
+                        .data(buildIdentityData(identity))
+                        .documentTypes(
+                                buildDocumentTypes(
+                                        identity.getId(),check
+                                        
+                                )
+                        )
+                        .evidence(Collections.emptyList())
+                        .build()
+                )
+                .toList();
+    }
+    
+    private String resolveIdentityName(IdentityProof identityProof) {
+    	
+    	DocumentType documentType = documentTypeRepository.findById(identityProof.getDocTypeId()).orElseThrow(()->new RuntimeException("Not found"));
+    	
+    	return documentType.getLabel();
+    	
+    }
+
+    private Map<String, Object> buildIdentityData(IdentityProof identity) {
+
+        Map<String, Object> data = new HashMap<>();
+        data.put("documentNumber", identity.getDocumentNumber());
+        data.put("issueDate", identity.getIssueDate());
+        data.put("expiryDate", identity.getExpiryDate());
+        data.put("verified", identity.getVerified());
+        data.put("verificationStatus", identity.getVerificationStatus());
+        data.put("verifiedBy", identity.getVerifiedBy());
+        data.put("verifiedAt", identity.getVerifiedAt());
+        data.put("expired", identity.isExpired());
+        data.put("daysUntilExpiry", identity.getDaysUntilExpiry());
+
+        return data;
+    }
+    
+    /*
+    private List<ObjectDTO> buildEducationObjects(VerificationCaseCheck check) {
+
+        List<EducationHistory> educations =
+                educationHistoryRepository.findByVerificationCaseCheckId(
+                        check.getCaseCheckId()
+                );
+
+        return educations.stream()
+                .map(edu -> ObjectDTO.builder()
+                        .objectId(String.valueOf(edu.getId()))
+                        .objectType("EDUCATION")
+                        .displayName(edu.getDegree().getName())
+                        .data(buildEducationData(edu))
+                        .documentTypes(
+                                buildDocumentTypes(
+                                        edu.getId(),
+                                        DocumentEntityType.EDUCATION
+                                )
+                        )
+                        .evidence(Collections.emptyList())
+                        .build()
+                )
+                .toList();
+    }
+
+    private Map<String, Object> buildEducationData(EducationHistory edu) {
+
+        Map<String, Object> data = new HashMap<>();
+        data.put("degree", edu.getDegree().getName());
+        data.put("fieldOfStudy", edu.getField().getName());
+        data.put("institute", edu.getInstitute_name());
+        data.put("university", edu.getUniversity_name());
+        data.put("fromDate", edu.getFromDate());
+        data.put("toDate", edu.getToDate());
+        data.put("yearOfPassing", edu.getYearOfPassing());
+        data.put("grade", edu.getGrade());
+        data.put("gpa", edu.getGpa());
+        data.put("verified", edu.isVerified());
+        data.put("verificationStatus", edu.getVerificationStatus());
+
+        return data;
+    }
+
+    
+    private List<ObjectDTO> buildWorkExperienceObjects(VerificationCaseCheck check) {
+
+        List<WorkExperience> works =
+                workExperienceRepository.findByVerificationCaseCheckId(
+                        check.getCaseCheckId()
+                );
+
+        return works.stream()
+                .map(work -> ObjectDTO.builder()
+                        .objectId(String.valueOf(work.getExperienceId()))
+                        .objectType("WORK_EXPERIENCE")
+                        .displayName(work.getCompany_name())
+                        .data(buildWorkData(work))
+                        .documentTypes(
+                                buildDocumentTypes(
+                                        work.getExperienceId(),
+                                        DocumentEntityType.WORK_EXPERIENCE
+                                )
+                        )
+                        .evidence(Collections.emptyList())
+                        .build()
+                )
+                .toList();
+    }
+
+    
+    
+    private Map<String, Object> buildWorkData(WorkExperience work) {
+
+        Map<String, Object> data = new HashMap<>();
+        data.put("companyName", work.getCompany_name());
+        data.put("position", work.getPosition());
+        data.put("startDate", work.getStart_date());
+        data.put("endDate", work.getEnd_date());
+        data.put("currentlyWorking", work.getCurrentlyWorking());
+        data.put("employeeId", work.getEmployee_id());
+        data.put("durationInMonths", work.getDurationInMonths());
+        data.put("durationInYears", work.getDurationInYears());
+        data.put("verified", work.isVerified());
+        data.put("verificationStatus", work.getVerificationStatus());
+
+        return data;
+    }
+*/
+  //  
+    private List<DocumentTypeVerificationDTO> buildDocumentTypes(
+            Long objectId,VerificationCaseCheck check
+           
+    ) {
+
+        List<Document> documents =
+                documentRepository.findByCandidate_CandidateIdAndVerificationCaseCheck_CaseCheckIdAndObjectIdAndStatusNot(
+                		check.getVerificationCase().getCandidateId(),
+                		check.getCaseCheckId(),
+                		objectId,
+                		DocumentStatus.DELETED
+                );
+
+        Map<Object, List<Document>> grouped =
+                documents.stream()
+                        .collect(Collectors.groupingBy(
+                                doc -> doc.getDocTypeId().getDocTypeId()
+                        ));
+
+        return grouped.entrySet().stream()
+                .map(entry -> {
+                    DocumentType docType = entry.getValue().get(0).getDocTypeId();
+
+                    return DocumentTypeVerificationDTO.builder()
+                            .documentTypeId(String.valueOf(docType.getDocTypeId()))
+                            .type(docType.getLabel())
+                            .status(resolveDocumentTypeStatus(entry.getValue()))
+                            .files(buildVerificationFiles(entry.getValue()))
+                            .build();
+                })
+                .toList();
+        
+        
+                
+                
+    }
+    
+    private String resolveDocumentTypeStatus(List<Document> documents) {
+
+        if (documents.stream().allMatch(Document::isVerified)) {
+            return "VERIFIED";
+        }
+
+        if (documents.stream().anyMatch(
+                d -> d.getStatus() == DocumentStatus.REJECTED
+        )) {
+            return "REJECTED";
+        }
+
+        if (documents.stream().anyMatch(
+                d -> d.getStatus() == DocumentStatus.INSUFFICIENT
+        )) {
+            return "INSUFFICIENT";
+        }
+
+        return "PENDING";
+    }
+
+
+    
+    private List<VerificationFileDTO> buildVerificationFiles(
+            List<Document> documents
+    ) {
+
+        return documents.stream()
+                .map(doc -> VerificationFileDTO.builder()
+                        .fileId(doc.getDocId())
+                        .fileName(doc.getFileName())
+                        .fileUrl(doc.getFileUrl())
+                        .fileSize(doc.getFileSize())
+                        .fileType(doc.getFileType())
+                        .status(doc.getStatus())
+                        .uploadedBy(doc.getUploadedBy())
+                        .uploadedAt(doc.getUploadedAt())
+                        .verified(doc.isVerified())
+                        .verifiedBy(doc.getVerifiedBy())
+                        .verifiedAt(doc.getVerifiedAt())
+                        .verificationNotes(doc.getVerificationNotes())
+                        .comments(doc.getComments())
+                        .createdAt(doc.getCreatedAt())
+                        .updatedAt(doc.getUpdatedAt())
+                        .build()
+                )
+                .toList();
+    }
     
     private List<EvidenceTypeDTO> getAllowedEvidenceTypes(Long categoryId) {
         return categoryEvidenceTypeRepository

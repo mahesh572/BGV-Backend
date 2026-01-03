@@ -46,4 +46,8 @@ public interface VerificationCaseDocumentRepository extends JpaRepository<Verifi
     Optional<VerificationCaseDocument> findByVerificationCase_CaseIdAndCheckCategory_CategoryIdAndDocumentType_DocTypeId(
             Long caseId, Long categoryId, Long documentTypeId);
     
+    Optional<VerificationCaseDocument> findByVerificationCase_CaseIdAndVerificationCaseCheck_CaseCheckIdAndDocumentType_DocTypeId(Long caseId,Long checkId,Long documentTypeId);
+    
+    List<VerificationCaseDocument> findByVerificationCase_CaseIdAndVerificationCaseCheck_CaseCheckId(Long caseId,Long checkId);
+    
 }

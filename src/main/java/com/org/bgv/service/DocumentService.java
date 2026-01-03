@@ -59,6 +59,7 @@ import com.org.bgv.vendor.repository.VerificationEvidenceRepository;
 
 import jakarta.persistence.EntityNotFoundException;
 import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 
 import org.hibernate.service.spi.ServiceException;
 import org.slf4j.Logger;
@@ -86,6 +87,7 @@ import java.util.stream.Collectors;
 
 @Service
 @RequiredArgsConstructor
+@Slf4j
 public class DocumentService {
 
     private final DocumentRepository documentRepository;
@@ -117,7 +119,8 @@ public class DocumentService {
             Long categoryId,
             Long typeId,
             Long objectId,
-            Long caseId ) {
+            Long caseId,
+            Long checkId) {
 
         validateFiles(files);
 
@@ -134,10 +137,10 @@ public class DocumentService {
                 SectionConstants.fromNameOrValue(category.getName());
 
         for (MultipartFile file : files) {
-            uploadSingleFile(file, candidate, category, documentType, section, objectId,caseId);
+            uploadSingleFile(file, candidate, category, documentType, section, objectId,caseId,checkId);
         }
 
-        return getDocumentsBySection(candidateId,caseId, section.getValue());
+        return getDocumentsBySection(candidateId,caseId, section.getValue(),caseId,checkId);
     }
     
     private void validateFiles(List<MultipartFile> files) {
@@ -156,23 +159,97 @@ public class DocumentService {
             DocumentType documentType,
             SectionConstants section,
             Long objectId,
-            Long caseId) {
+            Long caseId,
+            Long checkId
+    ) {
+        log.info(
+            "Document upload started | candidateId={} | caseId={} | checkId={} | section={} | docType={}",
+            candidate.getCandidateId(),
+            caseId,
+            checkId,
+            section.name(),
+            documentType.getLabel()
+        );
 
         if (file.isEmpty()) {
+            log.error("Upload failed: empty file | fileName={}", file.getOriginalFilename());
             throw new RuntimeException("Empty file: " + file.getOriginalFilename());
         }
 
         if (file.getSize() > 10 * 1024 * 1024) {
+            log.error(
+                "Upload failed: file too large | fileName={} | size={} bytes",
+                file.getOriginalFilename(),
+                file.getSize()
+            );
             throw new RuntimeException("File too large: " + file.getOriginalFilename());
         }
+
+        VerificationCase verificationCase = null;
+        VerificationCaseCheck verificationCaseCheck = null;
+
+        // =========================
+        // CASE VERIFICATION MODE
+        // =========================
+        if (caseId != null && caseId > 0) {
+            log.debug("Resolving verification case | caseId={}", caseId);
+
+            verificationCase = verificationCaseRepository.findById(caseId)
+                    .orElseThrow(() -> {
+                        log.error("Verification case not found | caseId={}", caseId);
+                        return new RuntimeException("Verification case not found: " + caseId);
+                    });
+
+            verificationCaseCheck =
+                    verificationCaseCheckRepository
+                            .findByVerificationCase_CaseIdAndCaseCheckId(
+                                    verificationCase.getCaseId(),
+                                    checkId
+                            );
+
+            if (verificationCaseCheck == null) {
+                log.error(
+                    "VerificationCaseCheck not found | caseId={} | checkId={}",
+                    caseId,
+                    checkId
+                );
+                throw new RuntimeException("Verification check not found");
+            }
+
+            log.debug(
+                "Resolved verification check | caseCheckId={} | category={}",
+                verificationCaseCheck.getCaseCheckId(),
+                verificationCaseCheck.getCategory().getName()
+            );
+        } else {
+            log.debug("Self-profile upload mode (no case)");
+        }
+
+        // =========================
+        // S3 UPLOAD
+        // =========================
+        log.info(
+            "Uploading file to storage | fileName={} | section={}",
+            file.getOriginalFilename(),
+            section.getValue()
+        );
 
         Pair<String, String> upload =
                 s3StorageService.uploadFile(file, section.getValue());
 
-       // Long resolvedObjectId = resolveObjectId(section, candidate, objectId);
+        log.debug(
+            "File uploaded to S3 | url={} | awsKey={}",
+            upload.getFirst(),
+            upload.getSecond()
+        );
 
+        // =========================
+        // SAVE DOCUMENT
+        // =========================
         Document document = Document.builder()
                 .candidate(candidate)
+                .verificationCase(verificationCase)              // null for self
+                .verificationCaseCheck(verificationCaseCheck)    // null for self
                 .category(category)
                 .docTypeId(documentType)
                 .originalFileName(file.getOriginalFilename())
@@ -185,33 +262,49 @@ public class DocumentService {
                 .entityType(DocumentEntityType.PRIMARY)
                 .uploadedBy(SecurityUtils.getCurrentCustomUserDetails().getUserType())
                 .build();
-        
-       
 
         document = documentRepository.save(document);
-        
-     // Store docId in respective tables based on caseId
-        if (caseId != null) {
-            storeDocumentInCaseTables(document, category, documentType, caseId);
-        }
-        
-        
-    }
 
-    private Long resolveObjectId(
-            SectionConstants section,
-            Candidate candidate,
-            Long fallbackObjectId) {
+        log.info(
+            "Document saved | docId={} | candidateId={} | caseId={}",
+            document.getDocId(),
+            candidate.getCandidateId(),
+            caseId
+        );
 
-        if (section == SectionConstants.IDENTITY) {
-            IdentityProof proof = identityProofRepository.save(
-                    IdentityProof.builder().candidate(candidate).build()
+        // =========================
+        // STORE IN CASE TABLES
+        // =========================
+        if (verificationCase != null) {
+            log.info(
+                "Linking document to verification case | docId={} | caseId={} | checkId={}",
+                document.getDocId(),
+                verificationCase.getCaseId(),
+                verificationCaseCheck.getCaseCheckId()
             );
-            return proof.getId();
-        }
 
-        return fallbackObjectId;
+            storeDocumentInCaseTables(
+                    document,
+                    category,
+                    documentType,
+                    verificationCase,
+                    verificationCaseCheck
+            );
+
+            log.info(
+                "Document linked successfully | docId={} | caseId={}",
+                document.getDocId(),
+                verificationCase.getCaseId()
+            );
+        } else {
+            log.info(
+                "Self-profile document upload completed | docId={} | candidateId={}",
+                document.getDocId(),
+                candidate.getCandidateId()
+            );
+        }
     }
+    
 
     @Transactional
     public DeleteResponse deleteDocument(Long docId) {
@@ -716,51 +809,123 @@ public class DocumentService {
         return CategoriesDTO.builder().categories(documentCategoryDtos).build();
     }
     */
-    public DocumentCategoryDto getDocumentsBySection(Long candidateId, Long caseId, String section) {
+    public DocumentCategoryDto getDocumentsBySection(
+            Long candidateId,
+            Long caseId,
+            String section,
+            Long categoryId,
+            Long checkId
+    ) {
 
         Long companyId = SecurityUtils.getCurrentUserCompanyId();
 
-        // 1️⃣ Resolve category
-        CheckCategory category = checkCategoryRepository.findByNameIgnoreCase(section)
-                .orElseThrow(() -> new RuntimeException("Section not found: " + section));
+        log.info(
+            "Fetching documents by section | candidateId={} | caseId={} | checkId={} | section={}",
+            candidateId, caseId, checkId, section
+        );
 
-        // 2️⃣ Resolve candidate
+        // =========================
+        // 1️⃣ Resolve Candidate
+        // =========================
         Candidate candidate = candidateRepository.findById(candidateId)
                 .orElseThrow(() -> new RuntimeException("Candidate not found: " + candidateId));
 
-        // 3️⃣ Resolve verification case (use caseId explicitly)
-        VerificationCase verificationCase = verificationCaseRepository.findById(caseId)
-                .orElseThrow(() -> new RuntimeException("Verification case not found: " + caseId));
+        // =========================
+        // 2️⃣ Resolve Verification Case (CASE MODE ONLY)
+        // =========================
+        VerificationCase verificationCase = null;
+        VerificationCaseCheck verificationCaseCheck = null;
+        CheckCategory category;
 
-        if (!verificationCase.getCompanyId().equals(companyId)) {
-            throw new RuntimeException("Unauthorized access to verification case");
+        if (caseId != null && caseId > 0) {
+
+            verificationCase =
+                    verificationCaseRepository
+                            .findByCaseIdAndCandidateId(caseId, candidateId)
+                            .orElseThrow(() ->
+                                    new RuntimeException("Verification case not found: " + caseId));
+
+            if (!verificationCase.getCompanyId().equals(companyId)) {
+                throw new RuntimeException("Unauthorized access to verification case");
+            }
+
+            log.debug("Verification case resolved | caseId={}", verificationCase.getCaseId());
+
+            // =========================
+            // 3️⃣ Resolve Case Check (USING checkId)
+            // =========================
+            if (checkId != null) {
+                verificationCaseCheck =
+                        verificationCaseCheckRepository
+                                .findByVerificationCase_CaseIdAndCaseCheckId(
+                                        verificationCase.getCaseId(),
+                                        checkId
+                                );
+                                
+
+                category = verificationCaseCheck.getCategory();
+
+                log.debug(
+                    "Verification check resolved | checkId={} | category={}",
+                    verificationCaseCheck.getCaseCheckId(),
+                    category.getName()
+                );
+            } else {
+                throw new RuntimeException("checkId is required in case verification mode");
+            }
+
+        } else {
+            // =========================
+            // SELF PROFILE MODE
+            // =========================
+            category =
+                    checkCategoryRepository
+                            .findByNameIgnoreCase(section)
+                            .orElseThrow(() ->
+                                    new RuntimeException("Section not found: " + section));
+
+            log.debug("Self profile mode | category={}", category.getName());
         }
 
-        // 4️⃣ Resolve case check (optional)
-        Optional<VerificationCaseCheck> caseCheckOpt =
-                verificationCaseCheckRepository.findByVerificationCaseAndCategory(
-                        verificationCase, category
-                );
-
-        // 5️⃣ Resolve document types
+        // =========================
+        // 4️⃣ Resolve Document Types
+        // =========================
         List<DocumentType> documentTypes;
-        if (caseCheckOpt.isPresent()) {
-            List<VerificationCaseDocument> caseDocuments =
-                    verificationCaseService.getVerificationCaseCaseIdAndCheckCategoryCategoryId(
-                            verificationCase.getCaseId(),
-                            category.getCategoryId()
-                    );
 
+        if (verificationCaseCheck != null) {
+            // CASE MODE → use verification_case_document
+            List<VerificationCaseDocument> caseDocuments =
+                    verificationCaseDocumentRepository
+                            .findByVerificationCase_CaseIdAndVerificationCaseCheck_CaseCheckId(
+                                    verificationCase.getCaseId(),
+                                    verificationCaseCheck.getCaseCheckId()
+                            );
+            
             documentTypes = caseDocuments.stream()
                     .map(VerificationCaseDocument::getDocumentType)
                     .distinct()
                     .toList();
+
+            log.debug(
+                "Case document types resolved | count={}",
+                documentTypes.size()
+            );
+
         } else {
-            documentTypes = documentTypeRepository
-                    .findByCategoryCategoryId(category.getCategoryId());
+            // SELF MODE → use master document types
+            documentTypes =
+                    documentTypeRepository
+                            .findByCategoryCategoryId(category.getCategoryId());
+
+            log.debug(
+                "Self document types resolved | count={}",
+                documentTypes.size()
+            );
         }
 
-        // 6️⃣ Build category DTO
+        // =========================
+        // 5️⃣ Build Category DTO
+        // =========================
         DocumentCategoryDto categoryDto = buildDocumentCategoryDto(category);
 
         switch (category.getName()) {
@@ -772,7 +937,8 @@ public class DocumentService {
                                     verificationCase,
                                     companyId,
                                     category,
-                                    documentTypes
+                                    documentTypes,
+                                    verificationCaseCheck
                             )
                     );
 
@@ -791,6 +957,12 @@ public class DocumentService {
                             buildGenericDocumentTypes(candidateId, category, documentTypes)
                     );
         }
+
+        log.info(
+            "Documents resolved successfully | category={} | types={}",
+            category.getName(),
+            documentTypes.size()
+        );
 
         return categoryDto;
     }
@@ -826,55 +998,127 @@ public class DocumentService {
     }
     
    
-    
-    // Identity Proof Documents
+    // Identiy Proof
     private List<DocumentTypeDto> buildIdentityProofDocumentTypes(
             Long candidateId,
             VerificationCase verificationCase,
             Long companyId,
             CheckCategory category,
-            List<DocumentType> documentTypes) {
+            List<DocumentType> documentTypes,
+            VerificationCaseCheck verificationCaseCheck
+    ) {
+
+        boolean isSelfProfile = (verificationCase == null || verificationCaseCheck == null);
+
+        log.info(
+                "Building Identity Proof documents | candidateId={} | mode={} | category={}",
+                candidateId,
+                isSelfProfile ? "SELF_PROFILE" : "CASE_VERIFICATION",
+                category.getName()
+        );
 
         return documentTypes.stream().map(documentType -> {
 
-            // 1️⃣ Find IdentityProof for this doc type
-            Optional<IdentityProof> identityProofOpt =
-                    identityProofRepository.findByCandidate_CandidateIdAndDocTypeIdAndVerificationCase(
-                            candidateId,
-                            documentType.getDocTypeId(),
-                            verificationCase
-                    );
+            log.debug(
+                    "Processing Identity documentType={} | candidateId={}",
+                    documentType.getName(),
+                    candidateId
+            );
+
+            Optional<IdentityProof> identityProofOpt;
+
+            // =========================
+            // SELF PROFILE MODE
+            // =========================
+            if (isSelfProfile) {
+
+                log.debug(
+                        "Fetching IdentityProof (SELF) | candidateId={} | docTypeId={}",
+                        candidateId,
+                        documentType.getDocTypeId()
+                );
+
+                identityProofOpt =
+                        identityProofRepository
+                                .findByCandidate_CandidateIdAndDocTypeId(
+                                        candidateId,
+                                        documentType.getDocTypeId()
+                                );
+            }
+            // =========================
+            // CASE VERIFICATION MODE
+            // =========================
+            else {
+
+                log.debug(
+                        "Fetching IdentityProof (CASE) | candidateId={} | caseId={} | checkId={} | docTypeId={}",
+                        candidateId,
+                        verificationCase.getCaseId(),
+                        verificationCaseCheck.getCaseCheckId(),
+                        documentType.getDocTypeId()
+                );
+
+                identityProofOpt =
+                        identityProofRepository
+                                .findByCandidate_CandidateIdAndDocTypeIdAndVerificationCaseAndVerificationCaseCheck(
+                                        candidateId,
+                                        documentType.getDocTypeId(),
+                                        verificationCase,
+                                        verificationCaseCheck
+                                );
+            }
 
             DocumentTypeDto dto = buildDocumentTypeDto(documentType);
 
-            // 2️⃣ Set ID from IdentityProof table
-            identityProofOpt.ifPresent(identityProof ->
-                    dto.setId(identityProof.getId())
-            );
+            // Set IdentityProof ID (objectId)
+            identityProofOpt.ifPresent(identityProof -> {
+                dto.setId(identityProof.getId());
+                log.debug(
+                        "IdentityProof found | identityProofId={} | docType={}",
+                        identityProof.getId(),
+                        documentType.getName()
+                );
+            });
 
-            // 3️⃣ Set dynamic fields
+            // Dynamic fields
             switch (documentType.getName().toUpperCase()) {
                 case "AADHAR" -> dto.setFields(createAadharFields());
                 case "PANCARD", "PAN" -> dto.setFields(createPanFields());
                 case "PASSPORT" -> dto.setFields(createPassportFields());
+                default -> log.debug("No dynamic fields configured for docType={}", documentType.getName());
             }
 
-            // 4️⃣ Fetch documents using objectId = IdentityProof.id
+            // Fetch documents using objectId = IdentityProof.id
             List<Document> documents = identityProofOpt
-                    .map(identityProof ->
-                            documentRepository.findByObjectIdAndCategory_CategoryIdAndStatusNot(
-                                    identityProof.getId(),
-                                    category.getCategoryId(),
-                                    DocumentStatus.DELETED
-                            )
-                    )
+                    .map(identityProof -> {
+                        log.debug(
+                                "Fetching documents | identityProofId={} | categoryId={}",
+                                identityProof.getId(),
+                                category.getCategoryId()
+                        );
+
+                        return documentRepository
+                                .findByObjectIdAndCategory_CategoryIdAndStatusNot(
+                                        identityProof.getId(),
+                                        category.getCategoryId(),
+                                        DocumentStatus.DELETED
+                                );
+                    })
                     .orElse(List.of());
+
+            log.debug(
+                    "Documents fetched | docType={} | count={}",
+                    documentType.getName(),
+                    documents.size()
+            );
 
             dto.setFiles(convertDocumentsToFileDTOs(documents));
 
             return dto;
+
         }).toList();
     }
+
 
     
     // Education Documents
@@ -1083,48 +1327,101 @@ public class DocumentService {
         );
     }
 
-	private void storeDocumentInCaseTables(Document document, CheckCategory category, DocumentType documentType,
-			Long caseId) {
+    private void storeDocumentInCaseTables(
+            Document document,
+            CheckCategory category,
+            DocumentType documentType,
+            VerificationCase verificationCase,
+            VerificationCaseCheck verificationCaseCheck
+    ) {
 
-		// 1. First, find or create VerificationCaseDocument
-		VerificationCase verificationCase = verificationCaseRepository.findById(caseId)
-				.orElseThrow(() -> new RuntimeException("Verification case not found: " + caseId));
+        log.info(
+            "Storing document in case tables | docId={} | caseId={} | checkId={} | category={} | docType={}",
+            document.getDocId(),
+            verificationCase.getCaseId(),
+            verificationCaseCheck.getCaseCheckId(),
+            category.getName(),
+            documentType.getLabel()
+        );
 
-		// Find existing VerificationCaseDocument for this case, category and document type
-		VerificationCaseDocument caseDocument = verificationCaseDocumentRepository
-				.findByVerificationCase_CaseIdAndCheckCategory_CategoryIdAndDocumentType_DocTypeId(caseId,
-						category.getCategoryId(), documentType.getDocTypeId())
-				.orElseGet(() -> {
-					// Create new VerificationCaseDocument if it doesn't exist
-					VerificationCaseDocument newCaseDoc = VerificationCaseDocument.builder()
-							.verificationCase(verificationCase).checkCategory(category).documentType(documentType)
-							.isAddOn(false) // Set based on your logic
-							.required(true) // Set based on your logic
-							.documentPrice(0.0) // Set based on your logic
-							.verificationStatus(VerificationStatus.PENDING) // Set appropriate status
-							.createdAt(LocalDateTime.now()).build();
-					return verificationCaseDocumentRepository.save(newCaseDoc);
-				});
+        // =========================
+        // 1. FIND OR CREATE CASE DOCUMENT
+        // =========================
+        Optional<VerificationCaseDocument> caseDocumentOpt =
+                verificationCaseDocumentRepository
+                        .findByVerificationCase_CaseIdAndVerificationCaseCheck_CaseCheckIdAndDocumentType_DocTypeId(
+                                verificationCase.getCaseId(),
+                                verificationCaseCheck.getCaseCheckId(),
+                                documentType.getDocTypeId()
+                        );
 
-		// 2. Create VerificationCaseDocumentLink
-		VerificationCaseDocumentLink documentLink = VerificationCaseDocumentLink.builder().caseDocument(caseDocument)
-				.document(document).linkedAt(LocalDateTime.now()).build();
+        VerificationCaseDocument caseDocument;
 
-		verificationCaseDocumentLinkRepository.save(documentLink);
-/*
-		// 3. Update VerificationCaseCheck if exists
-		Optional<VerificationCaseCheck> caseCheckOpt = verificationCaseCheckRepository
-				.findByVerificationCase_CaseIdAndCategory_CategoryId(caseId, category.getCategoryId());
+        if (caseDocumentOpt.isPresent()) {
+            caseDocument = caseDocumentOpt.get();
 
-		if (caseCheckOpt.isPresent()) {
-			VerificationCaseCheck caseCheck = caseCheckOpt.get();
-			// Update case check status based on your business logic
-			caseCheck.setStatus(CaseStatus.DOCUMENT_UPLOADED); // Or appropriate status
-			caseCheck.setUpdatedAt(LocalDateTime.now());
-			verificationCaseCheckRepository.save(caseCheck);
-		}
-		*/
-}
+            log.debug(
+                "Existing case document found | caseDocumentId={} | verificationStatus={}",
+                caseDocument.getCaseDocumentId(),
+                caseDocument.getVerificationStatus()
+            );
+        } else {
+            log.info(
+                "No case document found, creating new | caseId={} | checkId={} | docType={}",
+                verificationCase.getCaseId(),
+                verificationCaseCheck.getCaseCheckId(),
+                documentType.getLabel()
+            );
+
+            caseDocument = VerificationCaseDocument.builder()
+                    .verificationCase(verificationCase)
+                    .verificationCaseCheck(verificationCaseCheck)
+                    .checkCategory(category)
+                    .documentType(documentType)
+                    .isAddOn(false)
+                    .required(true)
+                    .documentPrice(0.0)
+                    .verificationStatus(VerificationStatus.PENDING)
+                    .createdAt(LocalDateTime.now())
+                    .build();
+
+            caseDocument = verificationCaseDocumentRepository.save(caseDocument);
+
+            log.info(
+                "Case document created | caseDocumentId={} | caseId={} | checkId={}",
+                caseDocument.getCaseDocumentId(),
+                verificationCase.getCaseId(),
+                verificationCaseCheck.getCaseCheckId()
+            );
+        }
+
+        // =========================
+        // 2. CREATE DOCUMENT LINK
+        // =========================
+        log.debug(
+            "Linking document to case document | docId={} | caseDocumentId={}",
+            document.getDocId(),
+            caseDocument.getCaseDocumentId()
+        );
+
+        VerificationCaseDocumentLink documentLink =
+                VerificationCaseDocumentLink.builder()
+                        .caseDocument(caseDocument)
+                        .document(document)
+                        .status(DocumentStatus.UPLOADED)
+                        .linkedAt(LocalDateTime.now())
+                        .build();
+
+        verificationCaseDocumentLinkRepository.save(documentLink);
+
+        log.info(
+            "Document linked successfully | docId={} | caseDocumentId={} | status={}",
+            document.getDocId(),
+            caseDocument.getCaseDocumentId(),
+            DocumentStatus.UPLOADED
+        );
+    }
+
 	
 	private void updateVerificationCaseDocumentStatus(VerificationCaseDocument caseDocument) {
 	    // Check if all links for this case document are deleted

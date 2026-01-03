@@ -66,4 +66,10 @@ public interface VerificationCaseCheckRepository
             Long vendorId, 
             List<CaseStatus> statuses
         );
+    
+    VerificationCaseCheck findByVendorIdAndCaseCheckId(Long vendorId,Long caseCheckId);
+    
+    VerificationCaseCheck findByVerificationCase_CaseIdAndCaseCheckId(Long caseId,Long checkId);
+    
+    
 }

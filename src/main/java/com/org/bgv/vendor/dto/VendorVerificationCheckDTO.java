@@ -10,6 +10,7 @@ import java.util.List;
 import java.util.Map;
 
 import com.org.bgv.common.DocumentTypeInfo;
+import com.org.bgv.dto.document.DocumentTypeDto;
 import com.org.bgv.entity.VerificationCaseDocument;
 
 @Data
@@ -30,6 +31,7 @@ public class VendorVerificationCheckDTO {
     // Common timeline, requirements, and SLA
     private CandidateInfoDTO candidate;
     private List<VerificationDocumentDTO> documents;
+    private List<DocumentTypeDto> documentTypes;
     private List<TimelineEventDTO> timeline;
     private List<RequirementDTO> requirements;
     private SlaInfoDTO slas;

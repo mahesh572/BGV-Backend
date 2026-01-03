@@ -11,6 +11,7 @@ import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.PutMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 
 import com.org.bgv.api.response.CustomApiResponse;
@@ -35,9 +36,10 @@ public class EducationController {
 	  @PostMapping
     public ResponseEntity<CustomApiResponse<List<EducationHistoryDTO>>> saveEducationHistory(
             @PathVariable Long candidateId,
+            @RequestParam(required = false) Long caseId,
             @RequestBody List<EducationHistoryDTO> educationHistoryDTOs) {
         try {
-            List<EducationHistoryDTO> savedEducation = educationHistoryService.saveEducationHistory(educationHistoryDTOs, candidateId);
+            List<EducationHistoryDTO> savedEducation = educationHistoryService.saveEducationHistory(educationHistoryDTOs, candidateId,caseId);
             return ResponseEntity.status(HttpStatus.CREATED)
                     .body(CustomApiResponse.success("Education history saved successfully", savedEducation, HttpStatus.CREATED));
         } catch (RuntimeException e) {
@@ -51,10 +53,11 @@ public class EducationController {
     @PutMapping
     public ResponseEntity<CustomApiResponse<List<EducationHistoryDTO>>> updateEducationHistory(
             @PathVariable Long candidateId,
+            @RequestParam(required = false) Long caseId,
             @RequestBody List<EducationHistoryDTO> educationHistoryDTOs) {
         try {
         	log.info("Education controller:::::::{}",candidateId);
-            List<EducationHistoryDTO> updatedEducation = educationHistoryService.updateEducationHistories(educationHistoryDTOs, candidateId);
+            List<EducationHistoryDTO> updatedEducation = educationHistoryService.updateEducationHistories(educationHistoryDTOs, candidateId,caseId);
             return ResponseEntity.ok()
                     .body(CustomApiResponse.success("Education history updated successfully", updatedEducation, HttpStatus.OK));
         } catch (RuntimeException e) {
@@ -67,9 +70,9 @@ public class EducationController {
     }
     
     @GetMapping
-    public ResponseEntity<CustomApiResponse<List<EducationHistoryDTO>>> getEducationHistory(@PathVariable Long candidateId) {
+    public ResponseEntity<CustomApiResponse<List<EducationHistoryDTO>>> getEducationHistory(@PathVariable Long candidateId,@RequestParam(required = false) Long caseId) {
         try {
-            List<EducationHistoryDTO> educationHistory = educationHistoryService.getEducationByProfile(candidateId);
+            List<EducationHistoryDTO> educationHistory = educationHistoryService.getEducationByProfile(candidateId,caseId);
             return ResponseEntity.ok(CustomApiResponse.success("Education history retrieved successfully", educationHistory, HttpStatus.OK));
         } catch (RuntimeException e) {
             return ResponseEntity.status(HttpStatus.NOT_FOUND)

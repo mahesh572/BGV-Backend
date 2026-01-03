@@ -1,6 +1,7 @@
 package com.org.bgv.controller;
 
 import com.org.bgv.api.response.CustomApiResponse;
+import com.org.bgv.candidate.dto.SectionNamesDisplayDTO;
 import com.org.bgv.common.VerificationCaseResponse;
 import com.org.bgv.common.VerificationCaseRequest;
 import com.org.bgv.constants.CaseStatus;
@@ -141,7 +142,7 @@ public class VerificationCaseController {
     }
     
     @GetMapping("/candidate/{candidateId}/case/{caseId}/documents/sections")
-    public ResponseEntity<CustomApiResponse<List<String>>> 
+    public ResponseEntity<CustomApiResponse<List<SectionNamesDisplayDTO>>> 
     getCandidateVerificationSectionsDocuments(
     		@PathVariable Long candidateId,
     		@PathVariable Long caseId
@@ -149,7 +150,7 @@ public class VerificationCaseController {
         try {
         	
         	log.info("getCandidateVerificationSectionsDocuments:::::::::::{}",candidateId);
-            List<String> sectionsList =
+            List<SectionNamesDisplayDTO> sectionsList =
                     verificationCaseService.getSectionsForDocumentVerificationCase(candidateId,caseId);
           //  sectionsList.add("Other");
             return ResponseEntity.ok(

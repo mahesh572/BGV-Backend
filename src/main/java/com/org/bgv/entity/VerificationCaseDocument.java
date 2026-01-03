@@ -27,6 +27,10 @@ public class VerificationCaseDocument {
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "check_category_id", nullable = false)
     private CheckCategory checkCategory;
+    
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "case_check_id")
+    private VerificationCaseCheck verificationCaseCheck;
 
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "document_type_id", nullable = false)

@@ -41,6 +41,8 @@ public interface EducationHistoryRepository extends JpaRepository<EducationHisto
     
     List<EducationHistory> findByCandidateId(Long candidateId);
     
+    List<EducationHistory> findByCandidateIdAndVerificationCaseCaseId(Long candidateId,Long caseId);
+    
     @Query("SELECT e FROM EducationHistory e WHERE e.candidateId = :candidateId ORDER BY e.toDate DESC, e.fromDate DESC")
     List<EducationHistory> findByCandidateIdOrderByDate(@Param("candidateId") Long candidateId);
     
@@ -57,4 +59,6 @@ public interface EducationHistoryRepository extends JpaRepository<EducationHisto
     Long countByCandidateId(Long candidateId);
     
     Optional<EducationHistory> findByCandidateIdAndId(Long candidateId, Long id);
+    
+    EducationHistory findByCandidateIdAndVerificationCaseCaseIdAndId(Long candidateId,Long caseId,Long id);
 }

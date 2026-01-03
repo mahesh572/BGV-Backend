@@ -58,9 +58,16 @@ public interface IdentityProofRepository extends JpaRepository<IdentityProof, Lo
             Long companyId
     );
 
-    
+    Optional<IdentityProof> findByCandidate_CandidateIdAndDocTypeIdAndVerificationCaseAndVerificationCaseCheck(
+            Long candidateId,
+            Long docTypeId,
+            VerificationCase verificationCase,
+            VerificationCaseCheck verificationCaseCheck
+           
+    );
 
     
+     
 
     /* ---------------- VERIFICATION ---------------- */
 
@@ -97,5 +104,10 @@ public interface IdentityProofRepository extends JpaRepository<IdentityProof, Lo
     	        @Param("candidateId") Long candidateId,
     	        @Param("docTypeId") Long docTypeId
     	);
+    
+    
+    List<IdentityProof> findByVerificationCaseCheckCaseCheckId(Long checkId);
+    
+    
 }
 

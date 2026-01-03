@@ -37,10 +37,12 @@ public class DocumentController {
     public ResponseEntity<CustomApiResponse<DocumentCategoryDto>> getDocumentsBySection(
             @PathVariable Long candidateId,
             @PathVariable Long caseId,
-            @RequestParam String section) {
+            @RequestParam String section,
+            @RequestParam(required = false) Long categoryId,
+            @RequestParam(required = false) Long checkId) {
     	log.info("DocumentController:::::getDocumentsBySection:::::candidateId:::::section::::{}{}",candidateId,section);
         try {
-        	DocumentCategoryDto categories = documentService.getDocumentsBySection(candidateId,caseId, section);
+        	DocumentCategoryDto categories = documentService.getDocumentsBySection(candidateId,caseId, section,categoryId,checkId);
             return ResponseEntity.ok(
                     CustomApiResponse.success("Documents retrieved successfully for section: " + section, categories, HttpStatus.OK)
             );
@@ -60,7 +62,8 @@ public class DocumentController {
             @RequestParam("documentTypeId") Long documentTypeId,
             @RequestParam(value = "categoryId", required = false) Long categoryId,
             @RequestParam(value = "objectId", required = false) Long objectId,
-            @RequestParam(value = "caseId",required = false) Long caseId
+            @RequestParam(value = "caseId",required = false) Long caseId,
+            @RequestParam(value = "checkId",required = false) Long checkId
             )
           {
     	
@@ -68,7 +71,7 @@ public class DocumentController {
     	
         try {
         	DocumentCategoryDto uploadedDocuments = documentService.createDocuments(
-                files, candidateId,categoryId,documentTypeId,objectId,caseId);
+                files, candidateId,categoryId,documentTypeId,objectId,caseId,checkId);
         	log.info("***************************uploaded successfully");
             return ResponseEntity.status(HttpStatus.CREATED)
                     .body(CustomApiResponse.success("Documents uploaded successfully", uploadedDocuments, HttpStatus.CREATED));

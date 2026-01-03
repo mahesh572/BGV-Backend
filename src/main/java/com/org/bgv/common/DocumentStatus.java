@@ -5,6 +5,7 @@ public enum DocumentStatus {
 	    UNDER_REVIEW,    // Vendor started verification
 	    VERIFIED,        // Vendor verified successfully
 	    REJECTED,       // Vendor rejected the document
-	    PENDING,                 
+	    PENDING,
+	    INSUFFICIENT,
 	    DELETED;         // Soft-deleted (hidden from UI)
 }

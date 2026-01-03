@@ -16,6 +16,7 @@ import org.springframework.web.bind.annotation.RestController;
 import com.org.bgv.api.response.CustomApiResponse;
 import com.org.bgv.service.VendorDashboardService;
 import com.org.bgv.vendor.dto.VendorVerificationCheckDTO;
+import com.org.bgv.vendor.dto.VerificationCheckResponseDTO;
 import com.org.bgv.vendor.service.VerificationCheckService;
 
 import lombok.RequiredArgsConstructor;
@@ -39,11 +40,11 @@ public class VendorDashboardController {
     }
     
     @GetMapping("/vendor/{vendorId}/check/{checkId}")
-    public ResponseEntity<CustomApiResponse<VendorVerificationCheckDTO>> getCheckData(
+    public ResponseEntity<CustomApiResponse<VerificationCheckResponseDTO>> getCheckData(
             @PathVariable Long vendorId,
             @PathVariable Long checkId) {
         try {
-            VendorVerificationCheckDTO verificationCheckDTO = verificationCheckService.getVerificationCheck(checkId, vendorId);
+        	VerificationCheckResponseDTO verificationCheckDTO = verificationCheckService.getVerificationCheck(checkId, vendorId);
             return ResponseEntity.ok(CustomApiResponse.success(
                 "Verification check retrieved successfully", 
                 verificationCheckDTO, 

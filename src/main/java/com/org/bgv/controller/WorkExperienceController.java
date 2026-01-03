@@ -11,6 +11,7 @@ import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.PutMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 
 import com.org.bgv.api.response.CustomApiResponse;
@@ -34,9 +35,10 @@ public class WorkExperienceController {
     @PostMapping
     public ResponseEntity<CustomApiResponse<List<WorkExperienceDTO>>> saveWorkExperiences(
             @PathVariable Long candidateId,
+            @RequestParam(required = false) Long caseId,
             @RequestBody List<WorkExperienceDTO> workExperienceDTOs) {
         try {
-            List<WorkExperienceDTO> savedExperiences = workExperienceService.saveWorkExperiences(workExperienceDTOs, candidateId);
+            List<WorkExperienceDTO> savedExperiences = workExperienceService.saveWorkExperiences(workExperienceDTOs, candidateId,caseId);
             return ResponseEntity.status(HttpStatus.CREATED)
                     .body(CustomApiResponse.success("Work experiences saved successfully", savedExperiences, HttpStatus.CREATED));
         } catch (RuntimeException e) {
@@ -49,9 +51,9 @@ public class WorkExperienceController {
     }
 
     @GetMapping
-    public ResponseEntity<CustomApiResponse<List<WorkExperienceDTO>>> getWorkExperiences(@PathVariable Long candidateId) {
+    public ResponseEntity<CustomApiResponse<List<WorkExperienceDTO>>> getWorkExperiences(@PathVariable Long candidateId,@RequestParam(required = false) Long caseId) {
         try {
-            List<WorkExperienceDTO> experiences = workExperienceService.getWorkExperiencesByProfile(candidateId);
+            List<WorkExperienceDTO> experiences = workExperienceService.getWorkExperiencesByProfile(candidateId,caseId);
             return ResponseEntity.ok(CustomApiResponse.success("Work experiences retrieved successfully", experiences, HttpStatus.OK));
         } catch (RuntimeException e) {
             return ResponseEntity.status(HttpStatus.NOT_FOUND)
@@ -65,9 +67,10 @@ public class WorkExperienceController {
     @PutMapping
     public ResponseEntity<CustomApiResponse<List<WorkExperienceDTO>>> updateWorkExperiences(
             @PathVariable Long candidateId,
+            @RequestParam(required = false) Long caseId,
             @RequestBody List<WorkExperienceDTO> workExperienceDTOs) {
         try {
-            List<WorkExperienceDTO> updatedExperiences = workExperienceService.updateWorkExperiences(workExperienceDTOs, candidateId);
+            List<WorkExperienceDTO> updatedExperiences = workExperienceService.updateWorkExperiences(workExperienceDTOs, candidateId,caseId);
             return ResponseEntity.ok()
                     .body(CustomApiResponse.success("Work experiences updated successfully", updatedExperiences, HttpStatus.OK));
         } catch (RuntimeException e) {

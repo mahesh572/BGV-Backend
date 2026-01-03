@@ -13,8 +13,10 @@ import com.org.bgv.dto.WorkExperienceResponse;
 import com.org.bgv.entity.BaseDocument;
 //import com.org.bgv.entity.ProfessionalDocuments;
 import com.org.bgv.entity.Profile;
+import com.org.bgv.entity.VerificationCase;
 //import com.org.bgv.repository.ProfessionalDocumentsRepository;
 import com.org.bgv.repository.ProfileRepository;
+import com.org.bgv.repository.VerificationCaseRepository;
 import com.org.bgv.s3.S3StorageService;
 
 import jakarta.persistence.EntityNotFoundException;
@@ -43,11 +45,12 @@ public class WorkExperienceService {
 	// private final ProfessionalDocumentsRepository professionalDocumentsRepository;
 	private final S3StorageService s3StorageService;
 	 private final CandidateRepository candidateRepository;
+	 private final VerificationCaseRepository verificationCaseRepository;
 	
 	private static final Logger logger = LoggerFactory.getLogger(WorkExperienceService.class);
 
 	@Transactional
-	public List<WorkExperienceDTO> saveWorkExperiences(List<WorkExperienceDTO> workExperienceDTOs, Long candidateId) {
+	public List<WorkExperienceDTO> saveWorkExperiences(List<WorkExperienceDTO> workExperienceDTOs, Long candidateId,Long caseId) {
 		/*
 		Profile profile = profileRepository.findById(profileId)
 				.orElseThrow(() -> new RuntimeException("Profile not found: " + profileId));
@@ -61,7 +64,7 @@ public class WorkExperienceService {
 		// workExperienceRepository.deleteByProfile_ProfileId(profileId);
 
 		// Convert DTOs to entities and save
-		List<WorkExperience> workExperiences = workExperienceDTOs.stream().map(dto -> mapToEntity(dto, candidate))
+		List<WorkExperience> workExperiences = workExperienceDTOs.stream().map(dto -> mapToEntity(dto, candidate,caseId))
 				.collect(Collectors.toList());
 
 		List<WorkExperience> savedExperiences = workExperienceRepository.saveAll(workExperiences);
@@ -70,11 +73,34 @@ public class WorkExperienceService {
 		return savedExperiences.stream().map(this::mapToDTO).collect(Collectors.toList());
 	}
 
-	public List<WorkExperienceDTO> getWorkExperiencesByProfile(Long candidateId) {
-		
-		List<WorkExperience> experiences = workExperienceRepository.findByCandidateId(candidateId);
-		return experiences.stream().map(this::mapToDTO).collect(Collectors.toList());
+	public List<WorkExperienceDTO> getWorkExperiencesByProfile(Long candidateId, Long caseId) {
+
+	    List<WorkExperience> experiences;
+
+	    // =========================
+	    // SELF PROFILE MODE
+	    // =========================
+	    if (caseId == null || caseId == 0) {
+	        experiences =
+	                workExperienceRepository.findByCandidateId(candidateId);
+	    }
+	    // =========================
+	    // CASE VERIFICATION MODE
+	    // =========================
+	    else {
+	        experiences =
+	                workExperienceRepository
+	                        .findByCandidateIdAndVerificationCaseCaseId(
+	                                candidateId,
+	                                caseId
+	                        );
+	    }
+
+	    return experiences.stream()
+	            .map(this::mapToDTO)
+	            .collect(Collectors.toList());
 	}
+
 /*
 	public WorkExperienceResponse getWorkExperiencesWithDocuments(Long profileId) {
 		// Verify profile exists
@@ -117,10 +143,16 @@ public class WorkExperienceService {
 	}
 	*/
 
-	private WorkExperience mapToEntity(WorkExperienceDTO dto, Candidate candidate) {
+	private WorkExperience mapToEntity(WorkExperienceDTO dto, Candidate candidate,Long caseId) {
+		
+		  VerificationCase verificationCase =null;
+	        if(caseId!=null && caseId!=0) {
+	        	verificationCase = verificationCaseRepository.findByCaseIdAndCandidateId(caseId,candidate.getCandidateId()).orElseThrow(()->new EntityNotFoundException());
+	        }
 		return WorkExperience.builder()
 				//.profile(profile)
 				.candidateId(candidate.getCandidateId())
+				.verificationCase(verificationCase)
 				.company_name(dto.getCompanyName())
 				.position(dto.getPosition())
 				.start_date(dto.getStartDate()).end_date(dto.getEndDate()).reason(dto.getReasonForLeaving())
@@ -245,66 +277,93 @@ public class WorkExperienceService {
 	            );
 	}
 	
-	public List<WorkExperienceDTO> updateWorkExperiences(List<WorkExperienceDTO> workExperienceDTOs, Long candidateId) {
-        // Validate profile exists
-		List<WorkExperienceDTO> workList = new ArrayList<>();
-        /*
-		Profile profile = profileRepository.findById(profileId)
-                .orElseThrow(() -> new EntityNotFoundException("Profile not found with id: " + profileId));
-       */
-		Candidate candidate = candidateRepository.findById(candidateId)
-    	        .orElseThrow(() -> new RuntimeException("Candidate not found: " + candidateId));
-        // Validate input
-        if (workExperienceDTOs == null || workExperienceDTOs.isEmpty()) {
-            throw new IllegalArgumentException("Work experiences list cannot be empty");
-        }
-        
-        for(WorkExperienceDTO workExperienceDTO : workExperienceDTOs) {
-            try {
-            	 WorkExperience workExperience = null;
-            	
-             	if(workExperienceDTO.getId()!=null) {
-             		workExperience = workExperienceRepository.findByCandidateIdAndExperienceId(candidateId, workExperienceDTO.getId())
-                             .orElseThrow(() -> new RuntimeException("Work experience history not found: " + workExperienceDTO.getId()));
-             	}else {
-             		workExperience = new WorkExperience();
-             	}
-            	
-                                          
-                   
-                  //  workExperience.setProfile(profile);
-             	    workExperience.setCandidateId(candidateId);
-                    workExperience.setAddress(workExperienceDTO.getCompanyAddress());
-                    workExperience.setCompany_name(workExperienceDTO.getCompanyName());
-                    workExperience.setEmployee_id(workExperienceDTO.getEmployeeId());
-                    workExperience.setEnd_date(workExperienceDTO.getEndDate());
-                    workExperience.setHr_email_id(workExperienceDTO.getHrEmail());
-                    workExperience.setManager_email_id(workExperienceDTO.getManagerEmail());
-                    workExperience.setReason(workExperienceDTO.getReasonForLeaving());
-                    workExperience.setStart_date(workExperienceDTO.getStartDate());
-                    
-                    // Set other fields that might be missing
-                    workExperience.setPosition(workExperienceDTO.getPosition());
-                    workExperience.setEmploymentType(workExperienceDTO.getEmploymentType());
-                    workExperience.setCurrentlyWorking(workExperienceDTO.getCurrentlyWorking());
-                    workExperience.setNoticePeriod(workExperienceDTO.getNoticePeriod());
-                    workExperience.setCity(workExperienceDTO.getCity());
-                    workExperience.setState(workExperienceDTO.getState());
-                    workExperience.setCountry(workExperienceDTO.getCountry());
-                    
-                    workExperience = workExperienceRepository.save(workExperience);
-                    WorkExperienceDTO workDto = mapToDTO(workExperience);
-                    workList.add(workDto);
-                
-            } catch (Exception e) {
-                // Log the error and handle appropriately
-                System.err.println("Error updating work experience: " + e.getMessage());
-                throw e; // or handle differently based on your requirements
-            }
-        }
-        return workList;
-        
-    }
+	@Transactional
+	public List<WorkExperienceDTO> updateWorkExperiences(
+	        List<WorkExperienceDTO> workExperienceDTOs,
+	        Long candidateId,
+	        Long caseId
+	) {
+	    if (workExperienceDTOs == null || workExperienceDTOs.isEmpty()) {
+	        throw new IllegalArgumentException("Work experiences list cannot be empty");
+	    }
+
+	    Candidate candidate = candidateRepository.findById(candidateId)
+	            .orElseThrow(() -> new RuntimeException("Candidate not found: " + candidateId));
+
+	    List<WorkExperienceDTO> result = new ArrayList<>();
+
+	    for (WorkExperienceDTO dto : workExperienceDTOs) {
+
+	        WorkExperience workExperience;
+
+	        // =====================================================
+	        // UPDATE FLOW (ID PRESENT)
+	        // =====================================================
+	        if (dto.getId() != null) {
+
+	            // SELF PROFILE MODE
+	            if (caseId == null || caseId == 0) {
+	                workExperience =
+	                        workExperienceRepository
+	                                .findByCandidateIdAndExperienceId(candidateId, dto.getId())
+	                                .orElseThrow(() ->
+	                                        new RuntimeException("Work experience not found for candidate"));
+	            }
+	            // CASE VERIFICATION MODE
+	            else {
+	                workExperience =
+	                        workExperienceRepository
+	                                .findByCandidateIdAndVerificationCaseCaseIdAndExperienceId(
+	                                        candidateId,
+	                                        caseId,
+	                                        dto.getId()
+	                                );
+	                if (workExperience == null) {
+	                    throw new RuntimeException("Work experience not found for case");
+	                }
+	            }
+	        }
+	        // =====================================================
+	        // CREATE FLOW (NEW ROW)
+	        // =====================================================
+	        else {
+	            workExperience = new WorkExperience();
+	            workExperience.setCandidateId(candidateId);
+
+	            if (caseId != null && caseId != 0) {
+	                VerificationCase verificationCase =
+	                        verificationCaseRepository.findById(caseId)
+	                                .orElseThrow(() -> new RuntimeException("Case not found"));
+	                workExperience.setVerificationCase(verificationCase);
+	            }
+	        }
+
+	        // =====================================================
+	        // MAP FIELDS (COMMON)
+	        // =====================================================
+	        workExperience.setCompany_name(dto.getCompanyName());
+	        workExperience.setEmployee_id(dto.getEmployeeId());
+	        workExperience.setPosition(dto.getPosition());
+	        workExperience.setStart_date(dto.getStartDate());
+	        workExperience.setEnd_date(dto.getEndDate());
+	        workExperience.setReason(dto.getReasonForLeaving());
+	        workExperience.setHr_email_id(dto.getHrEmail());
+	        workExperience.setManager_email_id(dto.getManagerEmail());
+	        workExperience.setAddress(dto.getCompanyAddress());
+	        workExperience.setEmploymentType(dto.getEmploymentType());
+	        workExperience.setCurrentlyWorking(dto.getCurrentlyWorking());
+	        workExperience.setNoticePeriod(dto.getNoticePeriod());
+	        workExperience.setCity(dto.getCity());
+	        workExperience.setState(dto.getState());
+	        workExperience.setCountry(dto.getCountry());
+
+	        WorkExperience saved = workExperienceRepository.save(workExperience);
+	        result.add(mapToDTO(saved));
+	    }
+
+	    return result;
+	}
+
 	
 	
 	

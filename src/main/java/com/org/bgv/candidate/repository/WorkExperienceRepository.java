@@ -8,6 +8,7 @@ import org.springframework.data.jpa.repository.Modifying;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 
+import com.org.bgv.candidate.entity.EducationHistory;
 import com.org.bgv.candidate.entity.WorkExperience;
 
 import jakarta.transaction.Transactional;
@@ -20,10 +21,15 @@ public interface WorkExperienceRepository extends JpaRepository<WorkExperience, 
     List<WorkExperience> findByExperienceId(Long experienceId);
  // (Optional) Find a single work experience by profileId + experienceId for safe deletion
     Optional<WorkExperience> findByProfile_ProfileIdAndExperienceId(Long profileId, Long experienceId);
-    Optional<WorkExperience> findByCandidateIdAndExperienceId(Long candidateId, Long experienceId);
+    
     // Verification
     
     List<WorkExperience> findByCandidateId(Long candidateId);
+    
+   
+    Optional<WorkExperience> findByCandidateIdAndExperienceId(Long candidateId, Long experienceId);
+    WorkExperience findByCandidateIdAndVerificationCaseCaseIdAndExperienceId(Long candidateId,Long caseId,Long experienceId);
+    List<WorkExperience> findByCandidateIdAndVerificationCaseCaseId(Long candidateId,Long caseId);
     
     @Query("SELECT w FROM WorkExperience w WHERE w.candidateId = :candidateId " +
            "ORDER BY " +

@@ -16,9 +16,12 @@ import org.hibernate.annotations.UpdateTimestamp;
 import com.org.bgv.entity.DegreeType;
 import com.org.bgv.entity.FieldOfStudy;
 import com.org.bgv.entity.Profile;
+import com.org.bgv.entity.VerificationCase;
+import com.org.bgv.entity.VerificationCaseCheck;
 
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
+import jakarta.persistence.FetchType;
 import jakarta.persistence.GeneratedValue;
 import jakarta.persistence.GenerationType;
 import jakarta.persistence.Id;
@@ -44,6 +47,17 @@ public class EducationHistory {
     @ManyToOne
     @JoinColumn(name = "profile_id")
     private Profile profile;
+    
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "case_check_id")
+    private VerificationCaseCheck verificationCaseCheck;
+    
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "case_id")
+    private VerificationCase verificationCase;
+    
+    @Column(name = "company_id")
+    private Long companyId;
 
     @ManyToOne
     @JoinColumn(name = "degree_id") // Graduation/Associate/Bachelor etc.
