@@ -56,5 +56,7 @@ public interface WorkExperienceRepository extends JpaRepository<WorkExperience, 
     @Query("SELECT COUNT(w) FROM WorkExperience w WHERE w.candidateId = :candidateId AND w.verified = true")
     Long countVerifiedByCandidateId(@Param("candidateId") Long candidateId);
     
+    List<WorkExperience> findByVerificationCaseCheck_CaseCheckId(Long checkId);
+    
     
 }

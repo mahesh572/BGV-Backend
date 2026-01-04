@@ -44,7 +44,7 @@ public class ProfileController {
                     .body(CustomApiResponse.failure("Failed to create profile: " + e.getMessage(), HttpStatus.INTERNAL_SERVER_ERROR));
         }
     }
-    
+    /*
  // Get all profiles
     @GetMapping("/all")
     public ResponseEntity<CustomApiResponse<List<ProfileDTO>>> getAllProfiles() {
@@ -56,7 +56,7 @@ public class ProfileController {
                     .body(CustomApiResponse.failure("Failed to retrieve profiles: " + e.getMessage(), HttpStatus.INTERNAL_SERVER_ERROR));
         }
     }
-
+*/
     // Get complete profile with all details
     @GetMapping("/{profileId}/complete")
     public ResponseEntity<CustomApiResponse<ProfileDTO>> getCompleteProfile(@PathVariable Long profileId) {

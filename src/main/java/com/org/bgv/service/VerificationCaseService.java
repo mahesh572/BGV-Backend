@@ -16,6 +16,7 @@ import com.org.bgv.common.CaseDocumentSelection;
 import com.org.bgv.common.CategoryCase;
 import com.org.bgv.common.CategoryInfo;
 import com.org.bgv.common.CheckCategoryResponse;
+import com.org.bgv.common.DocumentStatus;
 import com.org.bgv.common.DocumentTypeInfo;
 import com.org.bgv.common.DocumentUploadCaseRequest;
 import com.org.bgv.common.EmployerPackageInfo;
@@ -31,6 +32,7 @@ import com.org.bgv.constants.VerificationStatus;
 import com.org.bgv.dto.*;
 import com.org.bgv.entity.*;
 import com.org.bgv.repository.*;
+import com.org.bgv.vendor.entity.VerificationRejection;
 
 import lombok.AllArgsConstructor;
 import lombok.Data;
@@ -129,22 +131,28 @@ public class VerificationCaseService {
                 referenceNumberGenerator.generateCaseNumber();
         verificationCase.setCaseNumber(caseRef);
         
-        VerificationCase savedCase = verificationCaseRepository.save(verificationCase);
+        VerificationCase savedCase = verificationCaseRepository.saveAndFlush(verificationCase);
         
         // Create verification case checks based on categories with selected documents
-        List<VerificationCaseCheck> caseChecks = createVerificationCaseChecks(
+         createVerificationCaseChecks(
                 savedCase, request.getCategories());
+        
+        List<VerificationCaseCheck> caseChecks =
+                verificationCaseCheckRepository.findByVerificationCase_CaseId(savedCase.getCaseId());
+
+        savedCase.setCaseChecks(caseChecks);
+       
+        
+        // Update verification case with checks and documents
+       // savedCase = verificationCaseRepository.save(savedCase);
+        
         
         // Create candidate case documents based on selected documents
         List<VerificationCaseDocument> caseDocuments = createCandidateCaseDocuments(
                 savedCase, employerDocuments, selectedDocumentIds, request.getCategories());
-        
-        savedCase.setCaseChecks(caseChecks);
         savedCase.setCaseDocuments(caseDocuments);
-        
-        // Update verification case with checks and documents
+       
         savedCase = verificationCaseRepository.save(savedCase);
-        
         // asssign vendor to Category Check
         
         vendorAssignmentService.assignVendorsToCaseChecks(caseChecks);
@@ -314,69 +322,116 @@ public class VerificationCaseService {
             VerificationCase verificationCase,
             List<EmployerPackageDocument> employerDocuments,
             List<Long> selectedDocumentIds,
-            List<CategoryCase> categories) {
+            List<CategoryCase> categories
+    ) {
+
+        log.info("Creating case documents | caseId={} | candidateId={}",
+                verificationCase.getCaseId(),
+                verificationCase.getCandidateId());
 
         List<VerificationCaseDocument> caseDocuments = new ArrayList<>();
 
-        // categoryId -> selected documents
+        // -----------------------------
+        // categoryId -> selected docs
+        // -----------------------------
         Map<Long, List<CaseDocumentSelection>> categoryDocumentSelections = new HashMap<>();
-
         if (categories != null) {
             for (CategoryCase category : categories) {
                 categoryDocumentSelections.put(category.getCategoryId(), category.getDocuments());
             }
         }
 
-        log.info("categoryDocumentSelections: {}", categoryDocumentSelections);
+        // -----------------------------
+        // categoryId -> caseCheck
+        // -----------------------------
+        Map<Long, VerificationCaseCheck> categoryCheckMap =
+                verificationCase.getCaseChecks()
+                        .stream()
+                        .collect(Collectors.toMap(
+                                cc -> cc.getCategory().getCategoryId(),
+                                cc -> cc
+                        ));
 
-        // 🔹 Track package document IDs
+        log.info("Resolved {} case checks for caseId={}",
+                categoryCheckMap.size(),
+                verificationCase.getCaseId());
+
+        // -----------------------------
+        // Package document IDs
+        // -----------------------------
         Set<Long> packageDocumentIds = employerDocuments.stream()
                 .map(ed -> ed.getDocumentType().getDocTypeId())
                 .collect(Collectors.toSet());
 
-        /* =========================
+        /* =====================================================
            PHASE 1: PACKAGE DOCUMENTS
-           ========================= */
+           ===================================================== */
         for (EmployerPackageDocument employerDoc : employerDocuments) {
 
-            Long documentId = employerDoc.getDocumentType().getDocTypeId();
             Long categoryId = employerDoc.getCheckCategory().getCategoryId();
+            Long documentId = employerDoc.getDocumentType().getDocTypeId();
+
+            VerificationCaseCheck caseCheck = categoryCheckMap.get(categoryId);
+            if (caseCheck == null) {
+                log.warn("Skipping document | no caseCheck | caseId={} | categoryId={}",
+                        verificationCase.getCaseId(), categoryId);
+                continue;
+            }
 
             boolean isSelected = selectedDocumentIds.contains(documentId);
 
-            if (!categoryDocumentSelections.isEmpty()) {
-                List<CaseDocumentSelection> categoryDocs =
+            if (categoryDocumentSelections.containsKey(categoryId)) {
+                List<CaseDocumentSelection> selections =
                         categoryDocumentSelections.get(categoryId);
 
-                if (categoryDocs != null) {
-                    isSelected = categoryDocs.stream()
-                            .anyMatch(doc ->
-                                    doc.getDocumentId().equals(documentId)
-                                    && Boolean.TRUE.equals(doc.getSelected()));
+                if (selections != null) {
+                    isSelected = selections.stream()
+                            .anyMatch(sel ->
+                                    sel.getDocumentId().equals(documentId)
+                                            && Boolean.TRUE.equals(sel.getSelected()));
                 }
             }
 
             boolean isAddOn = !employerDoc.getIncludedInBase() && isSelected;
 
-            VerificationCaseDocument caseDocument = VerificationCaseDocument.builder()
-                    .verificationCase(verificationCase)
-                    .checkCategory(employerDoc.getCheckCategory())
-                    .documentType(employerDoc.getDocumentType())
-                    .isAddOn(isAddOn)
-                    .required(isSelected)
-                    .verificationStatus(VerificationStatus.PENDING)
-                    .createdAt(LocalDateTime.now())
-                    .build();
+            log.debug(
+                    "Creating case document | caseId={} | checkId={} | category={} | docType={} | addOn={} | required={}",
+                    verificationCase.getCaseId(),
+                    caseCheck.getCaseCheckId(),
+                    employerDoc.getCheckCategory().getName(),
+                    employerDoc.getDocumentType().getName(),
+                    isAddOn,
+                    isSelected
+            );
+
+            VerificationCaseDocument caseDocument =
+                    VerificationCaseDocument.builder()
+                            .verificationCase(verificationCase)
+                            .verificationCaseCheck(caseCheck) // ✅ FIXED
+                            .checkCategory(employerDoc.getCheckCategory())
+                            .documentType(employerDoc.getDocumentType())
+                            .isAddOn(isAddOn)
+                            .required(isSelected)
+                            .verificationStatus(VerificationStatus.PENDING)
+                            .createdAt(LocalDateTime.now())
+                            .build();
 
             caseDocuments.add(caseDocument);
         }
 
-        /* =========================
-           PHASE 2: TRUE ADD-ON DOCS
-           ========================= */
+        /* =====================================================
+           PHASE 2: TRUE ADD-ON DOCUMENTS
+           ===================================================== */
         for (Map.Entry<Long, List<CaseDocumentSelection>> entry : categoryDocumentSelections.entrySet()) {
 
             Long categoryId = entry.getKey();
+            VerificationCaseCheck caseCheck = categoryCheckMap.get(categoryId);
+
+            if (caseCheck == null) {
+                log.warn("Skipping add-on docs | no caseCheck | caseId={} | categoryId={}",
+                        verificationCase.getCaseId(), categoryId);
+                continue;
+            }
 
             for (CaseDocumentSelection selection : entry.getValue()) {
 
@@ -386,7 +441,6 @@ public class VerificationCaseService {
 
                 Long documentId = selection.getDocumentId();
 
-                // 🔥 Not part of employer package
                 if (!packageDocumentIds.contains(documentId)) {
 
                     CheckCategory category = checkCategoryRepository.findById(categoryId)
@@ -395,12 +449,21 @@ public class VerificationCaseService {
                     DocumentType documentType = documentTypeRepository.findById(documentId)
                             .orElseThrow(() -> new RuntimeException("Document type not found"));
 
+                    log.debug(
+                            "Creating TRUE add-on | caseId={} | checkId={} | category={} | docType={}",
+                            verificationCase.getCaseId(),
+                            caseCheck.getCaseCheckId(),
+                            category.getName(),
+                            documentType.getName()
+                    );
+
                     VerificationCaseDocument addOnDocument =
                             VerificationCaseDocument.builder()
                                     .verificationCase(verificationCase)
+                                    .verificationCaseCheck(caseCheck) // ✅ FIXED
                                     .checkCategory(category)
                                     .documentType(documentType)
-                                    .isAddOn(true)          // ✅ TRUE ADD-ON
+                                    .isAddOn(true)
                                     .required(true)
                                     .verificationStatus(VerificationStatus.PENDING)
                                     .createdAt(LocalDateTime.now())
@@ -411,26 +474,38 @@ public class VerificationCaseService {
             }
         }
 
-        /* =========================
-           SAVE & LINK CANDIDATE DOCS
-           ========================= */
+        /* =====================================================
+           SAVE & LINK DOCUMENTS
+           ===================================================== */
         List<VerificationCaseDocument> savedCaseDocs =
                 verificationCaseDocumentRepository.saveAll(caseDocuments);
 
-        for (VerificationCaseDocument verCaseDocument : savedCaseDocs) {
+        log.info("Saved {} case documents | caseId={}",
+                savedCaseDocs.size(),
+                verificationCase.getCaseId());
+
+        for (VerificationCaseDocument caseDoc : savedCaseDocs) {
 
             List<Document> documents =
-                    documentRepository.findByCategory_CategoryIdAndDocTypeId_DocTypeIdAndCandidate_CandidateId(
-                            verCaseDocument.getCheckCategory().getCategoryId(),
-                            verCaseDocument.getDocumentType().getDocTypeId(),
-                            verificationCase.getCandidateId()
-                    );
+                    documentRepository
+                            .findByCategory_CategoryIdAndDocTypeId_DocTypeIdAndCandidate_CandidateId(
+                                    caseDoc.getCheckCategory().getCategoryId(),
+                                    caseDoc.getDocumentType().getDocTypeId(),
+                                    verificationCase.getCandidateId()
+                            );
+
+            log.debug("Linking {} documents | caseDocumentId={} | checkId={}",
+                    documents.size(),
+                    caseDoc.getCaseDocumentId(),
+                    caseDoc.getVerificationCaseCheck().getCaseCheckId());
 
             for (Document document : documents) {
                 verificationCaseDocumentLinkRepository.save(
                         VerificationCaseDocumentLink.builder()
-                                .caseDocument(verCaseDocument)
+                                .caseDocument(caseDoc)
                                 .document(document)
+                                .status(DocumentStatus.UPLOADED) // ✅ FIXED (NOT NULL)
+                                .linkedAt(LocalDateTime.now())
                                 .build()
                 );
             }
@@ -989,5 +1064,10 @@ public class VerificationCaseService {
         
         return PageRequest.of(page, size, sort);
     }
+    
+    
+    
+    
+   
     
 }

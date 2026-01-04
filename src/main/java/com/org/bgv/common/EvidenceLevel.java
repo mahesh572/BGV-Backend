@@ -1,6 +1,7 @@
 package com.org.bgv.common;
 
 public enum EvidenceLevel {
-    SECTION,     // Identity / Education / Work
-    DOC_TYPE     // PAN / Degree / Company
+	SECTION,    // Category level
+    OBJECT,     // Education / Work / Identity object
+    DOCUMENT    // Specific document type
 }

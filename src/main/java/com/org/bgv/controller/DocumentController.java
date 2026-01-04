@@ -108,7 +108,7 @@ public class DocumentController {
         }
     }
     
-    
+    /*
     
     @PostMapping(
             value = "/candidates/{candidateId}/cases/{caseId}/evidence",
@@ -150,7 +150,7 @@ public class DocumentController {
         );
     }
 
-
+*/
     
     
 }

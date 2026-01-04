@@ -68,10 +68,13 @@ public class VerificationEvidence {
 
     @Column(name = "object_id")
     private Long objectId; // nullable (docType object like IdentityProof id)
+    
+    @Column(name = "docId")
+    private Long docId;
 
     /* ===== Evidence File ===== */
 
-    @Column(name = "file_name", nullable = false)
+    @Column(name = "file_name")
     private String fileName;
 
     @Column(name = "original_file_name")
@@ -99,9 +102,9 @@ public class VerificationEvidence {
     @Column(name = "remarks", length = 1000)
     private String remarks;
 
-    @Column(name = "uploaded_by", nullable = false)
-    private String uploadedBy;
-
+    @Column(name = "uploaded_by_id")
+    private Long uploadedById;
+    
     @Column(name = "uploaded_by_role")
     private String uploadedByRole; // VENDOR / SYSTEM / ADMIN
 
@@ -109,13 +112,20 @@ public class VerificationEvidence {
     private LocalDateTime uploadedAt;
 
     @Enumerated(EnumType.STRING)
-    @Column(name = "status")
-    private VerificationStatus status;
+    @Column(name = "status", nullable = false)
+    private EvidenceStatus status;
+    
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "rejection_id")
+    private VerificationRejection rejection;
+    
+    @Column(name = "archived", nullable = false)
+    private boolean archived = false;
 
     @PrePersist
     public void prePersist() {
         this.uploadedAt = LocalDateTime.now();
-        this.status = VerificationStatus.ACTIVE;
+        this.status = EvidenceStatus.UPLOADED;
     }
 }
 

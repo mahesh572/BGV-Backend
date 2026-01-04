@@ -3,8 +3,11 @@ package com.org.bgv.vendor.service;
 import com.org.bgv.candidate.entity.Candidate;
 import com.org.bgv.candidate.entity.EducationHistory;
 import com.org.bgv.candidate.entity.IdentityProof;
+import com.org.bgv.candidate.entity.WorkExperience;
 import com.org.bgv.candidate.repository.CandidateRepository;
+import com.org.bgv.candidate.repository.EducationHistoryRepository;
 import com.org.bgv.candidate.repository.IdentityProofRepository;
+import com.org.bgv.candidate.repository.WorkExperienceRepository;
 import com.org.bgv.common.DocumentEntityType;
 import com.org.bgv.common.DocumentStatus;
 import com.org.bgv.common.DocumentTypeInfo;
@@ -78,6 +81,9 @@ public class VerificationCheckService {
     private final CategoryEvidenceTypeRepository categoryEvidenceTypeRepository;
     private final IdentityProofRepository identityProofRepository;
     private final DocumentRepository documentRepository;
+    private final EducationHistoryRepository educationHistoryRepository;
+    private final CheckCategoryRepository checkCategoryRepository;
+    private final WorkExperienceRepository workExperienceRepository;
     
     /**
      * Get verification check details by type
@@ -146,8 +152,14 @@ public class VerificationCheckService {
         VerificationCheckResponseDTO response =
                 buildVerificationCheckResponse(check, verificationCase, candidate);
 
+        
+        CheckCategory category = checkCategoryRepository
+                .findByCategoryId(check.getCategory().getCategoryId());
+                
+        
+        
         // 3️⃣ Objects (SECTION-WISE DATA)
-        response.setObjects(buildObjects(check));
+        response.setObjects(buildObjects(check,category));
 
         // 4️⃣ Static / unchanged lists
         response.setEvidenceTypeList(
@@ -182,14 +194,32 @@ public class VerificationCheckService {
                 .build();
     }
     
-    private List<ObjectDTO> buildObjects(VerificationCaseCheck check) {
+    private List<ObjectDTO> buildObjects(VerificationCaseCheck check,CheckCategory category) {
 
 	    List<ObjectDTO> objects = new ArrayList<>();
+	    
+	    switch (category.getName()) {
 
-	    objects.addAll(buildIdentityObjects(check));
-	  //  objects.addAll(buildEducationObjects(check));
-	  //  objects.addAll(buildWorkExperienceObjects(check));
+	    case "Identity" -> {
+	        objects.addAll(buildIdentityObjects(check));
+	    }
 
+	    case "Education" -> {
+	        objects.addAll(buildEducationObjects(check));
+	    }
+
+	    case "Work Experience" -> {
+	        objects.addAll(buildWorkExperienceObjects(check));
+	    }
+
+	    default -> {
+	        log.warn(
+	            "Unsupported category '{}' for caseCheckId={}",
+	            category.getName(),
+	            check.getCaseCheckId()
+	        );
+	    }
+	}
 	    return objects;
 
 }
@@ -243,24 +273,24 @@ public class VerificationCheckService {
         return data;
     }
     
-    /*
     private List<ObjectDTO> buildEducationObjects(VerificationCaseCheck check) {
 
         List<EducationHistory> educations =
-                educationHistoryRepository.findByVerificationCaseCheckId(
-                        check.getCaseCheckId()
-                );
+                educationHistoryRepository
+                        .findByVerificationCaseCheck_CaseCheckId(
+                                check.getCaseCheckId()
+                        );
 
         return educations.stream()
-                .map(edu -> ObjectDTO.builder()
-                        .objectId(String.valueOf(edu.getId()))
+                .map(education -> ObjectDTO.builder()
+                        .objectId(education.getId())
                         .objectType("EDUCATION")
-                        .displayName(edu.getDegree().getName())
-                        .data(buildEducationData(edu))
+                        .displayName(resolveEducationName(education))
+                        .data(buildEducationData(education))
                         .documentTypes(
                                 buildDocumentTypes(
-                                        edu.getId(),
-                                        DocumentEntityType.EDUCATION
+                                        education.getId(),
+                                        check
                                 )
                         )
                         .evidence(Collections.emptyList())
@@ -269,20 +299,60 @@ public class VerificationCheckService {
                 .toList();
     }
 
-    private Map<String, Object> buildEducationData(EducationHistory edu) {
+    private String resolveEducationName(EducationHistory education) {
+
+        String degree =
+                education.getDegree() != null
+                        ? education.getDegree().getName()
+                        : "Education";
+
+        String field =
+                education.getField() != null
+                        ? education.getField().getName()
+                        : "";
+
+        if (!field.isBlank()) {
+            return degree + " - " + field;
+        }
+
+        return degree;
+    }
+
+    private Map<String, Object> buildEducationData(EducationHistory education) {
 
         Map<String, Object> data = new HashMap<>();
-        data.put("degree", edu.getDegree().getName());
-        data.put("fieldOfStudy", edu.getField().getName());
-        data.put("institute", edu.getInstitute_name());
-        data.put("university", edu.getUniversity_name());
-        data.put("fromDate", edu.getFromDate());
-        data.put("toDate", edu.getToDate());
-        data.put("yearOfPassing", edu.getYearOfPassing());
-        data.put("grade", edu.getGrade());
-        data.put("gpa", edu.getGpa());
-        data.put("verified", edu.isVerified());
-        data.put("verificationStatus", edu.getVerificationStatus());
+
+        data.put("degree", education.getDegree() != null
+                ? education.getDegree().getName()
+                : null);
+
+        data.put("fieldOfStudy", education.getField() != null
+                ? education.getField().getName()
+                : null);
+
+        data.put("instituteName", education.getInstitute_name());
+        data.put("universityName", education.getUniversity_name());
+
+        data.put("fromDate", education.getFromDate());
+        data.put("toDate", education.getToDate());
+        data.put("yearOfPassing", education.getYearOfPassing());
+
+        data.put("typeOfEducation", education.getTypeOfEducation());
+
+        data.put("grade", education.getGrade());
+        data.put("gpa", education.getGpa());
+        data.put("description", education.getDescription());
+
+        data.put("city", education.getCity());
+        data.put("state", education.getState());
+        data.put("country", education.getCountry());
+
+        data.put("verified", education.isVerified());
+        data.put("verificationStatus", education.getVerificationStatus());
+        data.put("verifiedBy", education.getVerifiedBy());
+
+        data.put("createdAt", education.getCreatedAt());
+        data.put("updatedAt", education.getUpdatedAt());
 
         return data;
     }
@@ -290,21 +360,22 @@ public class VerificationCheckService {
     
     private List<ObjectDTO> buildWorkExperienceObjects(VerificationCaseCheck check) {
 
-        List<WorkExperience> works =
-                workExperienceRepository.findByVerificationCaseCheckId(
-                        check.getCaseCheckId()
-                );
+        List<WorkExperience> experiences =
+                workExperienceRepository
+                        .findByVerificationCaseCheck_CaseCheckId(
+                                check.getCaseCheckId()
+                        );
 
-        return works.stream()
-                .map(work -> ObjectDTO.builder()
-                        .objectId(String.valueOf(work.getExperienceId()))
+        return experiences.stream()
+                .map(experience -> ObjectDTO.builder()
+                        .objectId(experience.getExperienceId())
                         .objectType("WORK_EXPERIENCE")
-                        .displayName(work.getCompany_name())
-                        .data(buildWorkData(work))
+                        .displayName(resolveWorkExperienceName(experience))
+                        .data(buildWorkExperienceData(experience))
                         .documentTypes(
                                 buildDocumentTypes(
-                                        work.getExperienceId(),
-                                        DocumentEntityType.WORK_EXPERIENCE
+                                        experience.getExperienceId(),
+                                        check
                                 )
                         )
                         .evidence(Collections.emptyList())
@@ -313,26 +384,59 @@ public class VerificationCheckService {
                 .toList();
     }
 
-    
-    
-    private Map<String, Object> buildWorkData(WorkExperience work) {
+    private String resolveWorkExperienceName(WorkExperience experience) {
+
+        String company = experience.getCompany_name();
+        String position = experience.getPosition();
+
+        if (company != null && position != null) {
+            return position + " at " + company;
+        }
+
+        return company != null ? company : "Work Experience";
+    }
+
+    private Map<String, Object> buildWorkExperienceData(WorkExperience experience) {
 
         Map<String, Object> data = new HashMap<>();
-        data.put("companyName", work.getCompany_name());
-        data.put("position", work.getPosition());
-        data.put("startDate", work.getStart_date());
-        data.put("endDate", work.getEnd_date());
-        data.put("currentlyWorking", work.getCurrentlyWorking());
-        data.put("employeeId", work.getEmployee_id());
-        data.put("durationInMonths", work.getDurationInMonths());
-        data.put("durationInYears", work.getDurationInYears());
-        data.put("verified", work.isVerified());
-        data.put("verificationStatus", work.getVerificationStatus());
+
+        data.put("companyName", experience.getCompany_name());
+        data.put("position", experience.getPosition());
+
+        data.put("startDate", experience.getStart_date());
+        data.put("endDate", experience.getEnd_date());
+        data.put("currentlyWorking", experience.getCurrentlyWorking());
+
+        data.put("employmentType", experience.getEmploymentType());
+        data.put("noticePeriod", experience.getNoticePeriod());
+
+        data.put("employeeId", experience.getEmployee_id());
+        data.put("reasonForLeaving", experience.getReason());
+
+        data.put("managerEmail", experience.getManager_email_id());
+        data.put("hrEmail", experience.getHr_email_id());
+
+        data.put("address", experience.getAddress());
+        data.put("city", experience.getCity());
+        data.put("state", experience.getState());
+        data.put("country", experience.getCountry());
+
+        // Derived values
+        data.put("durationInMonths", experience.getDurationInMonths());
+        data.put("durationInYears", experience.getDurationInYears());
+
+        // Verification fields
+        data.put("verified", experience.isVerified());
+        data.put("verificationStatus", experience.getVerificationStatus());
+        data.put("verifiedBy", experience.getVerifiedBy());
+
+        data.put("createdAt", experience.getCreatedAt());
+        data.put("updatedAt", experience.getUpdatedAt());
 
         return data;
     }
-*/
-  //  
+
+  
     private List<DocumentTypeVerificationDTO> buildDocumentTypes(
             Long objectId,VerificationCaseCheck check
            
@@ -399,8 +503,9 @@ public class VerificationCheckService {
 
         return documents.stream()
                 .map(doc -> VerificationFileDTO.builder()
+                		.docId(doc.getDocId())
                         .fileId(doc.getDocId())
-                        .fileName(doc.getFileName())
+                        .fileName(doc.getOriginalFileName())
                         .fileUrl(doc.getFileUrl())
                         .fileSize(doc.getFileSize())
                         .fileType(doc.getFileType())
@@ -1105,7 +1210,7 @@ public class VerificationCheckService {
             .notes(ev.getRemarks())
 
             /* ===== Audit ===== */
-            .uploadedBy(ev.getUploadedBy())
+            .uploadedBy(ev.getUploadedById())
             .uploadedAt(ev.getUploadedAt())
 
             .build();

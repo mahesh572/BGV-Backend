@@ -11,9 +11,12 @@ import com.org.bgv.dto.DocumentSummary;
 import com.org.bgv.dto.WorkExperienceDTO;
 import com.org.bgv.dto.WorkExperienceResponse;
 import com.org.bgv.entity.BaseDocument;
+import com.org.bgv.entity.CheckCategory;
 //import com.org.bgv.entity.ProfessionalDocuments;
 import com.org.bgv.entity.Profile;
 import com.org.bgv.entity.VerificationCase;
+import com.org.bgv.entity.VerificationCaseCheck;
+import com.org.bgv.repository.CheckCategoryRepository;
 //import com.org.bgv.repository.ProfessionalDocumentsRepository;
 import com.org.bgv.repository.ProfileRepository;
 import com.org.bgv.repository.VerificationCaseRepository;
@@ -46,6 +49,7 @@ public class WorkExperienceService {
 	private final S3StorageService s3StorageService;
 	 private final CandidateRepository candidateRepository;
 	 private final VerificationCaseRepository verificationCaseRepository;
+	 private final CheckCategoryRepository checkCategoryRepository;
 	
 	private static final Logger logger = LoggerFactory.getLogger(WorkExperienceService.class);
 
@@ -146,13 +150,30 @@ public class WorkExperienceService {
 	private WorkExperience mapToEntity(WorkExperienceDTO dto, Candidate candidate,Long caseId) {
 		
 		  VerificationCase verificationCase =null;
+		  VerificationCaseCheck verificationCaseCheck = null;
 	        if(caseId!=null && caseId!=0) {
 	        	verificationCase = verificationCaseRepository.findByCaseIdAndCandidateId(caseId,candidate.getCandidateId()).orElseThrow(()->new EntityNotFoundException());
+	        	final String CATEGORY_NAME = "Work Experience";
+	        	CheckCategory category = checkCategoryRepository
+	                    .findByNameIgnoreCase(CATEGORY_NAME)
+	                    .orElseThrow(() -> new RuntimeException("Category not found: " + CATEGORY_NAME));
+	        	
+	        	Map<Long, VerificationCaseCheck> categoryCheckMap =
+	                    verificationCase.getCaseChecks()
+	                            .stream()
+	                            .collect(Collectors.toMap(
+	                                    cc -> cc.getCategory().getCategoryId(),
+	                                    cc -> cc
+	                            ));
+	    						
+	    						
+	        	verificationCaseCheck = categoryCheckMap.get(category.getCategoryId());
 	        }
 		return WorkExperience.builder()
 				//.profile(profile)
 				.candidateId(candidate.getCandidateId())
 				.verificationCase(verificationCase)
+				.verificationCaseCheck(verificationCaseCheck)
 				.company_name(dto.getCompanyName())
 				.position(dto.getPosition())
 				.start_date(dto.getStartDate()).end_date(dto.getEndDate()).reason(dto.getReasonForLeaving())
@@ -334,7 +355,24 @@ public class WorkExperienceService {
 	                VerificationCase verificationCase =
 	                        verificationCaseRepository.findById(caseId)
 	                                .orElseThrow(() -> new RuntimeException("Case not found"));
+	                
+	                final String CATEGORY_NAME = "Work Experience";
+	            	CheckCategory category = checkCategoryRepository
+	                        .findByNameIgnoreCase(CATEGORY_NAME)
+	                        .orElseThrow(() -> new RuntimeException("Category not found: " + CATEGORY_NAME));
+	            	
+	            	Map<Long, VerificationCaseCheck> categoryCheckMap =
+	                        verificationCase.getCaseChecks()
+	                                .stream()
+	                                .collect(Collectors.toMap(
+	                                        cc -> cc.getCategory().getCategoryId(),
+	                                        cc -> cc
+	                                ));
+	        						
+	        						
+	            	VerificationCaseCheck verificationCaseCheck = verificationCaseCheck = categoryCheckMap.get(category.getCategoryId());
 	                workExperience.setVerificationCase(verificationCase);
+	                workExperience.setVerificationCaseCheck(verificationCaseCheck);
 	            }
 	        }
 

@@ -3,6 +3,7 @@ package com.org.bgv.vendor.dto;
 import java.time.LocalDateTime;
 
 import com.org.bgv.common.EvidenceLevel;
+import com.org.bgv.common.EvidenceStatus;
 import com.org.bgv.constants.VerificationStatus;
 
 import lombok.AllArgsConstructor;
@@ -41,12 +42,16 @@ public class EvidenceDTO {
     private String evidencePath;           // S3 / internal path
 
     /* ===== Verification ===== */
-    private VerificationStatus status;     // PENDING, VERIFIED, REJECTED
+    private EvidenceStatus status;     // PENDING, VERIFIED, REJECTED
     private String verifiedBy;
     private LocalDateTime verifiedAt;
     private String notes;
 
     /* ===== Audit ===== */
-    private String uploadedBy;
+    private Long uploadedBy;
     private LocalDateTime uploadedAt;
+    
+    private String remarks;
+    
+    
 }

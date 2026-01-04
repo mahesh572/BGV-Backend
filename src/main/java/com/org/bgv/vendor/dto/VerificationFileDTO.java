@@ -14,6 +14,9 @@ import lombok.Data;
 @Data
 public class VerificationFileDTO {
 	
+	 @JsonProperty("docId")
+	 private Long docId;
+	 
 	private Long fileId;
 	private String fileName;
 	private String fileUrl;

@@ -900,13 +900,16 @@ public class DocumentService {
                                     verificationCase.getCaseId(),
                                     verificationCaseCheck.getCaseCheckId()
                             );
-            
+            log.info(
+                    "Case document  resolved | count={}",
+                    caseDocuments.size()
+                );
             documentTypes = caseDocuments.stream()
                     .map(VerificationCaseDocument::getDocumentType)
                     .distinct()
                     .toList();
 
-            log.debug(
+            log.info(
                 "Case document types resolved | count={}",
                 documentTypes.size()
             );
@@ -1457,124 +1460,6 @@ public class DocumentService {
 	    }
 	}
 	
-	// EVIDENCE
-	
-	@Transactional
-	public void uploadEvidence(
-	        Long candidateId,
-	        Long caseId,
-	        Long caseCheckId,
-	        Long docTypeId,
-	        Long objectId,
-	        Long evidenceTypeId,
-	        String description,
-	        MultipartFile file
-	) {
-
-	    /* ===============================
-	       1. Load Verification Context
-	       =============================== */
-
-	    VerificationCaseCheck check =
-	            verificationCaseCheckRepository.findById(caseCheckId)
-	                    .orElseThrow(() -> new IllegalArgumentException("Invalid caseCheckId"));
-
-	    CheckCategory category = check.getCategory();
-
-	    /* ===============================
-	       2. Validate EvidenceType for Category
-	       =============================== */
-
-	    CategoryEvidenceType categoryEvidenceType =
-	            categoryEvidenceTypeRepository
-	                    .findByCategoryCategoryIdAndEvidenceTypeIdAndActiveTrue(
-	                            category.getCategoryId(),
-	                            evidenceTypeId
-	                    )
-	                    .orElseThrow(() ->
-	                            new IllegalArgumentException(
-	                                    "Evidence type not allowed for this category"
-	                            )
-	                    );
-
-	    EvidenceType evidenceType = categoryEvidenceType.getEvidenceType();
-
-	    /* ===============================
-	       3. Validate rules
-	       =============================== */
-
-	    if (Boolean.TRUE.equals(evidenceType.getRequiresFile()) && file == null) {
-	        throw new IllegalArgumentException("File is mandatory for this evidence type");
-	    }
-
-	    if (Boolean.TRUE.equals(evidenceType.getRequiresRemarks())
-	            && (description == null || description.isBlank())) {
-	        throw new IllegalArgumentException("Remarks are mandatory for this evidence type");
-	    }
-
-	    /* ===============================
-	       4. Determine Evidence Level
-	       =============================== */
-
-	    EvidenceLevel evidenceLevel =
-	            (docTypeId == null)
-	                    ? EvidenceLevel.SECTION
-	                    : EvidenceLevel.DOC_TYPE;
-
-	    /* ===============================
-	       5. Upload file to S3
-	       =============================== */
-
-	    Pair<String, String> upload =
-	            s3StorageService.uploadFile(
-	                    file,
-	                    "evidence/" + caseId
-	            );
-
-	    /* ===============================
-	       6. Build VerificationEvidence
-	       =============================== */
-
-	    VerificationEvidence evidence = VerificationEvidence.builder()
-	            .verificationCase(
-	                    verificationCaseRepository.getReferenceById(caseId)
-	            )
-	            .verificationCaseCheck(check)
-	            .candidate(
-	                    candidateRepository.getReferenceById(candidateId)
-	            )
-	            .category(category)
-
-	            .documentType(
-	                    docTypeId != null
-	                            ? documentTypeRepository.getReferenceById(docTypeId)
-	                            : null
-	            )
-	            .objectId(
-	                    evidenceLevel == EvidenceLevel.DOC_TYPE ? objectId : null
-	            )
-
-	            .fileName(file.getOriginalFilename())
-	            .originalFileName(file.getOriginalFilename())
-	            .fileUrl(upload.getFirst())
-	            .awsDocKey(upload.getSecond())
-	            .fileSize(file.getSize())
-	            .fileType(file.getContentType())
-
-	            .evidenceLevel(evidenceLevel)
-	            .remarks(description)
-
-	            .uploadedBy(SecurityUtils.getCurrentUsername())
-	            .uploadedByRole("VENDOR")
-	            .status(VerificationStatus.ACTIVE)
-	            .build();
-
-	    /* ===============================
-	       7. Save
-	       =============================== */
-
-	    verificationEvidenceRepository.save(evidence);
-	}
 	
 	
 	

@@ -61,4 +61,6 @@ public interface EducationHistoryRepository extends JpaRepository<EducationHisto
     Optional<EducationHistory> findByCandidateIdAndId(Long candidateId, Long id);
     
     EducationHistory findByCandidateIdAndVerificationCaseCaseIdAndId(Long candidateId,Long caseId,Long id);
+    
+    List<EducationHistory> findByVerificationCaseCheck_CaseCheckId(Long checkId);
 }

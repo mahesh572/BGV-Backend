@@ -3,6 +3,7 @@ package com.org.bgv.vendor.repository;
 import java.util.List;
 
 import org.springframework.data.jpa.repository.JpaRepository;
+import org.springframework.data.jpa.repository.Query;
 import org.springframework.stereotype.Repository;
 
 import com.org.bgv.common.EvidenceLevel;
@@ -24,4 +25,15 @@ public interface VerificationEvidenceRepository extends JpaRepository<Verificati
             Long caseCheckId,
             Long documentTypeId
     );
+    
+    
+    @Query("""
+    		SELECT e FROM VerificationEvidence e
+    		JOIN FETCH e.verificationCaseCheck c
+    		LEFT JOIN FETCH e.documentType d
+    		WHERE c.id = :checkId
+    		AND e.status != 'ARCHIVED'
+    		""")
+    		List<VerificationEvidence> findAllByCheckId(Long checkId);
+
 }

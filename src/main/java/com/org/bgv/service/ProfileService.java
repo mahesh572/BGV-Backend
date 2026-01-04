@@ -124,14 +124,14 @@ public class ProfileService {
         
         profileRepository.delete(profile);
     }
-
+/*
     public List<ProfileDTO> getAllProfiles() {
         List<Profile> profiles = profileRepository.findAll();
         return profiles.stream()
                 .map(this::mapToDTO)
                 .collect(Collectors.toList());
     }
-
+*/
     private Profile mapToEntity(BasicDetailsDTO dto) {
     	
     	
@@ -172,7 +172,7 @@ public class ProfileService {
     	return basicdetailsDTO;
     }
     
-
+/*
     private ProfileDTO mapToDTO(Profile entity) {
     	
     	BasicDetailsDTO basicdetailsDTO = BasicDetailsDTO.builder()
@@ -196,6 +196,7 @@ public class ProfileService {
                // .documents(documentService.getDocumentsByProfileGroupedByCategory(entity.getProfileId()))
                 .build();
     }
+    */
     
     @Transactional
     public String updateProfileStatus(Long profileId, String newStatus) {
