@@ -16,8 +16,10 @@ spring:
   cloud:
     aws:
       credentials:
+
         access-key: 
         secret-key: 
+
       region:
         static: ap-south-1
       s3:

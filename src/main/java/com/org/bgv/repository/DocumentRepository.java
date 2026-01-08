@@ -1,5 +1,6 @@
 package com.org.bgv.repository;
 
+import java.util.Collection;
 import java.util.List;
 import java.util.Optional;
 
@@ -8,7 +9,9 @@ import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 import org.springframework.stereotype.Repository;
 
+import com.org.bgv.common.DocumentStatus;
 import com.org.bgv.entity.Document;
+import com.org.bgv.entity.VerificationCase;
 
 @Repository
 public interface DocumentRepository extends JpaRepository<Document, Long> {
@@ -38,6 +41,9 @@ public interface DocumentRepository extends JpaRepository<Document, Long> {
     // 8. Find documents by profileId, categoryId, and docTypeId (fixed field name)
     List<Document> findByProfile_ProfileIdAndCategory_CategoryIdAndDocTypeId_DocTypeId(
             Long profileId, Long categoryId, Long docTypeId);
+    
+    List<Document> findByCandidate_CandidateIdAndCategory_CategoryIdAndDocTypeId_DocTypeId(
+            Long candidateId, Long categoryId, Long docTypeId);
 
     // 9. Find documents by profileId and object_id
     List<Document> findByProfile_ProfileIdAndObjectId(Long profileId, Long objectId);
@@ -46,8 +52,12 @@ public interface DocumentRepository extends JpaRepository<Document, Long> {
     List<Document> findByCategory_CategoryIdAndDocTypeId_DocTypeId(Long categoryId, Long docTypeId);
 
     // 11. Find a specific document by all four criteria (fixed field name)
+    /*
     List<Document> findByProfile_ProfileIdAndCategory_CategoryIdAndDocTypeId_DocTypeIdAndObjectId(
-            Long profileId, Long categoryId, Long docTypeId, Long objectId);
+            Long profileId, Long categoryId, Long docTypeId, Long objectId); */
+    
+    List<Document> findByCandidate_CandidateIdAndCategory_CategoryIdAndDocTypeId_DocTypeIdAndObjectId(
+            Long candidateId, Long categoryId, Long docTypeId, Long objectId);
 
     // 12. Find documents by profileId and status
     List<Document> findByProfile_ProfileIdAndStatus(Long profileId, String status);
@@ -60,6 +70,8 @@ public interface DocumentRepository extends JpaRepository<Document, Long> {
 
     // 15. Find documents by profileId and multiple categoryIds
     List<Document> findByProfile_ProfileIdAndCategory_CategoryIdIn(Long profileId, List<Long> categoryIds);
+    
+    
 
     // 16. Custom query for complex searches (fixed field name)
     @Query("SELECT d FROM Document d WHERE " +
@@ -91,4 +103,68 @@ public interface DocumentRepository extends JpaRepository<Document, Long> {
 
     // 21. Find latest documents by profileId ordered by uploadedAt
     List<Document> findByProfile_ProfileIdOrderByUploadedAtDesc(Long profileId);
+    
+    List<Document> findByCategory_CategoryIdAndDocTypeId_DocTypeIdAndCandidate_CandidateId(
+            Long categoryId,
+            Long docTypeId,
+            Long candidateId
+    );
+    
+    // for verification part
+    
+    List<Document> findByCandidateCandidateId(Long candidateId);
+    
+    List<Document> findByCandidateCandidateIdAndCategoryCategoryId(Long candidateId, Long categoryId);
+    
+    List<Document> findByCandidateCandidateIdAndDocTypeIdDocTypeId(Long candidateId, Long documentTypeId);
+    
+    List<Document> findByCandidateCandidateIdAndObjectId(Long candidateId, Long objectId);
+    
+    List<Document> findByCandidateCandidateIdAndCategoryCategoryIdAndObjectId(
+            Long candidateId,
+            Long categoryId,
+            Long objectId
+    );
+    
+    @Query("""
+    	    SELECT d FROM Document d
+    	    WHERE d.candidate.candidateId = :candidateId
+    	    AND d.verified = true
+    	""")
+    	List<Document> findVerifiedDocumentsByCandidateId(@Param("candidateId") Long candidateId);
+    
+    Long countByCandidateCandidateId(Long candidateId);
+    
+    Long countByCandidateCandidateIdAndVerified(Long candidateId, boolean verified);
+    
+    @Query("SELECT d FROM Document d " +
+            "JOIN VerificationCaseDocumentLink link ON link.document = d " +
+            "JOIN VerificationCaseDocument vcd ON link.caseDocument = vcd " +
+            "WHERE vcd.verificationCase = :verificationCase " +
+            "AND vcd.checkCategory.code = :checkType")
+     List<Document> findByVerificationCaseAndCheckType(
+             @Param("verificationCase") VerificationCase verificationCase,
+             @Param("checkType") String checkType);
+    
+    
+    List<Document> findByCandidate_CandidateIdAndCategory_CategoryIdAndDocTypeId_DocTypeIdAndStatusNot(
+            Long candidateId, Long categoryId, Long docTypeId, String status);
+        
+        // And similar for other methods
+        List<Document> findByCandidate_CandidateIdAndCategory_CategoryIdAndDocTypeId_DocTypeIdAndObjectIdAndStatusNot(
+            Long candidateId, Long categoryId, Long docTypeId, Long objectId, String status);
+        
+        
+        List<Document> findByCandidate_CandidateIdAndDocIdInAndStatusNot(
+                Long candidateId, Collection<Long> documentIds, String status);
+        
+        List<Document> findByObjectIdAndCategory_CategoryIdAndStatusNot(
+                Long objectId,
+                Long categoryId,
+                DocumentStatus status
+        );
+        
+        
+        List<Document> findByCandidate_CandidateIdAndVerificationCaseCheck_CaseCheckIdAndObjectIdAndStatusNot(Long candidateId, Long caseCheckId,Long objectId,DocumentStatus status);
+        
 }

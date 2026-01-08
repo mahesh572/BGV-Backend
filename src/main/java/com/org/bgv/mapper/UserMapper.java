@@ -2,71 +2,100 @@ package com.org.bgv.mapper;
 
 import com.org.bgv.common.UserDto;
 import com.org.bgv.dto.AddressDTO;
-import com.org.bgv.dto.BasicdetailsDTO;
+import com.org.bgv.dto.BasicDetailsDTO;
 import com.org.bgv.dto.UserDetailsDto;
 
 import com.org.bgv.entity.Address;
+import com.org.bgv.entity.Profile;
 import com.org.bgv.entity.User;
+import com.org.bgv.repository.ProfileRepository;
+import com.org.bgv.repository.UserRepository;
+import com.org.bgv.service.DocumentService;
+import com.org.bgv.service.EducationService;
+import com.org.bgv.service.IdentityProofService;
+import com.org.bgv.service.ProfileAddressService;
+import com.org.bgv.service.WorkExperienceService;
 
+import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
+
+import java.util.Optional;
 import java.util.stream.Collectors;
 
 import org.springframework.stereotype.Component;
 
+
 @Component
+@RequiredArgsConstructor
+@Slf4j
 public class UserMapper implements BaseMapper<User, UserDto> {
    
+	 private final ProfileRepository profileRepository;
+	
 	@Override
     public UserDto toDto(User entity) {
 		UserDto dto = new UserDto();
+		try {
+		log.info("UserMapper:::::::::::::{}",entity);
+		
+		Profile profile = profileRepository.findByUserUserId(entity.getUserId());
+		
         dto.setUserId(entity.getUserId());
-        dto.setFirstName(entity.getFirstName());
-        dto.setLastName(entity.getLastName());
+        dto.setFirstName(profile.getFirstName());
+        dto.setLastName(profile.getLastName());
         dto.setEmail(entity.getEmail());
         dto.setUserType(entity.getUserType());
-        dto.setPhoneNumber(entity.getPhoneNumber());
-		
-
+        dto.setPhoneNumber(profile.getPhoneNumber());
+        dto.setPasswordResetrequired(entity.getPasswordResetrequired()==null?Boolean.FALSE:entity.getPasswordResetrequired());
+		}catch (Exception e) {
+			log.error(e.getMessage());
+		}
         return dto;
     }
 	
 	public UserDto toUserDto(User user) {
-        if (user == null) {
-            return null;
-        }
+	    if (user == null) {
+	        return null;
+	    }
 
-        String fullName = (user.getFirstName() != null ? user.getFirstName() : "") + 
-                         (user.getLastName() != null ? " " + user.getLastName() : "").trim();
-        
-        if (fullName.isEmpty()) {
-            fullName = null;
-        }
+	    Profile profile = profileRepository.findByUserUserId(user.getUserId());
 
-        return UserDto.builder()
-                .userId(user.getUserId())
-                .email(user.getEmail())
-                .userType(user.getUserType())
-                .firstName(user.getFirstName())
-                .lastName(user.getLastName())
-                .name(fullName)
-                .phoneNumber(user.getPhoneNumber())
-                .isActive(user.getIsActive())
-                .isVerified(user.getIsVerified())
-                .profilePictureUrl(user.getProfilePictureUrl())
-                .gender(user.getGender())
-                .status(user.getStatus())
-                .dateOfBirth(user.getDateOfBirth() != null ? user.getDateOfBirth() : null)
-                .build();
-    }
+	    String firstName = profile != null ? profile.getFirstName() : null;
+	    String lastName  = profile != null ? profile.getLastName()  : null;
+
+	    String fullName = null;
+	    if (firstName != null || lastName != null) {
+	        fullName = ((firstName != null ? firstName : "") +
+	                    (lastName  != null ? " " + lastName : "")).trim();
+	    }
+
+	    return UserDto.builder()
+	            .userId(user.getUserId())
+	            .email(user.getEmail())
+	            .userType(user.getUserType())
+	            .firstName(firstName)
+	            .lastName(lastName)
+	            .name(fullName)
+	            .phoneNumber(profile != null ? profile.getPhoneNumber() : null)
+	            .gender(profile != null ? profile.getGender() : null)
+	            .profilePictureUrl(user.getProfilePictureUrl())
+	            .isActive(user.getIsActive())
+	            .isVerified(user.getIsVerified())
+	            .status(user.getStatus())
+	            .dateOfBirth(user.getDateOfBirth())
+	            .build();
+	}
+
 
 
     @Override
     public User toEntity(UserDto dto) {
         User user = new User();
         user.setUserId(dto.getUserId());
-        user.setFirstName(dto.getFirstName());
-        user.setLastName(dto.getLastName());
+       // user.setFirstName(dto.getFirstName());
+      //  user.setLastName(dto.getLastName());
         user.setEmail(dto.getEmail());
-        user.setPhoneNumber(dto.getPhoneNumber());
+      //  user.setPhoneNumber(dto.getPhoneNumber());
        // user.setDateOfBirth(dto.getDateOfBirth());
         user.setUserType(dto.getUserType());
         user.setIsVerified(Boolean.FALSE);
@@ -87,7 +116,7 @@ public class UserMapper implements BaseMapper<User, UserDto> {
             .city(addr.getCity())
             .state(addr.getState())
             .country(addr.getCountry())
-            .postalCode(addr.getPostalCode())
+            .zipCode(addr.getZipCode())
             .isDefault(addr.isDefault())
             .addressType(addr.getAddressType())
             .user(user)
@@ -100,14 +129,14 @@ public class UserMapper implements BaseMapper<User, UserDto> {
         addrDto.setCity(address.getCity());
         addrDto.setState(address.getState());
         addrDto.setCountry(address.getCountry());
-        addrDto.setPostalCode(address.getPostalCode());
+        addrDto.setZipCode(address.getZipCode());
         addrDto.setDefault(address.isDefault());
         addrDto.setAddressType(address.getAddressType());
         return addrDto;
     }
-    public BasicdetailsDTO mapUserDTOToBasicdetails(UserDto userDto) {
+    public BasicDetailsDTO mapUserDTOToBasicdetails(UserDto userDto) {
     	
-    	return BasicdetailsDTO.builder()
+    	return BasicDetailsDTO.builder()
     			.firstName(userDto.getFirstName())
     			.lastName(userDto.getLastName())
     			.gender(userDto.getGender())

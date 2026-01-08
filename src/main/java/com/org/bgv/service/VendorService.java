@@ -5,13 +5,17 @@ import org.springframework.stereotype.Service;
 
 import com.org.bgv.common.Status;
 import com.org.bgv.dto.VendorDTO;
+import com.org.bgv.entity.CheckCategory;
 import com.org.bgv.entity.CheckType;
+import com.org.bgv.entity.Profile;
 import com.org.bgv.entity.Role;
 import com.org.bgv.entity.User;
 import com.org.bgv.entity.UserRole;
 import com.org.bgv.entity.Vendor;
 import com.org.bgv.entity.VendorCheckMapping;
+import com.org.bgv.repository.CheckCategoryRepository;
 import com.org.bgv.repository.CheckTypeRepository;
+import com.org.bgv.repository.ProfileRepository;
 import com.org.bgv.repository.RoleRepository;
 import com.org.bgv.repository.UserRepository;
 import com.org.bgv.repository.UserRoleRepository;
@@ -33,8 +37,10 @@ public class VendorService {
     private final RoleRepository roleRepository;
     private final UserRoleRepository userRoleRepository;
     private final VendorRepository vendorRepository;
-    private final CheckTypeRepository checkTypeRepository;
+   // private final CheckCategory checkCategory;
+    private final CheckCategoryRepository checkCategoryRepository;
     private final VendorCheckMappingRepository vendorCheckMappingRepository;
+    private final ProfileRepository profileRepository;
 
     @Transactional
     public Boolean createVendor(VendorDTO vendorDTO) {
@@ -42,13 +48,9 @@ public class VendorService {
         if(vendorDTO != null) {
             // Create and save User
             User user = User.builder()
-                .firstName(vendorDTO.getFirstName())
-                .lastName(vendorDTO.getLastName())
-                .phoneNumber(vendorDTO.getPhone())
                 .email(vendorDTO.getEmail())
                 .password(passwordEncoder.encode("123456"))
                 .userType(Status.USER_TYPE_VENDOR)
-                .gender(vendorDTO.getGender())
                 .dateOfBirth(vendorDTO.getDateOfBirth())
                 .build();
             
@@ -77,6 +79,16 @@ public class VendorService {
             
             vendor = vendorRepository.save(vendor);
             
+            Profile profile =Profile.builder()
+              .firstName(vendorDTO.getFirstName())
+              .lastName(vendorDTO.getLastName())
+              .phoneNumber(vendorDTO.getPhone())
+              .gender(vendorDTO.getGender())
+            .build();
+            
+            profileRepository.save(profile);
+            
+            /*
             // Assign ROLE_VENDOR to the user
             Role vendorRole = roleRepository.findByName("ROLE_VENDOR")
                     .orElseThrow(() -> new RuntimeException("ROLE_VENDOR not found"));
@@ -87,11 +99,14 @@ public class VendorService {
                     .build();
             
             userRoleRepository.save(userRole);
+            */
             
             // Handle services provided - FIXED: Use final reference
             if (vendorDTO.getServicesProvided() != null && !vendorDTO.getServicesProvided().isEmpty()) {
             	saveVendorServicesWithStream(vendor, vendorDTO.getServicesProvided());
             }
+            
+            // create profile
             
             isSuccess = Boolean.TRUE;
         }
@@ -102,12 +117,12 @@ public class VendorService {
     private void saveVendorServicesWithStream(final Vendor vendor, List<Long> serviceIds) {
         List<VendorCheckMapping> mappings = serviceIds.stream()
             .map(checkTypeId -> {
-                CheckType checkType = checkTypeRepository.findById(checkTypeId)
-                        .orElseThrow(() -> new RuntimeException("CheckType not found: " + checkTypeId));
+            	CheckCategory checkType = checkCategoryRepository.findByCategoryId(checkTypeId);
+                        
                 
                 return VendorCheckMapping.builder()
                         .vendor(vendor) // vendor is effectively final now
-                        .checkType(checkType)
+                        .category(checkType)
                         .isActive(true)
                         .build();
             })

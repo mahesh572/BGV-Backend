@@ -1,7 +1,11 @@
 package com.org.bgv.controller;
 
 import com.org.bgv.api.response.CustomApiResponse;
+import com.org.bgv.common.CheckCategoryResponse;
 import com.org.bgv.service.BGVServices;
+
+import lombok.extern.slf4j.Slf4j;
+
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
@@ -12,6 +16,7 @@ import java.util.Map;
 
 @RestController
 @RequestMapping("/api/bgv")
+@Slf4j
 public class BGVController {
 
     @Autowired
@@ -29,18 +34,18 @@ public class BGVController {
         }
     }
 */
-    @GetMapping("/categories")
+    @GetMapping("/verification/categories")
     public ResponseEntity<CustomApiResponse<List<Map<String, Object>>>> getAllCategories() {
         try {
-            List<Map<String, Object>> categories = bgvServices.getAllCategoriesAndCheck();
+            List<Map<String, Object>> categories = bgvServices.getAllCategoriesAndCheckVerification();
             return ResponseEntity.ok(CustomApiResponse.success("Categories retrieved successfully", categories, HttpStatus.OK));
         } catch (Exception e) {
             return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
                     .body(CustomApiResponse.failure("Failed to retrieve categories: " + e.getMessage(), HttpStatus.INTERNAL_SERVER_ERROR));
         }
     }
-
-    @GetMapping("/categories/active")
+    
+    @GetMapping("/verification/categories/active")
     public ResponseEntity<CustomApiResponse<List<Map<String, Object>>>> getActiveCategories() {
         try {
             List<Map<String, Object>> categories = bgvServices.getActiveCategories();
@@ -53,7 +58,7 @@ public class BGVController {
 
     
 
-    @PostMapping("/categories")
+    @PostMapping("/verification/categories")
     public ResponseEntity<CustomApiResponse<Object>> addCategory(@RequestBody Map<String, String> request) {
         try {
             String name = request.get("name");
@@ -99,6 +104,45 @@ public class BGVController {
                     .body(CustomApiResponse.failure("Failed to create check type: " + e.getMessage(), HttpStatus.INTERNAL_SERVER_ERROR));
         }
     }
+    
+    
+    
+
+    @GetMapping("/check/categories")
+    public ResponseEntity<CustomApiResponse<List<CheckCategoryResponse>>> getAllCheckCategories() {
+        List<CheckCategoryResponse> categories = bgvServices.getAllCheck_Categories();
+        return ResponseEntity.ok(CustomApiResponse.success(null, categories, HttpStatus.OK));
+    }
+    
+    @GetMapping("/check/categories/with-ruletypes")
+    public ResponseEntity<CustomApiResponse<List<CheckCategoryResponse>>> getCategoryWithRuleTypes(
+           ) throws Exception {
+    	List<CheckCategoryResponse> categoryResponse =  bgvServices.getAllCategoriesWithRuleTypes();
+        return ResponseEntity.ok(CustomApiResponse.success(null, categoryResponse, HttpStatus.OK));
+    }
+    
+    @GetMapping("/document-types/by-category")
+    public ResponseEntity<CustomApiResponse<Map<Long, List<Map<String, Object>>>>> getDocumentTypesByCategory() {
+        try {
+            Map<Long, List<Map<String, Object>>> documentTypes = bgvServices.getDocumentTypesByCategory();
+            log.info("getDocumentTypesByCategory:::::::{}",documentTypes);
+            return ResponseEntity.ok(CustomApiResponse.success(
+                "Document types retrieved successfully", 
+                documentTypes, 
+                HttpStatus.OK
+            ));
+        } catch (Exception e) {
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
+                .body(CustomApiResponse.failure(
+                    "Failed to retrieve document types: " + e.getMessage(), 
+                    HttpStatus.INTERNAL_SERVER_ERROR
+                ));
+        }
+    }
+    
+    
+    
+    
 /*
     @DeleteMapping("/categories/{id}")
     public ResponseEntity<CustomApiResponse<Void>> deleteCategory(@PathVariable Long id) {

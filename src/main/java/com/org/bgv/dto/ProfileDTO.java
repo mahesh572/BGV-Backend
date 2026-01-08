@@ -16,7 +16,7 @@ import java.util.List;
 @Builder
 public class ProfileDTO {
 	
-	private BasicdetailsDTO basicDetails;
+	private BasicDetailsDTO basicDetails;
     
     // Work experiences
     private List<WorkExperienceDTO> workExperiences;
@@ -30,5 +30,5 @@ public class ProfileDTO {
     private List<IdentityProofDTO> Identity;
     
     // Documents grouped by category
-    private List<DocumentCategoryGroup> documents;
+    private List<CheckCategoryGroup> documents;
 }

@@ -17,13 +17,15 @@ import com.org.bgv.common.AssignUsersRequest;
 import com.org.bgv.common.ChangePasswordRequest;
 import com.org.bgv.common.CompanySearchRequest;
 import com.org.bgv.common.PaginationResponse;
+import com.org.bgv.common.RoleConstants;
 import com.org.bgv.common.UserDto;
 import com.org.bgv.common.UserSearchRequest;
 import com.org.bgv.company.dto.CompanyDetailsDTO;
 import com.org.bgv.company.dto.CompanyRegistrationRequestDTO;
 import com.org.bgv.company.dto.CompanyRegistrationResponse;
 import com.org.bgv.company.dto.EmployerDTO;
-import com.org.bgv.dto.BasicdetailsDTO;
+import com.org.bgv.config.SecurityUtils;
+import com.org.bgv.dto.BasicDetailsDTO;
 import com.org.bgv.dto.UserDetailsDto;
 import com.org.bgv.entity.Company;
 import com.org.bgv.mapper.UserMapper;
@@ -57,8 +59,9 @@ public class AdminController {
 	        //	userDto.setUserType(Constants.USER_TYPE_CANDIDATE);
 	        	UserDto createdUser = userService.create(userDto);
 	        	logger.info("AdminController:::::createdUser::{}",createdUser);
+	        	userDto.setUserId(createdUser.getUserId());
 	        	// Profile creation
-	        	BasicdetailsDTO basicDetailsDTO = userMapper.mapUserDTOToBasicdetails(createdUser);
+	        	BasicDetailsDTO basicDetailsDTO = userMapper.mapUserDTOToBasicdetails(userDto);
 	        	logger.info("AdminController::::::profileservice:::::START:::::{}",basicDetailsDTO);
 	        	basicDetailsDTO = profileService.createProfile(basicDetailsDTO);
 	        	
@@ -73,35 +76,22 @@ public class AdminController {
 	        }
 	    }
 
-	 	@PostMapping("/{userId}/change-password")
-	    @Operation(summary = "Change user password", description = "Change password for a specific user")
-	    @ApiResponses({
-	        @ApiResponse(responseCode = "200", description = "Password changed successfully"),
-	        @ApiResponse(responseCode = "400", description = "Invalid input or current password incorrect"),
-	        @ApiResponse(responseCode = "404", description = "User not found"),
-	        @ApiResponse(responseCode = "500", description = "Internal server error")
-	    })
-	    public ResponseEntity<CustomApiResponse<Void>> changePassword(
-	            @Parameter(description = "ID of the user", required = true, example = "123")
-	            @PathVariable Long userId,
-	            @Valid @RequestBody ChangePasswordRequest request) {
-	        try {
-	            userService.changePasswordByAdmin(userId, request);
-	            return ResponseEntity.ok(CustomApiResponse.success("Password changed successfully", null, HttpStatus.OK));
-	        } catch (RuntimeException e) {
-	            return ResponseEntity.status(HttpStatus.BAD_REQUEST)
-	                    .body(CustomApiResponse.failure(e.getMessage(), HttpStatus.BAD_REQUEST));
-	        } catch (Exception e) {
-	            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
-	                    .body(CustomApiResponse.failure("Failed to change password: " + e.getMessage(), HttpStatus.INTERNAL_SERVER_ERROR));
-	        }
-	    }
+	 	
 	 	
 	 	@PostMapping("/users/search")
 	    public ResponseEntity<CustomApiResponse<PaginationResponse<UserDto>>> searchUsers(
 	            @RequestBody UserSearchRequest searchRequest) {
 	    	logger.info("searchUsers::::::::::::::::::::::{}"+searchRequest);
 	        try {
+	        	
+	        	if(SecurityUtils.hasRole(RoleConstants.ROLE_COMAPNY_ADMINISTRATOR)) {
+	        		logger.info("RoleConstants.ROLE_COMAPNY_ADMINISTRATOR::::::::::::::");
+	        		Long companyId = SecurityUtils.getCurrentUserCompanyId();
+	        		logger.info("RoleConstants.ROLE_COMAPNY_ADMINISTRATOR::::::::::companyId::::{}",companyId);
+	        		searchRequest.setCompanyId(companyId);
+	        	}
+	        	
+	        	
 	            PaginationResponse<UserDto> response = userService.searchUsers(searchRequest);
 	            return ResponseEntity.ok(CustomApiResponse.success("Users retrieved successfully", response, HttpStatus.OK));
 	        } catch (RuntimeException e) {
@@ -239,5 +229,29 @@ public class AdminController {
 	                    ));
 	        }
 	    }
+	 	
+	 	 @PostMapping("/{userId}/change-password")
+	     @Operation(summary = "Change user password", description = "Change password for a specific user")
+	     @ApiResponses({
+	         @ApiResponse(responseCode = "200", description = "Password changed successfully"),
+	         @ApiResponse(responseCode = "400", description = "Invalid input or current password incorrect"),
+	         @ApiResponse(responseCode = "404", description = "User not found"),
+	         @ApiResponse(responseCode = "500", description = "Internal server error")
+	     })
+	     public ResponseEntity<CustomApiResponse<Void>> changePassword(
+	             @Parameter(description = "ID of the user", required = true, example = "123")
+	             @PathVariable Long userId,
+	             @Valid @RequestBody ChangePasswordRequest request) {
+	         try {
+	             userService.changePasswordByAdmin(userId, request);
+	             return ResponseEntity.ok(CustomApiResponse.success("Password changed successfully", null, HttpStatus.OK));
+	         } catch (RuntimeException e) {
+	             return ResponseEntity.status(HttpStatus.BAD_REQUEST)
+	                     .body(CustomApiResponse.failure(e.getMessage(), HttpStatus.BAD_REQUEST));
+	         } catch (Exception e) {
+	             return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
+	                     .body(CustomApiResponse.failure("Failed to change password: " + e.getMessage(), HttpStatus.INTERNAL_SERVER_ERROR));
+	         }
+	     }
 	 	
 }

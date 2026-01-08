@@ -11,16 +11,17 @@ import org.slf4j.LoggerFactory;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 
+import com.org.bgv.candidate.entity.Candidate;
+import com.org.bgv.candidate.repository.CandidateRepository;
 import com.org.bgv.common.RoleConstants;
+import com.org.bgv.config.SecurityUtils;
 import com.org.bgv.constants.CandidateStatus;
 import com.org.bgv.constants.Constants;
 import com.org.bgv.controller.RoleController;
-import com.org.bgv.entity.Candidate;
 import com.org.bgv.entity.Role;
 import com.org.bgv.entity.User;
 import com.org.bgv.entity.UserRole;
 import com.org.bgv.mapper.RoleMapper;
-import com.org.bgv.repository.CandidateRepository;
 import com.org.bgv.repository.CompanyRepository;
 import com.org.bgv.repository.CompanyUserRepository;
 import com.org.bgv.repository.ProfileRepository;
@@ -101,8 +102,17 @@ public class RoleService {
     }
 
     public List<RoleResponse> getAllRolesGroupedByType() {
-        // Get all roles
-        List<Role> allRoles = roleRepository.findAll();
+    	
+    	List<Role> allRoles = null;
+    	
+    	if (SecurityUtils.hasRole("Administrator")) {
+    		 
+    		allRoles = roleRepository.findAll();
+    	 }else if(SecurityUtils.hasRole("Company Administrator")) {
+    		 allRoles = roleRepository.findByType(RoleConstants.TYPE_COMPANY);
+    	 }
+    	
+        
         
         // Group roles by type and convert to RoleTypeGroupDto
         List<RoleResponse> roleGroups = allRoles.stream()

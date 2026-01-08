@@ -27,18 +27,31 @@ public interface UserRepository extends JpaRepository<User, Long>, JpaSpecificat
 	           "WHERE u.email = :email")
 	    Optional<User> findByEmailWithRoles(@Param("email") String email);
 	    
-	    @Query("SELECT u FROM User u WHERE " +
-	            "LOWER(u.firstName) LIKE LOWER(CONCAT('%', :keyword, '%')) OR " +
-	            "LOWER(u.lastName) LIKE LOWER(CONCAT('%', :keyword, '%')) OR " +
-	            "LOWER(u.email) LIKE LOWER(CONCAT('%', :keyword, '%')) OR " +
-	            "LOWER(u.userType) LIKE LOWER(CONCAT('%', :keyword, '%'))")
-	     List<User> searchUsers(@Param("keyword") String keyword);
+	    @Query("""
+	    	    SELECT u
+	    	    FROM User u
+	    	    LEFT JOIN u.profile p
+	    	    WHERE
+	    	        LOWER(p.firstName) LIKE LOWER(CONCAT('%', :keyword, '%'))
+	    	        OR LOWER(p.lastName) LIKE LOWER(CONCAT('%', :keyword, '%'))
+	    	        OR LOWER(u.email) LIKE LOWER(CONCAT('%', :keyword, '%'))
+	    	        OR LOWER(u.userType) LIKE LOWER(CONCAT('%', :keyword, '%'))
+	    	""")
+	    	List<User> searchUsers(@Param("keyword") String keyword);
 	     
-	     @Query("SELECT u FROM User u WHERE " +
-	            "LOWER(u.firstName) LIKE LOWER(CONCAT('%', :keyword, '%')) OR " +
-	            "LOWER(u.lastName) LIKE LOWER(CONCAT('%', :keyword, '%')) OR " +
-	            "LOWER(u.email) LIKE LOWER(CONCAT('%', :keyword, '%')) OR " +
-	            "LOWER(u.userType) LIKE LOWER(CONCAT('%', :keyword, '%'))")
-	     Page<User> searchUsersWithPagination(@Param("keyword") String keyword, Pageable pageable);
+	    @Query("""
+	    	    SELECT u
+	    	    FROM User u
+	    	    LEFT JOIN u.profile p
+	    	    WHERE
+	    	        LOWER(p.firstName) LIKE LOWER(CONCAT('%', :keyword, '%'))
+	    	        OR LOWER(p.lastName) LIKE LOWER(CONCAT('%', :keyword, '%'))
+	    	        OR LOWER(u.email) LIKE LOWER(CONCAT('%', :keyword, '%'))
+	    	        OR LOWER(u.userType) LIKE LOWER(CONCAT('%', :keyword, '%'))
+	    	""")
+	    	Page<User> searchUsersWithPagination(
+	    	        @Param("keyword") String keyword,
+	    	        Pageable pageable
+	    	);
 	    
 }

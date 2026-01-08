@@ -31,3 +31,6 @@ build/
 
 ### VS Code ###
 .vscode/
+src/main/java/com/org/bgv/s3/S3Config.java
+src/main/java/com/org/bgv/s3/S3Config.java
+src/main/resources/application.yml

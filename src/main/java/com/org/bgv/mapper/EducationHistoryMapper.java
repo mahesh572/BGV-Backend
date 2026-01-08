@@ -1,7 +1,7 @@
 package com.org.bgv.mapper;
 
+import com.org.bgv.candidate.entity.EducationHistory;
 import com.org.bgv.dto.EducationHistoryDTO;
-import com.org.bgv.entity.EducationHistory;
 import org.springframework.stereotype.Component;
 
 import java.time.LocalDate;

@@ -1,5 +1,6 @@
 package com.org.bgv.service;
 
+import com.org.bgv.common.CandidateDTO;
 import com.org.bgv.common.ChangePasswordRequest;
 import com.org.bgv.common.ColumnMetadata;
 import com.org.bgv.common.FilterMetadata;
@@ -9,6 +10,7 @@ import com.org.bgv.common.PageRequestDto;
 import com.org.bgv.common.PaginationMetadata;
 import com.org.bgv.common.PaginationRequest;
 import com.org.bgv.common.PaginationResponse;
+import com.org.bgv.common.RoleConstants;
 import com.org.bgv.common.SortField;
 import com.org.bgv.common.SortingMetadata;
 import com.org.bgv.common.SortingRequest;
@@ -19,15 +21,20 @@ import com.org.bgv.controller.UserController;
 import com.org.bgv.dto.UserDetailsDto;
 import com.org.bgv.entity.Company;
 import com.org.bgv.entity.CompanyUser;
+import com.org.bgv.entity.Profile;
 import com.org.bgv.entity.Role;
 import com.org.bgv.entity.User;
 import com.org.bgv.entity.UserRole;
+import com.org.bgv.entity.UserType;
+import com.org.bgv.entity.Vendor;
 import com.org.bgv.mapper.UserMapper;
 import com.org.bgv.repository.CompanyRepository;
 import com.org.bgv.repository.CompanyUserRepository;
+import com.org.bgv.repository.ProfileRepository;
 import com.org.bgv.repository.RoleRepository;
 import com.org.bgv.repository.UserRepository;
 import com.org.bgv.repository.UserRoleRepository;
+import com.org.bgv.repository.VendorRepository;
 
 import jakarta.persistence.criteria.Join;
 import jakarta.persistence.criteria.JoinType;
@@ -67,6 +74,11 @@ public class UserService {
     private final CompanyUserRepository companyUserRepository;
     private final PasswordEncoder passwordEncoder;
     private final CompanyRepository companyRepository;
+    private final CandidateService candidateService;
+    private final EmailService emailService;
+    private final ProfileRepository profileRepository;
+    private final VendorRepository vendorRepository;
+    private final VerificationCaseService verificationCaseService;
     
     private static final Logger logger = LoggerFactory.getLogger(UserService.class);
 
@@ -89,7 +101,7 @@ public class UserService {
     }
    */
     public PaginationResponse<UserDto> searchUsers(UserSearchRequest searchRequest) {
-        // Build pageable
+        
         Pageable pageable = createPageable(searchRequest.getPagination(), searchRequest.getSorting());
         
         // Build specification for filtering
@@ -207,6 +219,8 @@ public class UserService {
         try {
             User existingUser = userRepository.findById(id)
                     .orElseThrow(() -> new RuntimeException("User not found with id: " + id));
+            
+            Profile profile = profileRepository.findByUserUserId(existingUser.getUserId());
 
             // Check if email is being changed and if it already exists for another user
             if (!existingUser.getEmail().equals(userDto.getEmail()) && 
@@ -215,16 +229,17 @@ public class UserService {
             }
 
             // Update fields
-            existingUser.setFirstName(userDto.getFirstName());
-            existingUser.setLastName(userDto.getLastName());
+            profile.setFirstName(userDto.getFirstName());
+            profile.setLastName(userDto.getLastName());
             existingUser.setEmail(userDto.getEmail());
             
             // Update other fields as needed
             if (userDto.getPhoneNumber() != null) {
-                existingUser.setPhoneNumber(userDto.getPhoneNumber());
+            	profile.setPhoneNumber(userDto.getPhoneNumber());
             }
 
             User updated = userRepository.save(existingUser);
+            profileRepository.save(profile);
             return userMapper.toDto(updated);
         } catch (Exception e) {
             throw new RuntimeException("Failed to update user: " + e.getMessage(), e);
@@ -250,6 +265,7 @@ public class UserService {
                     .map(userMapper::toDto)
                     .orElseThrow(() -> new RuntimeException("User not found with email: " + email));
             userDto.setRoles(getUserRoles(userDto.getUserId()));
+            
             return userDto;
         } catch (Exception e) {
             throw new RuntimeException("Failed to fetch user by email: " + e.getMessage(), e);
@@ -326,13 +342,14 @@ public class UserService {
     
     public UserDto getUserFromToken(String token) {
     	UserDto userDto = null;
-
+try {
         if (jwtUtil.validateToken(token)) {
             String email = jwtUtil.getUsernameFromToken(token);
             userDto = getUserByEmail(email);
 
             // Try setting profileId, skip if not found
             try {
+            	logger.info("userDto.getUserId()::::::::::::::::::::{}",userDto.getUserId());
                 Long profileId = profileService.getProfileIdByUserId(userDto.getUserId());
                 if (profileId != null) {
                     userDto.setProfileId(profileId);
@@ -346,8 +363,28 @@ public class UserService {
             if (companyUsers != null && !companyUsers.isEmpty()) {
                 userDto.setCompanyId(companyUsers.get(0).getCompanyId());
             }
+            if(userDto.getRoles().contains(RoleConstants.ROLE_CANDIDATE)) {
+            	CandidateDTO candidate = candidateService.getCandidateByUserId(userDto.getUserId());
+            	if(candidate!=null) {
+            		userDto.setHasConsentProvided(candidate.getIsConsentProvided()==null?Boolean.FALSE:candidate.getIsConsentProvided());
+            		userDto.setCandidateId(candidate.getCandidateId());
+            		
+            	}
+            }else {
+            	userDto.setHasConsentProvided(Boolean.TRUE);
+            	
+            }
+            
+            logger.info("############################################################################:::::::::::::{}",UserType.VENDOR.name());
+            if(userDto.getUserType()!=null && userDto.getUserType().equalsIgnoreCase(UserType.VENDOR.name())) {
+            	Vendor vendor = vendorRepository.findByUser_userId(userDto.getUserId());
+            	logger.info("in user service:::::::::::{}",vendor);
+            	userDto.setVendorId(vendor.getId());
+            }
         }
-
+			}catch (Exception e) {
+				e.printStackTrace();
+			}
         return userDto;
     }
     
@@ -417,15 +454,18 @@ public class UserService {
     }
 
     
-    public void resetPassword(Long userId, String newPassword) {
+    public void resetPassword(Long userId, ChangePasswordRequest request) {
+    	logger.info("resetPassword:::::::::::::::::::::::::::::::");
         User user = userRepository.findById(userId)
                 .orElseThrow(() -> new RuntimeException("User not found with id: " + userId));
 
-        String encodedPassword = passwordEncoder.encode(newPassword);
+        String encodedPassword = passwordEncoder.encode(request.getNewPassword());
         user.setPassword(encodedPassword);
         user.setUpdatedAt(java.time.LocalDateTime.now());
+        user.setPasswordResetrequired(Boolean.FALSE);
 
         userRepository.save(user);
+        emailService.sendEmailResetPasswordSuccessfull(user);
         
         logger.info("Password reset successfully for user: {}", user.getEmail());
     }

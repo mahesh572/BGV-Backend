@@ -18,7 +18,7 @@ import com.org.bgv.service.VendorService;
 import lombok.RequiredArgsConstructor;
 
 @RestController
-@RequestMapping("/api/vendors")
+@RequestMapping("/api/vendor")
 @CrossOrigin(origins = "*") // Adjust based on your frontend URL
 @RequiredArgsConstructor
 public class VendorController {
@@ -38,5 +38,8 @@ public class VendorController {
                     .body(CustomApiResponse.failure("Failed to fetch users: " + e.getMessage(), HttpStatus.INTERNAL_SERVER_ERROR));
         }
     }
+	
+	
+	
 	
 }

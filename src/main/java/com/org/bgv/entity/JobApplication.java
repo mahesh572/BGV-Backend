@@ -4,6 +4,8 @@ import jakarta.persistence.*;
 import lombok.*;
 import java.time.LocalDateTime;
 
+import com.org.bgv.candidate.entity.Candidate;
+
 @Entity
 @Table(name = "job_applications")
 @Getter

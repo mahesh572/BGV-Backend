@@ -3,7 +3,6 @@ package com.org.bgv.service;
 import java.util.List;
 import java.util.stream.Collectors;
 
-import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.security.core.GrantedAuthority;
 import org.springframework.security.core.authority.SimpleGrantedAuthority;
 import org.springframework.security.core.userdetails.UserDetails;
@@ -12,54 +11,86 @@ import org.springframework.security.core.userdetails.UsernameNotFoundException;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import com.org.bgv.config.CustomUserDetails;
+import com.org.bgv.entity.CompanyUser;
 import com.org.bgv.entity.User;
+import com.org.bgv.repository.CompanyUserRepository;
 import com.org.bgv.repository.UserRepository;
 
+import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 
-
+@Slf4j
 @Service
+@RequiredArgsConstructor
 public class CustomUserDetailsService implements UserDetailsService {
-	@Autowired
-    private UserRepository userRepository;
+    
+    private final UserRepository userRepository;
+    private final CompanyUserRepository companyUserRepository;
 
     @Override
-    @Transactional(readOnly = true) // Add this annotation
+    @Transactional(readOnly = true)
     public UserDetails loadUserByUsername(String email) throws UsernameNotFoundException {
-        System.out.println("🔍 UserDetailsService - Loading user by email: " + email);
+        log.info("Loading user by email: {}", email);
         
         try {
-            // Use a custom query with JOIN FETCH to load roles eagerly
             User user = userRepository.findByEmailWithRoles(email)
                     .orElseThrow(() -> {
-                        System.out.println("❌ User not found with email: " + email);
+                        log.error("User not found with email: {}", email);
                         return new UsernameNotFoundException("User not found with email: " + email);
                     });
             
-            System.out.println("✅ User found: " + user.getEmail());
-            System.out.println("✅ User roles count: " + (user.getRoles() != null ? user.getRoles().size() : 0));
+            log.info("User found: {}", user.getEmail());
+            log.debug("User roles count: {}", user.getRoles().size());
             
-            // Convert UserRoles to Spring Security authorities
+            // Convert roles to authorities
             List<GrantedAuthority> authorities = user.getRoles().stream()
                     .map(userRole -> {
                         String roleName = userRole.getRole().getName();
-                        System.out.println("✅ User role: " + roleName);
+                        log.debug("Mapping role: {}", roleName);
                         return new SimpleGrantedAuthority(roleName);
                     })
                     .collect(Collectors.toList());
             
-            System.out.println("✅ Authorities: " + authorities);
+            // Get company information
+            Long companyId = getCompanyIdForUser(user);
             
-            return new org.springframework.security.core.userdetails.User(
-                    user.getEmail(),
-                    user.getPassword(),
-                    authorities
-            );
+            log.info("User authenticated successfully with {} authorities", authorities.size());
             
-        } catch (Exception e) {
-            System.out.println("❌ Error in UserDetailsService: " + e.getMessage());
-            e.printStackTrace();
+            return buildCustomUserDetails(user, authorities, companyId);
+            
+        } catch (UsernameNotFoundException e) {
             throw e;
+        } catch (Exception e) {
+            log.error("Error loading user by email: {}", email, e);
+            throw new UsernameNotFoundException("Error loading user: " + e.getMessage(), e);
         }
     }
+    
+    private Long getCompanyIdForUser(User user) {
+        try {
+            List<CompanyUser> companyUsers = companyUserRepository.findByUserUserId(user.getUserId());
+            if (companyUsers != null && !companyUsers.isEmpty()) {
+                return companyUsers.get(0).getCompanyId();
+            }
+            log.warn("No company found for user: {}", user.getEmail());
+            return null;
+        } catch (Exception e) {
+            log.error("Error fetching company for user: {}", user.getEmail(), e);
+            return null;
+        }
+    }
+    
+    private CustomUserDetails buildCustomUserDetails(User user, List<GrantedAuthority> authorities, Long companyId) {
+        return CustomUserDetails.builder()
+                .email(user.getEmail())
+                .password(user.getPassword())
+                .authorities(authorities)
+                .companyId(companyId)
+                .userId(user.getUserId())
+                .username(user.getEmail())
+                .userType(user.getUserType())
+             //   .enabled(user.isActive()) // Make sure you have this field in User entity
+                .build();
+    }
 }
-

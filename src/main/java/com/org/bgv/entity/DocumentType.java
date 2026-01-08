@@ -32,9 +32,19 @@ public class DocumentType {
 
     @ManyToOne
     @JoinColumn(name = "category_id")
-    private DocumentCategory category;
+    private CheckCategory category;
     
+    @Column(name = "label")
     private String label;
+    
+    @Column(name = "isRequired")
+    private boolean isRequired;
+    
+    private String upload;
+    
+    private String code;
+    
+    private Double price;
 
     // getters and setters
 }

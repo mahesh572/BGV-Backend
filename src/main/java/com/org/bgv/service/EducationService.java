@@ -1,27 +1,36 @@
 package com.org.bgv.service;
 
+import com.org.bgv.candidate.entity.Candidate;
+import com.org.bgv.candidate.entity.EducationHistory;
+import com.org.bgv.candidate.repository.CandidateRepository;
+import com.org.bgv.candidate.repository.EducationHistoryRepository;
 import com.org.bgv.dto.DegreeTypeResponse;
 import com.org.bgv.dto.DocumentResponse;
 import com.org.bgv.dto.EducationHistoryDTO;
 import com.org.bgv.dto.FieldOfStudyResponse;
-import com.org.bgv.entity.EducationHistory;
 import com.org.bgv.entity.Profile;
+import com.org.bgv.entity.VerificationCase;
+import com.org.bgv.entity.VerificationCaseCheck;
+import com.org.bgv.entity.CheckCategory;
 import com.org.bgv.entity.DegreeType;
-import com.org.bgv.entity.EducationDocuments;
+
+//import com.org.bgv.entity.EducationDocuments;
 import com.org.bgv.entity.FieldOfStudy;
-import com.org.bgv.repository.EducationHistoryRepository;
 import com.org.bgv.repository.ProfileRepository;
+import com.org.bgv.repository.VerificationCaseCheckRepository;
+import com.org.bgv.repository.VerificationCaseRepository;
 import com.org.bgv.s3.S3StorageService;
 
 import jakarta.persistence.EntityNotFoundException;
 
+import com.org.bgv.repository.CheckCategoryRepository;
 import com.org.bgv.repository.DegreeTypeRepository;
-import com.org.bgv.repository.EducationDocumentsRepository;
 import com.org.bgv.repository.FieldOfStudyRepository;
 import lombok.RequiredArgsConstructor;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.springframework.cache.annotation.Cacheable;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -44,18 +53,28 @@ public class EducationService {
     private final ProfileRepository profileRepository;
     private final DegreeTypeRepository degreeTypeRepository;
     private final FieldOfStudyRepository fieldOfStudyRepository;
-    private final EducationDocumentsRepository educationDocumentsRepository;
+   // private final EducationDocumentsRepository educationDocumentsRepository;
     private final S3StorageService s3StorageService;
+    private final CandidateRepository candidateRepository;
+    private final VerificationCaseRepository verificationCaseRepository;
+    private final CheckCategoryRepository checkCategoryRepository;
+    private final VerificationCaseCheckRepository verificationCaseCheckRepository;
 
     private static final Logger logger = LoggerFactory.getLogger(EducationService.class);
     
     @Transactional
-    public List<EducationHistoryDTO> saveEducationHistory(List<EducationHistoryDTO> educationHistoryDTOs, Long profileId) {
-        Profile profile = profileRepository.findById(profileId)
+    public List<EducationHistoryDTO> saveEducationHistory(List<EducationHistoryDTO> educationHistoryDTOs, Long candidateId,Long caseId) {
+    	
+       
+    	Candidate candidate = candidateRepository.findById(candidateId)
+    	        .orElseThrow(() -> new RuntimeException("Profile not found: " + candidateId));
+    	/*
+    	Profile profile = profileRepository.findById(profileId)
                 .orElseThrow(() -> new RuntimeException("Profile not found: " + profileId));
-
+        */
+    	
         List<EducationHistory> educationHistories = educationHistoryDTOs.stream()
-                .map(dto -> mapToEntity(dto, profile))
+                .map(dto -> mapToEntity(dto, candidate,caseId))
                 .collect(Collectors.toList());
 
         List<EducationHistory> savedEducations = educationHistoryRepository.saveAll(educationHistories);
@@ -65,21 +84,58 @@ public class EducationService {
                 .collect(Collectors.toList());
     }
 
-    public List<EducationHistoryDTO> getEducationByProfile(Long profileId) {
-        List<EducationHistory> educationHistories = educationHistoryRepository.findByProfile_ProfileId(profileId);
-        List<Long> eduIds = educationHistories.stream()
-                .map(EducationHistory::getId)
-                .collect(Collectors.toList());
+    public List<EducationHistoryDTO> getEducationByProfile(Long candidateId, Long caseId) {
 
-        List<EducationDocuments> eduDocuments = educationDocumentsRepository.findByProfile_ProfileIdAndObjectIdIn(profileId, eduIds);
+        List<EducationHistory> educationHistories;
 
+        // SELF-REGISTERED / PROFILE MODE
+        if (caseId == null || caseId == 0) {
+            educationHistories =
+                    educationHistoryRepository.findByCandidateId(candidateId);
+        }
+        // CASE-BASED VERIFICATION MODE
+        else {
+            educationHistories =
+                    educationHistoryRepository
+                            .findByCandidateIdAndVerificationCaseCaseId(
+                                    candidateId,
+                                    caseId
+                            );
+        }
+       
+
+        // Fetch case
+        
         return educationHistories.stream()
-                .map(education -> convertEducationDetails(education, eduDocuments))
+                .map(this::convertEducationDetails)
                 .collect(Collectors.toList());
     }
 
-    private EducationHistory mapToEntity(EducationHistoryDTO dto, Profile profile) {
+
+    private EducationHistory mapToEntity(EducationHistoryDTO dto, Candidate candidate,Long caseId) {
         DegreeType degree = null;
+        VerificationCase verificationCase = null;
+        VerificationCaseCheck verificationCaseCheck = null;
+        if(caseId!=null && caseId!=0) {
+        	verificationCase = verificationCaseRepository.findByCaseIdAndCandidateId(caseId,candidate.getCandidateId()).orElseThrow(()->new EntityNotFoundException());
+        	final String CATEGORY_NAME = "Education";
+        	CheckCategory category = checkCategoryRepository
+                    .findByNameIgnoreCase(CATEGORY_NAME)
+                    .orElseThrow(() -> new RuntimeException("Category not found: " + CATEGORY_NAME));
+        	
+        	Map<Long, VerificationCaseCheck> categoryCheckMap =
+                    verificationCase.getCaseChecks()
+                            .stream()
+                            .collect(Collectors.toMap(
+                                    cc -> cc.getCategory().getCategoryId(),
+                                    cc -> cc
+                            ));
+    						
+    						
+        	verificationCaseCheck = categoryCheckMap.get(category.getCategoryId());
+        }
+        
+        
         if (dto.getQualificationType() != null) {
             degree = degreeTypeRepository.findById(dto.getQualificationType())
                     .orElseThrow(() -> new RuntimeException("Degree type not found: " + dto.getQualificationType()));
@@ -92,7 +148,10 @@ public class EducationService {
         }
 
         return EducationHistory.builder()
-                .profile(profile)
+               // .profile(profile)
+        		.candidateId(candidate.getCandidateId())
+        		.verificationCase(verificationCase)
+        		.verificationCaseCheck(verificationCaseCheck)
                 .degree(degree)
                 .field(field)
                 .institute_name(dto.getInstitutionName())
@@ -151,84 +210,154 @@ public class EducationService {
         return date.getMonth().getDisplayName(java.time.format.TextStyle.FULL, java.util.Locale.ENGLISH);
     }
 
-    public EducationHistoryDTO updateEducationHistory(Long profileId, EducationHistoryDTO educationHistoryDTO) {
-       logger.info("Education service::::::START");
-    	EducationHistory existingEducation = null;
-    	if(educationHistoryDTO.getId()!=null) {
-    		existingEducation = educationHistoryRepository.findById(educationHistoryDTO.getId())
-                    .orElseThrow(() -> new RuntimeException("Education history not found: " + educationHistoryDTO.getId()));
-    	}else {
-    		existingEducation = new EducationHistory();
-    	}
-    	 Profile profile = profileRepository.findById(profileId)
-                 .orElseThrow(() -> new RuntimeException("Profile not found: " + profileId));
-    	
-    	existingEducation.setProfile(profile);
-        existingEducation.setInstitute_name(educationHistoryDTO.getInstitutionName());
-        existingEducation.setUniversity_name(educationHistoryDTO.getUniversityName());
-        existingEducation.setFromDate(parseDate(educationHistoryDTO.getFromMonth(), educationHistoryDTO.getFromYear()));
-        existingEducation.setToDate(parseDate(educationHistoryDTO.getToMonth(), educationHistoryDTO.getToYear()));
-        existingEducation.setCity(educationHistoryDTO.getCity());
-        existingEducation.setState(educationHistoryDTO.getState());
-        existingEducation.setCountry(educationHistoryDTO.getCountry());
-        existingEducation.setYearOfPassing(educationHistoryDTO.getYearOfPassing());
-        existingEducation.setTypeOfEducation(educationHistoryDTO.getTypeOfEducation());
-        existingEducation.setGrade(educationHistoryDTO.getGrade());
-        existingEducation.setGpa(educationHistoryDTO.getGpa());
-        existingEducation.setUpdatedAt(LocalDateTime.now());
+    private EducationHistoryDTO updateEducationHistory(
+            Long candidateId,
+            EducationHistoryDTO dto,
+            Long caseId
+    ) {
+        EducationHistory education;
 
-        if (educationHistoryDTO.getQualificationType() != null) {
-            DegreeType degree = degreeTypeRepository.findById(educationHistoryDTO.getQualificationType())
-                    .orElseThrow(() -> new RuntimeException("Degree type not found: " + educationHistoryDTO.getQualificationType()));
-            existingEducation.setDegree(degree);
+        // =====================================================
+        // UPDATE
+        // =====================================================
+        if (dto.getId() != null) {
+
+            // SELF PROFILE MODE
+            if (caseId == null || caseId == 0) {
+                education =
+                    educationHistoryRepository
+                        .findByCandidateIdAndId(candidateId, dto.getId())
+                        .orElseThrow(() ->
+                            new RuntimeException("Education not found for candidate"));
+            }
+            // CASE VERIFICATION MODE
+            else {
+                education =
+                    educationHistoryRepository
+                        .findByCandidateIdAndVerificationCaseCaseIdAndId(
+                            candidateId,
+                            caseId,
+                            dto.getId()
+                        );
+                if (education == null) {
+                    throw new RuntimeException("Education not found for case");
+                }
+            }
+        }
+        // =====================================================
+        // CREATE (during update batch)
+        // =====================================================
+        else {
+            education = new EducationHistory();
+            education.setCandidateId(candidateId);
+
+            if (caseId != null && caseId != 0) {
+                VerificationCase verificationCase =
+                    verificationCaseRepository.findById(caseId)
+                        .orElseThrow(() -> new RuntimeException("Case not found"));
+                
+                final String CATEGORY_NAME = "Education";
+            	CheckCategory category = checkCategoryRepository
+                        .findByNameIgnoreCase(CATEGORY_NAME)
+                        .orElseThrow(() -> new RuntimeException("Category not found: " + CATEGORY_NAME));
+            	
+            	Map<Long, VerificationCaseCheck> categoryCheckMap =
+                        verificationCase.getCaseChecks()
+                                .stream()
+                                .collect(Collectors.toMap(
+                                        cc -> cc.getCategory().getCategoryId(),
+                                        cc -> cc
+                                ));
+        						
+        						
+            	VerificationCaseCheck verificationCaseCheck = verificationCaseCheck = categoryCheckMap.get(category.getCategoryId());
+                education.setVerificationCase(verificationCase);
+                education.setVerificationCaseCheck(verificationCaseCheck);
+                
+                
+            }
         }
 
-        if (educationHistoryDTO.getFieldOfStudy() != null) {
-            FieldOfStudy field = fieldOfStudyRepository.findById(educationHistoryDTO.getFieldOfStudy())
-                    .orElseThrow(() -> new RuntimeException("Field of study not found: " + educationHistoryDTO.getFieldOfStudy()));
-            existingEducation.setField(field);
+        // =====================================================
+        // MAP FIELDS
+        // =====================================================
+        education.setInstitute_name(dto.getInstitutionName());
+        education.setUniversity_name(dto.getUniversityName());
+        education.setFromDate(parseDate(dto.getFromMonth(), dto.getFromYear()));
+        education.setToDate(parseDate(dto.getToMonth(), dto.getToYear()));
+        education.setCity(dto.getCity());
+        education.setState(dto.getState());
+        education.setCountry(dto.getCountry());
+        education.setYearOfPassing(dto.getYearOfPassing());
+        education.setTypeOfEducation(dto.getTypeOfEducation());
+        education.setGrade(dto.getGrade());
+        education.setGpa(dto.getGpa());
+
+        if (dto.getQualificationType() != null) {
+            education.setDegree(
+                degreeTypeRepository.findById(dto.getQualificationType())
+                    .orElseThrow(() -> new RuntimeException("Degree type not found"))
+            );
         }
 
-        EducationHistory updatedEducation = educationHistoryRepository.save(existingEducation);
-        return mapToDTO(updatedEducation);
+        if (dto.getFieldOfStudy() != null) {
+            education.setField(
+                fieldOfStudyRepository.findById(dto.getFieldOfStudy())
+                    .orElseThrow(() -> new RuntimeException("Field of study not found"))
+            );
+        }
+
+        return mapToDTO(educationHistoryRepository.save(education));
     }
+
+
     
-    public List<EducationHistoryDTO> updateEducationHistories(List<EducationHistoryDTO> educationHistoryDTOs, Long profileId) {
-        
-    	 if (educationHistoryDTOs == null || educationHistoryDTOs.isEmpty()) {
-    	        throw new IllegalArgumentException("Education history list cannot be null or empty");
-    	    }
-    	 
-    	 List<EducationHistoryDTO> updatedList = new ArrayList<>();
-    	 for (EducationHistoryDTO dto : educationHistoryDTOs) {
-    	       
-    		 EducationHistoryDTO updateEducationHistory = updateEducationHistory(profileId, dto);
-    		 
-    		 updatedList.add(updateEducationHistory);
-    	 }
-    	return updatedList;
+    @Transactional
+    public List<EducationHistoryDTO> updateEducationHistories(
+            List<EducationHistoryDTO> educationHistoryDTOs,
+            Long candidateId,
+            Long caseId
+    ) {
+        if (educationHistoryDTOs == null || educationHistoryDTOs.isEmpty()) {
+            throw new IllegalArgumentException("Education history list cannot be empty");
+        }
+
+        candidateRepository.findById(candidateId)
+                .orElseThrow(() -> new RuntimeException("Candidate not found"));
+
+        List<EducationHistoryDTO> result = new ArrayList<>();
+
+        for (EducationHistoryDTO dto : educationHistoryDTOs) {
+            result.add(updateEducationHistory(candidateId, dto, caseId));
+        }
+
+        return result;
     }
-    public void deleteEducationHistory(Long profileId, Long id) {
-        educationHistoryRepository.findByProfile_ProfileIdAndId(profileId, id)
-                .ifPresentOrElse(
-                        educationHistoryRepository::delete,
-                        () -> {
-                            throw new EntityNotFoundException(
-                                "Education history not found for profileId: " + profileId + " and id: " + id
-                            );
-                        }
-                );
+
+    
+    
+    public void deleteEducationHistory(Long candidateId, Long id) {
+    	
+    	EducationHistory education = educationHistoryRepository
+                .findByCandidateIdAndId(candidateId, id)
+                .orElseThrow(() -> new EntityNotFoundException(
+                        "Education history not found for candidateId: " + candidateId +
+                        " and id: " + id
+                ));
+
+        educationHistoryRepository.delete(education);
     }
 
     public void deleteAllEducationByProfile(Long profileId) {
-    	
+    	/*
     	 List<EducationDocuments> allDocuments = educationDocumentsRepository.findByProfile_ProfileId(profileId);
     	 for (EducationDocuments document : allDocuments) {
              if (document.getAwsDocKey() != null) {
                  s3StorageService.deleteFile(document.getAwsDocKey());
              }
          }
-    	educationDocumentsRepository.deleteByProfile_ProfileId(profileId);
+         */
+    	// educationDocumentsRepository.deleteByProfile_ProfileId(profileId);
         educationHistoryRepository.deleteByProfile_ProfileId(profileId);
     }
 
@@ -262,12 +391,14 @@ public class EducationService {
                 .build();
     }
 
-    private EducationHistoryDTO convertEducationDetails(EducationHistory educationHistory, List<EducationDocuments> eduDocuments) {
-        List<DocumentResponse> documentResponses = eduDocuments.stream()
+    private EducationHistoryDTO convertEducationDetails(EducationHistory educationHistory) {
+       
+    	/*
+    	List<DocumentResponse> documentResponses = eduDocuments.stream()
                 .filter(doc -> doc.getObjectId() != null && doc.getObjectId().equals(educationHistory.getId()))
                 .map(this::convertToDocumentResponse)
                 .collect(Collectors.toList());
-
+       */
         return EducationHistoryDTO.builder()
                 .id(educationHistory.getId())
                 .qualificationType(educationHistory.getDegree() != null ? educationHistory.getDegree().getDegreeId() : null)
@@ -288,10 +419,11 @@ public class EducationService {
                 .country(educationHistory.getCountry())
                 .yearOfPassing(educationHistory.getYearOfPassing())
                 .typeOfEducation(educationHistory.getTypeOfEducation())
-                .documents(documentResponses) // include filtered documents
+              //  .documents(documentResponses) // include filtered documents
                 .build();
     }
-
+    
+/*
     private DocumentResponse convertToDocumentResponse(EducationDocuments document) {
         return DocumentResponse.builder()
                 .doc_id(document.getDocId())
@@ -310,7 +442,7 @@ public class EducationService {
                 .awsDocKey(document.getAwsDocKey())
                 .build();
     }
-
+*/
     private String extractFileName(String fileUrl) {
         if (fileUrl == null) return null;
         return fileUrl.substring(fileUrl.lastIndexOf("/") + 1);
@@ -321,4 +453,21 @@ public class EducationService {
         int dotIndex = fileUrl.lastIndexOf(".");
         return dotIndex > 0 ? fileUrl.substring(dotIndex + 1).toUpperCase() : "UNKNOWN";
     }
+    
+    
+    // verification
+    
+    @Cacheable(value = "education", key = "#candidateId")
+    public List<EducationHistoryDTO> getEducations(Long candidateId) {
+        logger.info("Fetching education records for candidate: {}", candidateId);
+        
+        List<EducationHistory> educations = educationHistoryRepository.findByCandidateIdOrderByDate(candidateId);
+        
+        return educations.stream()
+            .map(this::convertEducationDetails)
+            .collect(Collectors.toList());
+    }
+    
+   
+    
 }

@@ -1,10 +1,14 @@
 package com.org.bgv.data.seed;
 
 import com.org.bgv.common.RoleConstants;
+import com.org.bgv.common.navigation.CreateNavigationMenuDto;
+import com.org.bgv.common.navigation.NavigationResponseDto;
 import com.org.bgv.entity.BGVCategory;
+import com.org.bgv.entity.CheckCategory;
 import com.org.bgv.entity.CheckType;
+import com.org.bgv.entity.Company;
+import com.org.bgv.entity.CompanyUser;
 import com.org.bgv.entity.DegreeType;
-import com.org.bgv.entity.DocumentCategory;
 import com.org.bgv.entity.DocumentType;
 import com.org.bgv.entity.FieldOfStudy;
 import com.org.bgv.entity.Other;
@@ -14,17 +18,22 @@ import com.org.bgv.entity.RolePermission;
 import com.org.bgv.entity.User;
 import com.org.bgv.entity.UserRole;
 import com.org.bgv.repository.BGVCategoryRepository;
+import com.org.bgv.repository.CheckCategoryRepository;
 import com.org.bgv.repository.CheckTypeRepository;
+import com.org.bgv.repository.CompanyRepository;
+import com.org.bgv.repository.CompanyUserRepository;
 import com.org.bgv.repository.DegreeTypeRepository;
-import com.org.bgv.repository.DocumentCategoryRepository;
 import com.org.bgv.repository.DocumentTypeRepository;
 import com.org.bgv.repository.FieldOfStudyRepository;
+import com.org.bgv.repository.NavigationMenuRepository;
 import com.org.bgv.repository.OtherRepository;
 import com.org.bgv.repository.PermissionRepository;
 import com.org.bgv.repository.RolePermissionRepository;
 import com.org.bgv.repository.RoleRepository;
 import com.org.bgv.repository.UserRepository;
 import com.org.bgv.repository.UserRoleRepository;
+import com.org.bgv.service.EmailService;
+import com.org.bgv.service.NavigationMenuService;
 
 import lombok.RequiredArgsConstructor;
 
@@ -32,6 +41,8 @@ import org.springframework.boot.CommandLineRunner;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Component;
 
+import java.time.LocalDate;
+import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
 import java.util.Map;
@@ -41,7 +52,7 @@ import java.util.Optional;
 @RequiredArgsConstructor
 public class DataSeederConfig implements CommandLineRunner {
 
-    private final DocumentCategoryRepository categoryRepo;
+    private final CheckCategoryRepository categoryRepo;
     private final DocumentTypeRepository docTypeRepo;
     private final PermissionRepository permissionRepository;
     private final RolePermissionRepository rolePermissionRepository;
@@ -54,10 +65,15 @@ public class DataSeederConfig implements CommandLineRunner {
     private final PasswordEncoder passwordEncoder;
     private final BGVCategoryRepository bgvCategoryRepository;
     private final CheckTypeRepository checkTypeJPARepository;
+    private final CompanyRepository companyRepository;
+    private final CompanyUserRepository companyUserRepository;
+    private final NavigationMenuService navigationMenuService;
+    private final NavigationMenuRepository navigationMenuRepository;
+    private final EmailService emailTemplateService;
 
     @Override
     public void run(String... args) {
-        seedDocumentCategoriesAndTypes();
+      //  seedDocumentCategoriesAndTypes();
         seedPermissions();
         seedRoles();
         seedRolePermissions();
@@ -65,33 +81,43 @@ public class DataSeederConfig implements CommandLineRunner {
         seedFieldsOfStudy();
         seedSingleOtherRecord();
         seedDefaultAdminUser(); 
-        seedBGVCategoriesAndCheckTypes();
+       // seedBGVCategoriesAndCheckTypes();
+        setdefaultnavigationSeed();
+        emailTemplateService.initializeTemplatesFromFiles();
+
     }
     
     private void seedDefaultAdminUser() {
         if (userRepository.findByEmail("admin@example.com").isEmpty()) {
             User adminUser = User.builder()
-                    .firstName("System Administrator")
+                   // .firstName("System Administrator")
                     .email("admin@example.com")
                     .password(passwordEncoder.encode("123456"))
-                    .firstName("System")
-                    .lastName("Administrator")
-                    .phoneNumber("+1234567890")
+                  //  .firstName("System")
+                  //  .lastName("Administrator")
+                 //   .phoneNumber("+1234567890")
                     .userType("ADMIN")
                     .build();
             
             User savedAdmin = userRepository.save(adminUser);
             
             // Assign ROLE_ADMIN to the admin user
-            Role adminRole = roleRepository.findByName("ROLE_ADMIN")
-                    .orElseThrow(() -> new RuntimeException("ROLE_ADMIN not found"));
+            Role adminRole = roleRepository.findByName("Administrator")
+                    .orElseThrow(() -> new RuntimeException("Administrator not found"));
             
             UserRole userRole = UserRole.builder()
                     .user(savedAdmin)
                     .role(adminRole)
                     .build();
-            
             userRoleRepository.save(userRole);
+            Boolean isExisted =companyRepository.existsByCompanyName("default");
+            if(!isExisted) {
+            	 Company defaultCompany = createDefaultCompany();
+                 Company savedCompany = companyRepository.save(defaultCompany);
+                 CompanyUser companyUser = createCompanyUser(savedCompany, savedAdmin);
+                 companyUserRepository.save(companyUser);
+            }
+            
             System.out.println("Default admin user created successfully");
         }
     }
@@ -107,33 +133,36 @@ public class DataSeederConfig implements CommandLineRunner {
     
     private void seedDocumentCategoriesAndTypes() {
         // Prepare category objects with labels
-        List<DocumentCategory> categories = Arrays.asList(
-            createCategory("IDENTITY_PROOF", "Identity Proof"),
-            createCategory("EDUCATION", "Education"),
-            createCategory("WORK_EXPERIENCE", "Professional/Work Experience"),
-            createCategory("OTHER", "Other")
+        List<CheckCategory> categories = Arrays.asList(
+            createCategory("IDENTITY_PROOF", "Identity Proof","IDENTITY"),
+            createCategory("EDUCATION", "Education","EDUCATION"),
+            createCategory("WORK_EXPERIENCE", "Professional/Work Experience","WORK"),
+            createCategory("OTHER", "Other","OTHER"),
+            createCategory("ADDRESS", "Address","ADDRESS"),
+            createCategory("COURT", "Court","COURT")
         );
         
         // Save categories and prepare document types
-        for (DocumentCategory category : categories) {
-            DocumentCategory savedCategory = saveCategoryIfNotExists(category);
+        for (CheckCategory category : categories) {
+        	CheckCategory savedCategory = saveCategoryIfNotExists(category);
             seedDocumentTypesForCategory(savedCategory);
         }
     }
     
-    private DocumentCategory createCategory(String name, String label) {
-        return DocumentCategory.builder()
+    private CheckCategory createCategory(String name, String label,String code) {
+        return CheckCategory.builder()
                 .name(name)
                 .label(label)
+                .code(code)
                 .build();
     }
     
-    private DocumentCategory saveCategoryIfNotExists(DocumentCategory category) {
-        Optional<DocumentCategory> existingCategory = categoryRepo.findByName(category.getName());
+    private CheckCategory saveCategoryIfNotExists(CheckCategory category) {
+        Optional<CheckCategory> existingCategory = categoryRepo.findByName(category.getName());
         return existingCategory.orElseGet(() -> categoryRepo.save(category));
     }
     
-    private void seedDocumentTypesForCategory(DocumentCategory category) {
+    private void seedDocumentTypesForCategory(CheckCategory category) {
         List<DocumentType> documentTypes = getDocumentTypesForCategory(category);
         
         for (DocumentType documentType : documentTypes) {
@@ -141,49 +170,56 @@ public class DataSeederConfig implements CommandLineRunner {
         }
     }
     
-    private List<DocumentType> getDocumentTypesForCategory(DocumentCategory category) {
+    private List<DocumentType> getDocumentTypesForCategory(CheckCategory category) {
         switch (category.getName().toUpperCase()) {
             case "IDENTITY_PROOF":
                 return Arrays.asList(
-                    createDocumentType("AADHAR", "Aadhar Card", category),
-                    createDocumentType("PANCARD", "PAN Card", category),
-                    createDocumentType("PASSPORT", "Passport", category),
-                    createDocumentType("VOTER_ID", "Voter ID", category),
-                    createDocumentType("DRIVING_LICENCE", "Driving Licence", category)
+                    createDocumentType("AADHAR", "Aadhar Card", category,"AADHAAR"),
+                    createDocumentType("PANCARD", "PAN Card", category,"PAN"),
+                    createDocumentType("PASSPORT", "Passport", category,"PASSPORT"),
+                    createDocumentType("VOTER_ID", "Voter ID", category,"VOTER"),
+                    createDocumentType("DRIVING_LICENCE", "Driving Licence", category,"DL")
                 );
             case "EDUCATION":
                 return Arrays.asList(
-                    createDocumentType("SSC_MARKSHEET", "SSC Marksheet", category),
-                    createDocumentType("HSC_MARKSHEET", "HSC Marksheet", category),
-                    createDocumentType("GRADUATION_CERTIFICATE", "Graduation Certificate", category),
-                    createDocumentType("POST_GRADUATION_CERTIFICATE", "Post Graduation Certificate", category)
+                    createDocumentType("SSC_MARKSHEET", "SSC Marksheet", category,"SSC_MARKSHEET"),
+                    createDocumentType("HSC_MARKSHEET", "HSC Marksheet", category,"HSC_MARKSHEET"),
+                    createDocumentType("GRADUATION_CERTIFICATE", "Graduation Certificate", category,"GRADUATION_CERTIFICATE"),
+                    createDocumentType("POST_GRADUATION_CERTIFICATE", "Post Graduation Certificate", category,"POST_GRADUATION_CERTIFICATE")
                 );
             case "WORK_EXPERIENCE":
                 return Arrays.asList(
-                    createDocumentType("EXPERIENCE_LETTER", "Experience Letter", category),
-                    createDocumentType("OFFER_LETTER", "Offer Letter", category),
-                    createDocumentType("RELIEVING_LETTER", "Relieving Letter", category),
-                    createDocumentType("PAYSLIP", "Payslip", category),
-                    createDocumentType("APPOINTMENT_LETTER", "Appointment Letter", category)
+                    createDocumentType("EXPERIENCE_LETTER", "Experience Letter", category,"EXPERIENCE_LETTER"),
+                    createDocumentType("OFFER_LETTER", "Offer Letter", category,"OFFER_LETTER"),
+                    createDocumentType("RELIEVING_LETTER", "Relieving Letter", category,"RELIEVING_LETTER"),
+                    createDocumentType("PAYSLIP", "Payslip", category,"PAYSLIP"),
+                    createDocumentType("APPOINTMENT_LETTER", "Appointment Letter", category,"APPOINTMENT_LETTER")
                 );
+            case "ADDRESS":
+            	 return Arrays.asList(
+                         createDocumentType("ADDR_PERM", "Permanent Address", category,"ADDR_PERM"),
+                         createDocumentType("ADDR_CURR", "Current Address", category,"ADDR_CURR")
+                     );
+            	
             case "OTHER":
                 return Arrays.asList(
-                    createDocumentType("OTHER", "Other Document", category)
+                    createDocumentType("OTHER", "Other Document", category,"OTHER")
                 );
             default:
                 return Arrays.asList();
         }
     }
     
-    private DocumentType createDocumentType(String name, String label, DocumentCategory category) {
+    private DocumentType createDocumentType(String name, String label, CheckCategory category,String code) {
         return DocumentType.builder()
                 .name(name)
                 .label(label)
                 .category(category)
+                .code(code)
                 .build();
     }
     
-    private void saveDocumentTypeIfNotExists(DocumentType documentType, DocumentCategory category) {
+    private void saveDocumentTypeIfNotExists(DocumentType documentType, CheckCategory category) {
         if (docTypeRepo.findByNameAndCategory_CategoryId(documentType.getName(), category.getCategoryId()).isEmpty()) {
             docTypeRepo.save(documentType);
         }
@@ -462,5 +498,79 @@ public class DataSeederConfig implements CommandLineRunner {
 
         System.out.println("✅ BGV Categories and Check Types seeded successfully");
     }
+    
+    private Company createDefaultCompany() {
+        Company company = new Company();
+        company.setCompanyName("default");
+        company.setCompanyType("default");
+      //  company.setRegistrationNumber("BGV-ADMIN-001");
+      //  company.setTaxId("TAX-ADMIN-001");
+      //  company.setIncorporationDate(LocalDate.now());
+      //  company.setIndustry("");
+       // company.setCompanySize("1-10");
+        company.setWebsite("https://bgventures.com");
+        company.setDescription("Default administration company ");
+        
+        // Contact Information
+        company.setContactPersonName("System Administrator");
+        company.setContactPersonTitle("Administrator");
+        company.setContactEmail("admin@example.com");
+        company.setContactPhone("");
+       /* 
+        // Address Information
+        company.setAddressLine1("123 Administration Street");
+        company.setCity("Tech City");
+        company.setState("California");
+        company.setCountry("United States");
+        company.setZipCode("90001");
+        company.setStatus("ACTIVE");
+        
+        // Additional Information
+        company.setLinkedinProfile("https://linkedin.com/company/bgventures");
+        */
+        return company;
+    }
+    private CompanyUser createCompanyUser(Company company, User user) {
+        CompanyUser companyUser = new CompanyUser();
+        companyUser.setCompany(company);
+        companyUser.setUser(user);
+        companyUser.setCompanyId(company.getId());
+        companyUser.setUserId(user.getUserId());
+        return companyUser;
+    }
+    
+    private void setdefaultnavigationSeed() {
+    	
+    	List<String> permissions = new ArrayList<>();
+    	permissions.add("Administrator");
+    	
+    	if (navigationMenuRepository.existsByNameAndParentId("Settings", null)) {
+           // throw new IllegalArgumentException("Navigation menu with name  already exists");
+        }else {
+    	CreateNavigationMenuDto  createNavigationMenuDto = createDefaultNavigation("Settings", "Settings", "/admin/settings/", "Settings", "Section", permissions, true, null,0L);
+    	NavigationResponseDto createdMenu = navigationMenuService.createNavigationMenu(createNavigationMenuDto);
+    	
+    	navigationMenuService.createNavigationMenu(createDefaultNavigation("Create Page", "Create Page", "/admin/settings/pages/new", "FileText", "Link", permissions, true, createdMenu.getId(),0L));
+    	navigationMenuService.createNavigationMenu(createDefaultNavigation("Email Templates", "Email Templates", "/admin/settings/email-templates", "Mail", "Link", permissions, true, createdMenu.getId(),0L));
+        }
+        }
+    private CreateNavigationMenuDto createDefaultNavigation(String name,String label,String href,String icon,String type,List<String> permissions,Boolean isActive,Long parentId,Long menuOrder) {
+    	return CreateNavigationMenuDto.builder()
+    	.name(name)
+    	.type(type)
+    	.label(label)
+    	.href(href)
+    	.icon(icon)
+    	.permissions(permissions)
+    	.parentId(parentId)
+    	.isActive(isActive)
+    	.order(0)
+    	.build();
+    	
+    	
+    	
+    }
+    
+   
 
 }

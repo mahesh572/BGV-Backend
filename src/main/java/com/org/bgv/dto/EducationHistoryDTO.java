@@ -10,6 +10,8 @@ import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.util.List;
 
+import jakarta.validation.constraints.NotNull;
+
 @Getter
 @Setter
 @NoArgsConstructor
@@ -18,6 +20,9 @@ import java.util.List;
 public class EducationHistoryDTO {
 
     private Long id;
+    
+    @NotNull(message = "Candidate ID is required")
+    private Long candidateId;
 
     // Instead of mapping full DegreeType entity, use degreeId and optionally degreeName
     private Long qualificationType;
@@ -45,5 +50,10 @@ public class EducationHistoryDTO {
    // private String courseOrField;
     private Integer yearOfPassing;
     private String typeOfEducation;
+    
+    private boolean verified;
+    private String verificationStatus;
+    private String verifiedBy;
+    
     private List<DocumentResponse> documents;
 }
