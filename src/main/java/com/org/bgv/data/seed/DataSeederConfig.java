@@ -397,6 +397,8 @@ public class DataSeederConfig implements CommandLineRunner {
         );
     }
     
+    
+    /*
     private void seedBGVCategoriesAndCheckTypes() {
         // Step 1: Seed categories
         List<BGVCategory> categories = Arrays.asList(
@@ -420,7 +422,8 @@ public class DataSeederConfig implements CommandLineRunner {
         // Step 2: Seed check types
         seedBGVCheckTypes();
     }
-
+    */
+/*
     private BGVCategory createBGVCategory(String name, String label) {
         return BGVCategory.builder()
                 .name(name)
@@ -498,6 +501,7 @@ public class DataSeederConfig implements CommandLineRunner {
 
         System.out.println("✅ BGV Categories and Check Types seeded successfully");
     }
+    */
     
     private Company createDefaultCompany() {
         Company company = new Company();

@@ -1,12 +1,15 @@
 package com.org.bgv.constants;
 
 public enum CaseCheckStatus {
-    PENDING,
-    IN_PROGRESS,
-    COMPLETED,
-    REJECTED,
+	IN_PROGRESS,        // Candidate filling data / uploading
+    SUBMITTED,          // Candidate submitted to vendor
+    PENDING,            // Waiting for vendor verification
+    AWAITING_CANDIDATE, // Vendor asked clarification
+    RESUBMITTED,        // Candidate re-submitted
+    COMPLETED,          // Vendor verified
     ON_HOLD,
-    DELAYED,
     INSUFFICIENT,
-    ASSIGNED
+    REJECTED,
+    PENDING_CANDIDATE,
+    FAILED;             // Vendor rejected
 }

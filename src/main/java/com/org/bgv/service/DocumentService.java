@@ -13,6 +13,7 @@ import com.org.bgv.common.DocumentStatus;
 import com.org.bgv.common.EvidenceLevel;
 import com.org.bgv.common.Status;
 import com.org.bgv.config.SecurityUtils;
+import com.org.bgv.constants.CaseCheckStatus;
 import com.org.bgv.constants.CaseStatus;
 import com.org.bgv.constants.SectionConstants;
 import com.org.bgv.constants.VerificationStatus;
@@ -53,9 +54,7 @@ import com.org.bgv.repository.VerificationCaseRepository;
 import com.org.bgv.s3.S3StorageService;
 import com.org.bgv.vendor.entity.CategoryEvidenceType;
 import com.org.bgv.vendor.entity.EvidenceType;
-import com.org.bgv.vendor.entity.VerificationEvidence;
 import com.org.bgv.vendor.repository.CategoryEvidenceTypeRepository;
-import com.org.bgv.vendor.repository.VerificationEvidenceRepository;
 
 import jakarta.persistence.EntityNotFoundException;
 import lombok.RequiredArgsConstructor;
@@ -109,7 +108,7 @@ public class DocumentService {
     private final VerificationCaseDocumentLinkRepository verificationCaseDocumentLinkRepository;
     private final VerificationCaseCheckRepository verificationCaseCheckRepository;
     private final CategoryEvidenceTypeRepository categoryEvidenceTypeRepository;
-    private final VerificationEvidenceRepository verificationEvidenceRepository;
+   // private final VerificationEvidenceRepository verificationEvidenceRepository;
     
     private static final Logger logger = LoggerFactory.getLogger(DocumentService.class);
 
@@ -1384,11 +1383,12 @@ public class DocumentService {
                     .isAddOn(false)
                     .required(true)
                     .documentPrice(0.0)
-                    .verificationStatus(VerificationStatus.PENDING)
+                    .verificationStatus(DocumentStatus.UPLOADED) 
                     .createdAt(LocalDateTime.now())
                     .build();
 
             caseDocument = verificationCaseDocumentRepository.save(caseDocument);
+            
 
             log.info(
                 "Case document created | caseDocumentId={} | caseId={} | checkId={}",
@@ -1437,9 +1437,10 @@ public class DocumentService {
 	    
 	    if (allLinksDeleted) {
 	        // Update VerificationCaseDocument status if all links are deleted
-	        caseDocument.setVerificationStatus(VerificationStatus.NOT_UPLOADED); // or appropriate status
+	        caseDocument.setVerificationStatus(DocumentStatus.NONE); // or appropriate status
 	        verificationCaseDocumentRepository.save(caseDocument);
 	    }
+	    
 	    
 	    // Update VerificationCaseCheck status if needed
 	    updateVerificationCaseCheckStatus(caseDocument);
@@ -1454,7 +1455,7 @@ public class DocumentService {
 	    if (caseCheckOpt.isPresent()) {
 	        VerificationCaseCheck caseCheck = caseCheckOpt.get();
 	        // Update status based on your business logic
-	        caseCheck.setStatus(CaseStatus.PENDING); // or appropriate status
+	        caseCheck.setStatus(CaseCheckStatus.PENDING); // or appropriate status
 	        caseCheck.setUpdatedAt(LocalDateTime.now());
 	        verificationCaseCheckRepository.save(caseCheck);
 	    }

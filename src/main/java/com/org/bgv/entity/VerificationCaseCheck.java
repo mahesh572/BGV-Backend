@@ -1,7 +1,8 @@
 package com.org.bgv.entity;
 
 import java.time.LocalDateTime;
-
+import java.util.List;
+import java.util.ArrayList;
 import com.org.bgv.constants.CaseCheckStatus;
 import com.org.bgv.constants.CaseStatus;
 
@@ -44,7 +45,7 @@ public class VerificationCaseCheck {
      */
     @Enumerated(EnumType.STRING)
     @Column(name = "status", nullable = false)
-    private CaseStatus status;
+    private CaseCheckStatus status;
     
     @Column(name = "updated_at")
     @Builder.Default
@@ -56,6 +57,10 @@ public class VerificationCaseCheck {
     
     @Column(name = "vendor_id")
     private Long vendorId;
+    
+    @OneToMany(mappedBy = "verificationCaseCheck", cascade = CascadeType.ALL, fetch = FetchType.LAZY)
+    @Builder.Default
+    private List<VerificationCaseDocument> documents = new ArrayList<>();
     
     @PreUpdate
     protected void onUpdate() {

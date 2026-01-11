@@ -122,6 +122,9 @@ public class Document implements BaseDocument {
     @Enumerated(EnumType.STRING)
     @Column(name = "entity_type", nullable = false)
     private DocumentEntityType entityType;
+    
+    @ManyToOne
+    private DocumentAttribute attribute; // FRONT / BACK
 
     @CreationTimestamp
     @Column(name = "created_at", updatable = false)

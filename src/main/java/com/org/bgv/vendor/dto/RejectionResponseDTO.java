@@ -9,7 +9,7 @@ import lombok.Getter;
 public class RejectionResponseDTO {
 
     private Long id;
-    private RejectionLevel level;
+    private ReasonLevel level;
 
     private Long objectId;
     private Long documentId;

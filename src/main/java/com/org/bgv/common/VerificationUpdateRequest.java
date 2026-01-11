@@ -18,7 +18,7 @@ public class VerificationUpdateRequest {
     private Long caseDocumentId;
     
     @NotNull
-    private VerificationStatus status;
+    private DocumentStatus status;
     
     private String verificationNotes;
 }

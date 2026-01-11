@@ -5,13 +5,20 @@ import lombok.Builder;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
 import lombok.Setter;
+
+import java.util.List;
+import java.util.ArrayList;
+
+import jakarta.persistence.CascadeType;
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
+import jakarta.persistence.FetchType;
 import jakarta.persistence.GeneratedValue;
 import jakarta.persistence.GenerationType;
 import jakarta.persistence.Id;
 import jakarta.persistence.JoinColumn;
 import jakarta.persistence.ManyToOne;
+import jakarta.persistence.OneToMany;
 import jakarta.persistence.Table;
 
 
@@ -35,16 +42,28 @@ public class DocumentType {
     private CheckCategory category;
     
     @Column(name = "label")
-    private String label;
+    private String label; // Aadhaar Card
     
     @Column(name = "isRequired")
     private boolean isRequired;
     
-    private String upload;
+    @Column(name = "upload_type")
+    private String upload; // SINGLE / MULTIPLE (optional)
     
-    private String code;
+    private String code;  // AADHAAR, PAN, PASSPORT
     
     private Double price;
+    
+    private Boolean active = true;
 
     // getters and setters
+    
+    @OneToMany(
+    	    mappedBy = "documentType",
+    	    cascade = CascadeType.ALL,
+    	    orphanRemoval = true,
+    	    fetch = FetchType.LAZY
+    	)
+    	@Builder.Default
+    	private List<DocumentTypeAttribute> attributes = new ArrayList<>();
 }

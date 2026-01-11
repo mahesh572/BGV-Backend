@@ -71,7 +71,7 @@ public class VendorAssignmentService {
         validateVendorSupportsCategory(vendorId, caseCheck.getCategory().getCategoryId());
 
         caseCheck.setVendorId(vendorId);
-        caseCheck.setStatus(CaseStatus.ASSIGNED);
+      //  caseCheck.setStatus(CaseStatus.ASSIGNED);
 
         verificationCaseCheckRepository.save(caseCheck);
 
@@ -95,7 +95,7 @@ public class VendorAssignmentService {
                 caseCheck.getCategory().getCategoryId());
 
         caseCheck.setVendorId(newVendorId);
-        caseCheck.setStatus(CaseStatus.REASSIGNED);
+       // caseCheck.setStatus(CaseStatus.REASSIGNED);
 
         verificationCaseCheckRepository.save(caseCheck);
 
@@ -153,8 +153,8 @@ public class VendorAssignmentService {
                 .countByVendorIdAndStatusIn(
                         vendor.getId(),
                         List.of(
-                            CaseStatus.ASSIGNED,
-                            CaseStatus.IN_PROGRESS
+                            CaseCheckStatus.AWAITING_CANDIDATE,
+                            CaseCheckStatus.PENDING
                         )
                 );
     }
@@ -164,7 +164,7 @@ public class VendorAssignmentService {
         for (VerificationCaseCheck check : checks) {
             Vendor vendor = autoAssignVendor(check.getCategory().getCategoryId());
             check.setVendorId(vendor.getId());
-            check.setStatus(CaseStatus.ASSIGNED);
+           // check.setStatus(CaseStatus.ASSIGNED);
         }
     }
     

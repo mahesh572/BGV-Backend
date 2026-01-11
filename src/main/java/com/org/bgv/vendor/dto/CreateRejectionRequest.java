@@ -12,7 +12,7 @@ public class CreateRejectionRequest {
     private Long caseId;
     private Long caseCheckId; // null only for CASE level
 
-    private RejectionLevel level; 
+    private ReasonLevel level; 
     // CASE, SECTION, OBJECT, DOCUMENT
 
     private Long objectId;    // Education / Work id

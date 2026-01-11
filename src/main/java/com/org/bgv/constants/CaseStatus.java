@@ -2,22 +2,14 @@ package com.org.bgv.constants;
 
 
 public enum CaseStatus {
-	CREATED,
-	ASSIGNED, 
-    IN_PROGRESS, 
-    UNDER_REVIEW, 
-    COMPLETED, 
-    CANCELLED,
-    FAILED,
-    REJECTED,
-    AWAITING,
-    VERIFIED,
-    PENDING,
-    ON_HOLD,
-    DELAYED,
-    INSUFFICIENT,
-    REASSIGNED,
-    SUBMITTED;
+	CREATED,        // Case created, no candidate action yet
+	INITIATED,     // Case INITIATED, no candidate action yet both same
+	SUBMITTED,
+    IN_PROGRESS,    // Candidate or Vendor working
+    COMPLETED,      // All checks verified
+    PARTIAL,        // Some checks failed
+    FAILED,         // Critical failure
+    CANCELLED; 
 	
 	
     

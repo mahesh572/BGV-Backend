@@ -48,73 +48,82 @@ public class NavigationMenuService {
     private NavigationMenuRepository navigationMenuRepository;
 
     public List<NavigationResponseDto> getAllNavigationMenus(String action) {
-        // Fetch all root menus
-        List<NavigationMenu> rootMenus = navigationMenuRepository.findByParentIsNullOrderByOrderAsc();
+        try {
+            List<NavigationMenu> rootMenus =
+                    navigationMenuRepository.findByParentIsNullOrderByOrderAsc();
 
-        List<NavigationMenu> resultMenus;
+            List<NavigationMenu> resultMenus;
 
-        if ("ALL".equalsIgnoreCase(action)) {
-            // 🔹 If action = ALL, return all menus (no permission filtering)
-            resultMenus = rootMenus;
-        } else {
-            // 🔹 Otherwise, filter based on user authorities
-            List<String> authorities = SecurityUtils.getCurrentUserAuthorities();
+            if ("ALL".equalsIgnoreCase(action)) {
+                resultMenus = rootMenus;
+            } else {
+                List<String> authorities = SecurityUtils.getCurrentUserAuthorities();
 
-            resultMenus = rootMenus.stream()
-                    .map(menu -> filterMenuByPermissions(menu, authorities))
-                    .filter(Objects::nonNull)
-                    .collect(Collectors.toList());
-            
-            Set<String> defaultNaviSet = new HashSet<>();
-            defaultNaviSet.add("DashBoard");
-            defaultNaviSet.add("Basic Details");
-            defaultNaviSet.add("Documents");
-            defaultNaviSet.add("Education");
-            defaultNaviSet.add("Work Experience");
-            defaultNaviSet.add("Address");
-            defaultNaviSet.add("verification");
-            defaultNaviSet.add("Cases");
-            
-            
-            Long userId = SecurityUtils.getCurrentCustomUserDetails().getUserId();
-            User user = userRepository.findById(userId).orElseThrow(() -> new RuntimeException("User not found with id: " + userId));
-            if(user!=null && user.getUserType().equalsIgnoreCase(UserType.CANDIDATE.name())) {
-            	Candidate candidate = candidateRepository.findByUserUserId(userId).orElseThrow(() -> new RuntimeException("Candidate not found with User_id: " + userId));
-		            if(candidate!=null && candidate.getSourceType().equalsIgnoreCase(UserType.COMPANY.name())) {
-		            	// List<VerificationCaseResponse> verificationCaseResponses =verificationCaseService.getVerificationCasesByCandidate(candidate.getCandidateId());
-		           log.info("###################################################################:::{}",resultMenus);
-		            	Set<String> checkTypes =
-		            	        verificationCaseRepository.findByCandidateId(candidate.getCandidateId())
-		            	                .stream()
-		            	                .flatMap(vc -> vc.getCaseChecks().stream())
-		            	                .map(check ->
-		            	                        check.getCategory() != null
-		            	                                ? check.getCategory().getName()
-		            	                                : "unknown"
-		            	                )
-		            	                .collect(Collectors.toSet());
-		            	
-		            	defaultNaviSet.addAll(checkTypes);
-		            	
-		            	log.info("defaultNaviSet:::::::::::{}",defaultNaviSet);
-		            	
-		            	resultMenus = resultMenus.stream()
-		            	        .filter(menu ->
-		            	                defaultNaviSet.contains(menu.getName())
-		            	        )
-		            	        .collect(Collectors.toList());
-		            	
-		            }
-            
+                resultMenus = rootMenus.stream()
+                        .map(menu -> filterMenuByPermissions(menu, authorities))
+                        .filter(Objects::nonNull)
+                        .collect(Collectors.toList());
+
+                applyCandidateSpecificNavigation(resultMenus);
             }
-            
-        }
 
-        // Convert to DTOs
-        return resultMenus.stream()
-                .map(NavigationResponseDto::new)
-                .collect(Collectors.toList());
+            return resultMenus.stream()
+                    .map(NavigationResponseDto::new)
+                    .collect(Collectors.toList());
+
+        } catch (Exception ex) {
+            log.error("Error while fetching navigation menus", ex);
+            throw new RuntimeException("Unable to load navigation menus");
+        }
     }
+    private void applyCandidateSpecificNavigation(List<NavigationMenu> resultMenus) {
+        try {
+            Long userId = SecurityUtils.getCurrentCustomUserDetails().getUserId();
+
+            User user = userRepository.findById(userId)
+                    .orElseThrow(() -> new EntityNotFoundException("User not found"));
+
+            if (!UserType.CANDIDATE.name().equalsIgnoreCase(user.getUserType())) {
+                return;
+            }
+
+            Candidate candidate = candidateRepository.findByUserUserId(userId)
+                    .orElseThrow(() -> new EntityNotFoundException("Candidate not found"));
+
+            if (!UserType.COMPANY.name().equalsIgnoreCase(candidate.getSourceType())) {
+                return;
+            }
+
+            Set<String> allowedMenus = new HashSet<>(Set.of(
+                    "DashBoard", "Basic Details", "Documents",
+                    "Education", "Work Experience", "Address",
+                    "verification", "Cases"
+            ));
+
+            Set<String> checkTypes =
+                    verificationCaseRepository.findByCandidateId(candidate.getCandidateId())
+                            .stream()
+                            .flatMap(vc -> vc.getCaseChecks().stream())
+                            .map(check -> check.getCategory() != null
+                                    ? check.getCategory().getName()
+                                    : null)
+                            .filter(Objects::nonNull)
+                            .collect(Collectors.toSet());
+
+            allowedMenus.addAll(checkTypes);
+
+            resultMenus.removeIf(menu -> !allowedMenus.contains(menu.getName()));
+            
+
+        } catch (EntityNotFoundException ex) {
+            log.warn("Candidate navigation skipped: {}", ex.getMessage());
+        } catch (Exception ex) {
+        	
+            log.error("Error applying candidate-specific navigation", ex);
+            throw new RuntimeException("Navigation resolution failed");
+        }
+    }
+
 
 
     public List<NavigationResponseDto> getActiveNavigationMenus() {
@@ -138,34 +147,39 @@ public class NavigationMenuService {
     }
 
     public NavigationResponseDto createNavigationMenu(CreateNavigationMenuDto createDto) {
-        // Check for duplicate name
-        if (navigationMenuRepository.existsByNameAndParentId(createDto.getName(), createDto.getParentId())) {
-            throw new IllegalArgumentException("Navigation menu with name '" + createDto.getName() + "' already exists");
-        }
-
-        
-        NavigationMenu menu = new NavigationMenu();
-        mapCreateDtoToEntity(createDto, menu);
-
-        // Set parent if provided
-        if (createDto.getParentId() != null && createDto.getParentId() !=0) {
-            NavigationMenu parent = navigationMenuRepository.findById(createDto.getParentId())
-                    .orElseThrow(() -> new EntityNotFoundException("Parent menu not found with id: " + createDto.getParentId()));
-            menu.setParent(parent);
-        }
-
-        NavigationMenu savedMenu = navigationMenuRepository.save(menu);
-        
-        // Handle children recursively if provided
-        if (createDto.getChildren() != null && !createDto.getChildren().isEmpty()) {
-            for (CreateNavigationMenuDto childDto : createDto.getChildren()) {
-                childDto.setParentId(savedMenu.getId());
-                createNavigationMenu(childDto);
+        try {
+            if (navigationMenuRepository.existsByNameAndParentId(
+                    createDto.getName(), createDto.getParentId())) {
+                throw new IllegalArgumentException(
+                        "Navigation menu already exists: " + createDto.getName());
             }
-        }
 
-        return new NavigationResponseDto(savedMenu);
+            NavigationMenu menu = new NavigationMenu();
+            mapCreateDtoToEntity(createDto, menu);
+
+            if (createDto.getParentId() != null && createDto.getParentId() != 0) {
+                NavigationMenu parent = navigationMenuRepository.findById(createDto.getParentId())
+                        .orElseThrow(() -> new EntityNotFoundException("Parent menu not found"));
+                menu.setParent(parent);
+            }
+
+            NavigationMenu saved = navigationMenuRepository.save(menu);
+
+            if (createDto.getChildren() != null) {
+                for (CreateNavigationMenuDto child : createDto.getChildren()) {
+                    child.setParentId(saved.getId());
+                    createNavigationMenu(child);
+                }
+            }
+
+            return new NavigationResponseDto(saved);
+
+        } catch (Exception ex) {
+            log.error("Failed to create navigation menu: {}", createDto.getName(), ex);
+            throw new RuntimeException("Navigation menu creation failed");
+        }
     }
+
 
     public NavigationResponseDto updateNavigationMenu(Long id, UpdateNavigationMenuDto updateDto) {
         NavigationMenu menu = navigationMenuRepository.findById(id)
