@@ -5,5 +5,10 @@ public enum ActionType {
 	INSUFFICIENT,   // fixable → candidate action needed
     REJECT,         // blocked → resubmission needed
     FAIL,           // terminal → audit required
-    VERIFY
+    VERIFY,
+    VIEW,
+    DOWNLOAD,
+    APPROVE,
+    REVERIFY,
+    ESCALATE
 }

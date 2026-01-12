@@ -5,6 +5,7 @@ public enum ActionLevel {
     CHECK,
     OBJECT,
     DOCUMENT,
-    SECTION;
+    SECTION,
+    FILE;
 }
 

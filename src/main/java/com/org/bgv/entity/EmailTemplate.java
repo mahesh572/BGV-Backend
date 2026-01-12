@@ -8,6 +8,8 @@ import lombok.NoArgsConstructor;
 
 import java.time.LocalDateTime;
 
+import com.org.bgv.common.EmailTemplateType;
+
 @NoArgsConstructor
 @AllArgsConstructor
 @Builder
@@ -26,6 +28,11 @@ public class EmailTemplate {
     @Column(name = "type", length = 50, nullable = false)
     private String type; // e.g., "account_creation", "password_reset"
 
+    /*
+    @Enumerated(EnumType.STRING)
+    @Column(name = "type", nullable = false, length = 50)
+    private EmailTemplateType type;
+    */
     @Column(name = "subject", length = 255, nullable = false)
     private String subject;
 
@@ -46,6 +53,12 @@ public class EmailTemplate {
     protected void onCreate() {
         createdAt = LocalDateTime.now();
     }
-    
+    @Column(name = "updated_at")
+    private LocalDateTime updatedAt;
+
+    @PreUpdate
+    protected void onUpdate() {
+        updatedAt = LocalDateTime.now();
+    }
 }
 

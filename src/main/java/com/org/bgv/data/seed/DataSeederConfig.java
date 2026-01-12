@@ -83,7 +83,7 @@ public class DataSeederConfig implements CommandLineRunner {
         seedDefaultAdminUser(); 
        // seedBGVCategoriesAndCheckTypes();
         setdefaultnavigationSeed();
-        emailTemplateService.initializeTemplatesFromFiles();
+       // emailTemplateService.initializeTemplatesFromFiles();
 
     }
     

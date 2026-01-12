@@ -5,10 +5,16 @@ import java.util.List;
 
 import org.springframework.stereotype.Service;
 
+import com.org.bgv.common.DocumentStatus;
 import com.org.bgv.config.SecurityUtils;
+import com.org.bgv.constants.CaseCheckStatus;
+import com.org.bgv.entity.Document;
 import com.org.bgv.entity.VerificationCase;
+import com.org.bgv.entity.VerificationCaseCheck;
+import com.org.bgv.repository.DocumentRepository;
 import com.org.bgv.repository.VerificationCaseCheckRepository;
 import com.org.bgv.repository.VerificationCaseRepository;
+import com.org.bgv.service.EmailService;
 import com.org.bgv.vendor.action.dto.EvidenceLinkRequest;
 import com.org.bgv.vendor.action.dto.VerificationActionRequest;
 import com.org.bgv.vendor.dto.ActionLevel;
@@ -40,6 +46,8 @@ public class VerificationActionService {
 	private final VerificationActionRepository verificationActionRepository;
 	private final VerificationCaseRepository verificationCaseRepository;
 	private final VerificationCaseCheckRepository verificationCaseCheckRepository;
+	private final EmailService emailService;
+	private final DocumentRepository documentRepository;
 	
 	public List<ActionReasonDTO> getReasons(
 	        Long categoryId,
@@ -121,7 +129,7 @@ public class VerificationActionService {
         
         log.info("Evidence {} linked to action {}", evidenceId, actionId);
     }
-	
+	/*
 	@Transactional
 	public Long createRequestInfoAction(VerificationActionRequest req) {
 
@@ -129,9 +137,15 @@ public class VerificationActionService {
 	        VerificationAction.builder()
 	            .actionType(req.getActionType())
 	            .actionLevel(req.getActionLevel())
-	            .verificationCase(verificationCaseRepository.getReferenceById(req.getCaseId()))
-	            .verificationCaseCheck(verificationCaseCheckRepository.getReferenceById(req.getCheckId()))
-	            .reason(actionReasonRepository.getReferenceById(req.getReasonId()))
+	            .verificationCase(
+	                verificationCaseRepository.getReferenceById(req.getCaseId())
+	            )
+	            .verificationCaseCheck(
+	                verificationCaseCheckRepository.getReferenceById(req.getCheckId())
+	            )
+	            .reason(
+	                actionReasonRepository.getReferenceById(req.getReasonId())
+	            )
 	            .remarks(req.getRemarks())
 	            .candidateId(getCandidateId(req))
 	            .status(ActionStatus.OPEN)
@@ -140,22 +154,157 @@ public class VerificationActionService {
 	            .build()
 	    );
 
-	    // 🔗 LINK EVIDENCE
-	    if (req.getEvidences() != null) {
-	        List<Long> evidenceIds = req.getEvidences()
-	                .stream()
-	                .map(EvidenceLinkRequest::getEvidenceId)
-	                .toList();
+	    // 🔗 HANDLE EVIDENCE
+	    if (req.getEvidences() != null && !req.getEvidences().isEmpty()) {
 
-	        List<VerificationActionEvidence> evidences =
-	        		evidenceRepository.findAllById(evidenceIds);
+	        for (EvidenceLinkRequest evReq : req.getEvidences()) {
 
-	        evidences.forEach(ev -> ev.setAction(action));
+	            // -------------------------------
+	            // 1️⃣ VENDOR UPLOAD (already exists)
+	            // -------------------------------
+	            if (evReq.getSource() == EvidenceSource.VENDOR_UPLOAD) {
+
+	                VerificationActionEvidence evidence =
+	                        evidenceRepository.findById(evReq.getEvidenceId())
+	                            .orElseThrow(() ->
+	                                new IllegalArgumentException(
+	                                    "Evidence not found: " + evReq.getEvidenceId()
+	                                )
+	                            );
+
+	                evidence.setAction(action);
+	            }
+
+	            // --------------------------------
+	            // 2️⃣ CANDIDATE DOCUMENT (create new)
+	            // --------------------------------
+	            else if (evReq.getSource() == EvidenceSource.CANDIDATE_DOCUMENT) {
+
+	                VerificationActionEvidence evidence =
+	                        VerificationActionEvidence.builder()
+	                            .action(action)
+	                            .source(EvidenceSource.CANDIDATE_DOCUMENT)
+	                            .documentId(evReq.getDocumentId())
+	                            .uploadedBy(SecurityUtils.getCurrentUserId())
+	                            .build();
+
+	                evidenceRepository.save(evidence);
+	            }
+	        }
 	    }
 
 	    return action.getId();
 	}
+*/
+	
+	@Transactional
+	public Long createAction(VerificationActionRequest req) {
 
+	    VerificationAction action = buildBaseAction(req);
+
+	    verificationActionRepository.save(action);
+
+	    linkEvidences(req, action);
+	    
+	    switch (req.getActionLevel()) {
+      //  case CASE -> updateCaseStatus(req, action);
+      //  case CHECK -> updateCheckStatus(req, action);
+        case DOCUMENT -> updateDocumentStatus(req, action);
+      //  case OBJECT -> updateObjectStatus(req, action);
+      }
+	    
+	   // updateCheckStatus(req, action);
+	    
+	    emailService.sendCandidateActionRequiredEmail(req.getCaseId(), req.getCheckId(), req.getActionType(), action.getReason().getLabel(), req.getRemarks());
+	    
+	    
+	  //  applyActionSideEffects(req, action); // 👈 optional hooks
+
+	    return action.getId();
+	}
+
+	private VerificationAction buildBaseAction(VerificationActionRequest req) {
+
+	    return VerificationAction.builder()
+	            .actionType(req.getActionType())
+	            .actionLevel(req.getActionLevel())
+	            .verificationCase(
+	                verificationCaseRepository.getReferenceById(req.getCaseId())
+	            )
+	            .verificationCaseCheck(
+	                verificationCaseCheckRepository.getReferenceById(req.getCheckId())
+	            )
+	            .reason(
+	                req.getReasonId() != null
+	                    ? actionReasonRepository.getReferenceById(req.getReasonId())
+	                    : null
+	            )
+	            .remarks(req.getRemarks())
+	            .candidateId(getCandidateId(req))
+	            .status(ActionStatus.OPEN)
+	            .performedBy(SecurityUtils.getCurrentUserId())
+	            .performedAt(LocalDateTime.now())
+	            .build();
+	}
+
+	
+	private void linkEvidences(
+	        VerificationActionRequest req,
+	        VerificationAction action
+	) {
+
+	    if (req.getEvidences() == null) return;
+
+	    for (EvidenceLinkRequest evReq : req.getEvidences()) {
+
+	        switch (evReq.getSource()) {
+
+	            case VENDOR_UPLOAD -> {
+	                VerificationActionEvidence evidence =
+	                        evidenceRepository.findById(evReq.getEvidenceId())
+	                            .orElseThrow(() ->
+	                                new IllegalArgumentException(
+	                                    "Evidence not found: " + evReq.getEvidenceId()
+	                                )
+	                            );
+	                evidence.setAction(action);
+	            }
+
+	            case CANDIDATE_DOCUMENT -> {
+	                evidenceRepository.save(
+	                        VerificationActionEvidence.builder()
+	                            .action(action)
+	                            .source(EvidenceSource.CANDIDATE_DOCUMENT)
+	                            .documentId(evReq.getDocumentId())
+	                            .uploadedBy(SecurityUtils.getCurrentUserId())
+	                            .build()
+	                );
+	            }
+	        }
+	    }
+	}
+/*
+	private void applyActionSideEffects(
+	        VerificationActionRequest req,
+	        VerificationAction action
+	) {
+
+	    switch (req.getActionType()) {
+
+	        case REQUEST_INFO -> {
+	            // notify candidate
+	        }
+
+	        case REJECT -> {
+	            closeCheck(action);
+	        }
+
+	        case APPROVE -> {
+	            markCheckVerified(action);
+	        }
+	    }
+	}
+*/
 	private Long getCandidateId(VerificationActionRequest req) {
 
 	    if (req.getCaseId() == null) {
@@ -174,5 +323,85 @@ public class VerificationActionService {
 
 	    return verificationCase.getCandidateId();
 	}
+	
+	
+	private CaseCheckStatus resolveCheckStatus(ActionType actionType,CaseCheckStatus currentStatus) {
+
+	    return switch (actionType) {
+
+	    case REQUEST_INFO -> CaseCheckStatus.INFO_REQUESTED;
+
+        case INSUFFICIENT -> CaseCheckStatus.INSUFFICIENT;
+
+        case VERIFY, APPROVE -> CaseCheckStatus.VERIFIED;
+
+        case REJECT -> CaseCheckStatus.REJECTED;
+
+        case FAIL -> CaseCheckStatus.FAILED;
+
+        case REVERIFY -> CaseCheckStatus.REVERIFY_REQUIRED;
+
+        case ESCALATE -> CaseCheckStatus.ESCALATED;
+
+        // UI / non-status actions
+        case VIEW, DOWNLOAD -> currentStatus;
+	    };
+	}
+
+	private void updateCheckStatus(
+	        VerificationActionRequest req,
+	        VerificationAction action
+	) {
+
+	    VerificationCaseCheck check =
+	            verificationCaseCheckRepository.getReferenceById(req.getCheckId());
+
+	    CaseCheckStatus newStatus = resolveCheckStatus(req.getActionType(),check.getStatus());
+
+	    check.setStatus(newStatus);
+	    check.setLastAction(action);
+	    check.setUpdatedAt(LocalDateTime.now());
+	}
+
+	private void updateDocumentStatus(
+	        VerificationActionRequest req,
+	        VerificationAction action
+	) {
+	    if (req.getDocumentId() == null) {
+	        throw new IllegalArgumentException("DocumentId is required for DOCUMENT level action");
+	    }
+
+	    Document document = documentRepository.findById(req.getDocumentId())
+	            .orElseThrow(() ->
+	                    new EntityNotFoundException("Document not found: " + req.getDocumentId()));
+
+	    DocumentStatus newStatus = resolveDocumentStatus(req.getActionType());
+
+	    document.setStatus(newStatus);
+	    document.setLastAction(action);
+	    document.setUpdatedAt(LocalDateTime.now());
+
+	}
+
+	
+	// this below status map for candidate
+	private DocumentStatus resolveDocumentStatus(ActionType actionType) {
+
+	    return switch (actionType) {
+
+	        case REQUEST_INFO -> DocumentStatus.REQUEST_INFO;
+
+	        case INSUFFICIENT -> DocumentStatus.INSUFFICIENT;
+
+	        case REJECT -> DocumentStatus.REJECTED;
+
+	        case VERIFY, APPROVE -> DocumentStatus.VERIFIED;
+
+	        default -> throw new IllegalStateException(
+	                "ActionType " + actionType + " not supported for document"
+	        );
+	    };
+	}
+
 
 }

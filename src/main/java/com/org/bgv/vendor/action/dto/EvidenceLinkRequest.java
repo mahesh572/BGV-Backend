@@ -10,4 +10,5 @@ import lombok.Data;
 public class EvidenceLinkRequest {
     private Long evidenceId;
     private EvidenceSource source;
+    private Long documentId;
 }

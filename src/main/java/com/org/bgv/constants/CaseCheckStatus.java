@@ -11,5 +11,9 @@ public enum CaseCheckStatus {
     INSUFFICIENT,
     REJECTED,
     PENDING_CANDIDATE,
-    FAILED;             // Vendor rejected
+    FAILED,             // Vendor rejected
+    INFO_REQUESTED,
+    VERIFIED,
+    REVERIFY_REQUIRED,
+    ESCALATED;
 }

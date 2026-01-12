@@ -15,6 +15,9 @@ import com.org.bgv.constants.CaseCheckStatus;
 import com.org.bgv.constants.CaseStatus;
 import com.org.bgv.entity.*;
 import com.org.bgv.repository.*;
+import com.org.bgv.vendor.action.dto.ActionDTO;
+import com.org.bgv.vendor.action.dto.VendorActionCatalog;
+import com.org.bgv.vendor.dto.ActionType;
 import com.org.bgv.vendor.dto.CandidateInfoDTO;
 import com.org.bgv.vendor.dto.DeclaredEducationInfoDTO;
 import com.org.bgv.vendor.dto.DeclaredEmploymentInfoDTO;
@@ -168,12 +171,17 @@ public class VerificationCheckService {
 	private VerificationCheckResponseDTO buildVerificationCheckResponse(VerificationCaseCheck check,
 			VerificationCase verificationCase, Candidate candidate) {
 
-		return VerificationCheckResponseDTO.builder().caseId(String.valueOf(verificationCase.getCaseId()))
-				.caseRef(getCaseReference(verificationCase)).checkId(String.valueOf(check.getCaseCheckId()))
-				.checkRef(check.getCheckRef()).checkType(check.getCategory().getCode().toLowerCase())
-				.checkName(check.getCategory().getName()).status(mapCheckStatus(check.getStatus()))
+		return VerificationCheckResponseDTO.builder()
+				.caseId(String.valueOf(verificationCase.getCaseId()))
+				.caseRef(getCaseReference(verificationCase))
+				.checkId(String.valueOf(check.getCaseCheckId()))
+				.checkRef(check.getCheckRef())
+				.checkType(check.getCategory().getCode().toLowerCase())
+				.checkName(check.getCategory().getName())
+				.status(mapCheckStatus(check.getStatus()))
 				.candidate(mapCandidateInfo(candidate))
 				// .audit(buildAudit(check))
+				 .actions(VendorActionCatalog.checkActions()) 
 				.build();
 	}
 
@@ -209,11 +217,16 @@ public class VerificationCheckService {
 				.findByVerificationCaseCheckCaseCheckId(check.getCaseCheckId());
 
 		return identities.stream()
-				.map(identity -> ObjectDTO.builder().objectId(identity.getId()).objectType("IDENTITY")
-						.displayName(resolveIdentityName(identity)).data(buildIdentityData(identity))
+				.map(identity -> ObjectDTO.builder()
+						.objectId(identity.getId())
+						.objectType("IDENTITY")
+						.displayName(resolveIdentityName(identity))
+						.data(buildIdentityData(identity))
 						.documentTypes(buildDocumentTypes(identity.getId(), check
 
-						)).evidence(Collections.emptyList()).build()).toList();
+						)).evidence(Collections.emptyList())
+						.actions(VendorActionCatalog.objectActions())
+						.build()).toList();
 	}
 
 	private String resolveIdentityName(IdentityProof identityProof) {
@@ -247,9 +260,14 @@ public class VerificationCheckService {
 				.findByVerificationCaseCheck_CaseCheckId(check.getCaseCheckId());
 
 		return educations.stream()
-				.map(education -> ObjectDTO.builder().objectId(education.getId()).objectType("EDUCATION")
-						.displayName(resolveEducationName(education)).data(buildEducationData(education))
-						.documentTypes(buildDocumentTypes(education.getId(), check)).evidence(Collections.emptyList())
+				.map(education -> ObjectDTO.builder()
+						.objectId(education.getId())
+						.objectType("EDUCATION")
+						.displayName(resolveEducationName(education))
+						.data(buildEducationData(education))
+						.documentTypes(buildDocumentTypes(education.getId(), check))
+						.evidence(Collections.emptyList())
+						.actions(VendorActionCatalog.objectActions())
 						.build())
 				.toList();
 	}
@@ -309,9 +327,11 @@ public class VerificationCheckService {
 
 		return experiences.stream()
 				.map(experience -> ObjectDTO.builder().objectId(experience.getExperienceId())
-						.objectType("WORK_EXPERIENCE").displayName(resolveWorkExperienceName(experience))
+						.objectType("WORK_EXPERIENCE")
+						.displayName(resolveWorkExperienceName(experience))
 						.data(buildWorkExperienceData(experience))
 						.documentTypes(buildDocumentTypes(experience.getExperienceId(), check))
+						.actions(VendorActionCatalog.objectActions())
 						.evidence(Collections.emptyList()).build())
 				.toList();
 	}
@@ -383,8 +403,12 @@ public class VerificationCheckService {
 		return grouped.entrySet().stream().map(entry -> {
 			DocumentType docType = entry.getValue().get(0).getDocTypeId();
 
-			return DocumentTypeVerificationDTO.builder().documentTypeId(String.valueOf(docType.getDocTypeId()))
-					.type(docType.getLabel()).status(resolveDocumentTypeStatus(entry.getValue()))
+			return DocumentTypeVerificationDTO.builder()
+					.documentTypeId(String.valueOf(docType.getDocTypeId()))
+					.type(docType.getLabel())
+					.status(resolveDocumentTypeStatus(entry.getValue()))
+					 .actions(VendorActionCatalog.documentActions())
+					// .actions(resolveDocumentActions(resolveDocumentTypeStatus(entry.getValue())))
 					.files(buildVerificationFiles(entry.getValue())).build();
 		}).toList();
 
@@ -403,6 +427,10 @@ public class VerificationCheckService {
 		if (documents.stream().anyMatch(d -> d.getStatus() == DocumentStatus.INSUFFICIENT)) {
 			return "INSUFFICIENT";
 		}
+		if (documents.stream().anyMatch(d -> d.getStatus() == DocumentStatus.REQUEST_INFO)) {
+			return "REQUEST_INFO";
+		}
+		
 
 		return "PENDING";
 	}
@@ -410,12 +438,26 @@ public class VerificationCheckService {
 	private List<VerificationFileDTO> buildVerificationFiles(List<Document> documents) {
 
 		return documents.stream()
-				.map(doc -> VerificationFileDTO.builder().docId(doc.getDocId()).fileId(doc.getDocId())
-						.fileName(doc.getOriginalFileName()).fileUrl(doc.getFileUrl()).fileSize(doc.getFileSize())
-						.fileType(doc.getFileType()).status(doc.getStatus()).uploadedBy(doc.getUploadedBy())
-						.uploadedAt(doc.getUploadedAt()).verified(doc.isVerified()).verifiedBy(doc.getVerifiedBy())
-						.verifiedAt(doc.getVerifiedAt()).verificationNotes(doc.getVerificationNotes())
-						.comments(doc.getComments()).createdAt(doc.getCreatedAt()).updatedAt(doc.getUpdatedAt())
+				.map(doc -> VerificationFileDTO.builder()
+						.docId(doc.getDocId())
+						.fileId(doc.getDocId())
+						.fileName(doc.getOriginalFileName())
+						.fileUrl(doc.getFileUrl())
+						.fileSize(doc.getFileSize())
+						.fileType(doc.getFileType())
+						.status(doc.getStatus())
+						.uploadedBy(doc.getUploadedBy())
+						.uploadedAt(doc.getUploadedAt())
+						.verified(doc.isVerified())
+						//.verifiedBy(doc.getVerifiedBy())
+						//.verifiedAt(doc.getVerifiedAt())
+						//.verificationNotes(doc.getVerificationNotes())
+						.comments(doc.getComments())
+						.createdAt(doc.getCreatedAt())
+						.updatedAt(doc.getUpdatedAt())
+						.fileKey(doc.getAwsDocKey())
+						.actions(resolveFileActions(doc.getStatus()))
+						.status(doc.getStatus())
 						.build())
 				.toList();
 	}
@@ -814,7 +856,7 @@ public class VerificationCheckService {
 		case ON_HOLD:
 			return "on_hold";
 		// case DELAYED: return "delayed";
-		// case INSUFFICIENT: return "insufficient";
+		 case INSUFFICIENT: return "insufficient";
 		default:
 			return "pending";
 		}
@@ -1093,6 +1135,65 @@ public class VerificationCheckService {
 
 		// Update parent case
 		updateParentCaseStatus(check.getVerificationCase());
+	}
+
+	
+	private List<ActionDTO> resolveDocumentActions(String documentTypeStatus) {
+
+	    boolean restricted =
+	            "REQUEST_INFO".equals(documentTypeStatus) ||
+	            "INSUFFICIENT".equals(documentTypeStatus);
+
+	    if (!restricted) {
+	        return VendorActionCatalog.documentActions();
+	    }
+
+	    // 🔒 Only allow view + download
+	    return VendorActionCatalog.documentActions().stream()
+	            .map(action -> {
+	                if (action.getCode() == ActionType.VIEW ||
+	                    action.getCode() == ActionType.DOWNLOAD) {
+	                    return action;
+	                }
+
+	                return ActionDTO.builder()
+	                        .code(action.getCode())
+	                        .label(action.getLabel())
+	                        .level(action.getLevel())
+	                        .enabled(false)
+	                        .build();
+	            })
+	            .toList();
+	}
+
+	private List<ActionDTO> resolveFileActions(DocumentStatus status) {
+
+		log.info("resolveFileActions::::::::::::::::::::::::::::::{}",status);
+		
+		boolean restricted =
+		        status == DocumentStatus.REQUEST_INFO ||
+		        status == DocumentStatus.INSUFFICIENT;
+		log.info("resolveFileActions::::::::::::::::::restricted::::::::::::{}",restricted);
+	    if (!restricted) {
+	        return VendorActionCatalog.documentActions();
+	    }
+
+	    // 🔒 Only allow view + download
+	    return VendorActionCatalog.documentActions().stream()
+	            .map(action -> {
+	                if (action.getCode() == ActionType.VIEW ||
+	                    action.getCode() == ActionType.DOWNLOAD) {
+	                    return action;
+	                }
+
+	                return ActionDTO.builder()
+	                        .code(action.getCode())
+	                        .label(action.getLabel())
+	                        .level(action.getLevel())
+	                        .enabled(false)
+	                        .build();
+	            })
+	            .toList();
 	}
 
 }

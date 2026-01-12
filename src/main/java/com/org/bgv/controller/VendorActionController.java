@@ -1,11 +1,14 @@
 package com.org.bgv.controller;
 
 import java.util.List;
+import java.util.Map;
 
+import org.springframework.core.io.InputStreamResource;
 import org.springframework.data.util.Pair;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
@@ -18,6 +21,7 @@ import com.org.bgv.config.JwtUtil;
 import com.org.bgv.config.SecurityUtils;
 import com.org.bgv.s3.S3StorageService;
 import com.org.bgv.service.UserService;
+import com.org.bgv.vendor.action.dto.PresignedUrlResponse;
 import com.org.bgv.vendor.action.dto.VerificationActionRequest;
 import com.org.bgv.vendor.dto.ActionLevel;
 import com.org.bgv.vendor.dto.ActionReasonDTO;
@@ -165,6 +169,7 @@ public class VendorActionController {
         }
     }
 
+    /*
     @PostMapping("/request-info")
     public ResponseEntity<CustomApiResponse<?>> requestInfo(
             @RequestBody VerificationActionRequest request
@@ -200,6 +205,58 @@ public class VendorActionController {
                 )
         );
     }
+    
+    */
+    
+    @PostMapping
+    public ResponseEntity<CustomApiResponse<?>> createAction(
+            @RequestBody VerificationActionRequest request
+    ) {
+
+        log.info("ACTION initiated | type={} | caseId={} | checkId={} | level={}",
+                request.getActionType(),
+                request.getCaseId(),
+                request.getCheckId(),
+                request.getActionLevel());
+
+        Long actionId = verificationActionService.createAction(request);
+
+        return ResponseEntity.ok(
+                CustomApiResponse.success(
+                        "Action created successfully",
+                        Map.of("actionId", actionId),
+                        HttpStatus.OK
+                )
+        );
+    }
+
+    
+    @GetMapping("/documents/download")
+    public ResponseEntity<InputStreamResource> downloadDocument(
+            @RequestParam Long docId
+    ) {
+        return s3StorageService.downloadFile(docId);
+    }
+    
+    @GetMapping("/documents/{docId}/presigned-url")
+    public ResponseEntity<CustomApiResponse<?>> getPresignedUrl(
+            @PathVariable Long docId,
+            @RequestParam(defaultValue = "10") int expiryMinutes,
+            @RequestParam(defaultValue = "true") boolean inline
+    ) {
+        String url = s3StorageService.generatePresignedUrl(docId, expiryMinutes, inline);
+        
+        return ResponseEntity.ok(
+                CustomApiResponse.success(
+                        "Presigned url generated",
+                        new PresignedUrlResponse(url),
+                        HttpStatus.OK
+                )
+        );
+        
+      
+    }
+    
 
 }
 

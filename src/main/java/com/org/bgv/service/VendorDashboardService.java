@@ -277,7 +277,7 @@ public class VendorDashboardService {
             case PENDING: return "pending";
             case ON_HOLD: return "on_hold";
           //  case DELAYED: return "delayed";
-           // case INSUFFICIENT: return "insufficient";
+            case INSUFFICIENT: return "insufficient";
             default: return "pending";
         }
     }

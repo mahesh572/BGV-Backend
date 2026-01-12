@@ -2,6 +2,8 @@ package com.org.bgv.vendor.dto;
 
 import com.fasterxml.jackson.annotation.JsonInclude;
 import com.fasterxml.jackson.annotation.JsonProperty;
+import com.org.bgv.vendor.action.dto.ActionDTO;
+
 import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Data;
@@ -25,6 +27,8 @@ public class ObjectDTO {
     
     @JsonProperty("displayName")
     private String displayName;
+    
+    private List<ActionDTO> actions;
     
     @JsonProperty("data")
     private Map<String, Object> data;

@@ -14,7 +14,10 @@ import org.springframework.mail.SimpleMailMessage;
 import org.springframework.mail.javamail.JavaMailSender;
 import org.springframework.mail.javamail.MimeMessageHelper;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 
+import com.org.bgv.candidate.entity.Candidate;
+import com.org.bgv.candidate.repository.CandidateRepository;
 import com.org.bgv.common.EmailTemplateDTO;
 import com.org.bgv.company.dto.EmployeeDTO;
 import com.org.bgv.config.SecurityUtils;
@@ -23,9 +26,14 @@ import com.org.bgv.entity.Email;
 import com.org.bgv.entity.EmailTemplate;
 import com.org.bgv.entity.Profile;
 import com.org.bgv.entity.User;
+import com.org.bgv.entity.VerificationCase;
 import com.org.bgv.repository.CompanyRepository;
 import com.org.bgv.repository.EmailTemplateRepository;
 import com.org.bgv.repository.ProfileRepository;
+import com.org.bgv.repository.UserRepository;
+import com.org.bgv.repository.VerificationCaseCheckRepository;
+import com.org.bgv.repository.VerificationCaseRepository;
+import com.org.bgv.vendor.dto.ActionType;
 
 import jakarta.mail.MessagingException;
 import jakarta.mail.internet.MimeMessage;
@@ -48,6 +56,11 @@ public class EmailService {
 	 private final CompanyRepository companyRepository;
 	 
 	 private final ProfileRepository profileRepository;
+	 
+	 private final VerificationCaseRepository verificationCaseRepository;
+	 private final CandidateRepository candidateRepository;
+	 private final UserRepository userRepository;
+	 private final VerificationCaseCheckRepository verificationCaseCheckRepository;
 	
 	private final Map<String, TemplateConfig> templateConfigs = Map.of(
 	        "account_creation", new TemplateConfig("Welcome New User", "templates/email/account-creation.html", "templates/email/account-creation.txt"),
@@ -336,9 +349,10 @@ public class EmailService {
     
     
     public String processTemplate(String template, Map<String, Object> variables) {
-    	
-    	StringSubstitutor stringSubstitutor = new StringSubstitutor(new HashMap<>(), "{", "}"); 
-        return stringSubstitutor.replace(template, variables);
+        StringSubstitutor substitutor =
+                new StringSubstitutor(variables, "{", "}");
+        substitutor.setEnableUndefinedVariableException(false);
+        return substitutor.replace(template);
     }
     
     // Method with custom prefix/suffix
@@ -403,6 +417,8 @@ public class EmailService {
                     String.format("Email template not found for type: '%s' and name: '%s'", type, name))
                 );
     }
+    
+    
     private void sendEmail(String from,String to, String subject, String htmlContent) {
         MimeMessage message = mailSender.createMimeMessage();
         
@@ -417,6 +433,147 @@ public class EmailService {
             throw new RuntimeException("Failed to send email", e);
         }
     }
+    /*
+    public void sendCandidateActionRequiredEmail(
+            Long candidateUserId,
+            Long companyId,
+            String checkName,
+            String actionType,
+            String reason,
+            String actionMessage
+    ) {
+
+        // 1️⃣ Load candidate user & profile
+        Profile profile = profileRepository.findByUserUserId(candidateUserId);
+        if (profile == null) {
+            throw new EntityNotFoundException("Candidate profile not found for userId: " + candidateUserId);
+        }
+
+        User user = profile.getUser();
+        if (user == null) {
+            throw new EntityNotFoundException("User not found for candidate userId: " + candidateUserId);
+        }
+
+        // 2️⃣ Load company
+        Company company = companyRepository.findById(companyId)
+                .orElseThrow(() -> new EntityNotFoundException(
+                        "Company not found with ID: " + companyId));
+
+        // 3️⃣ Fetch email template
+        EmailTemplate emailTemplate = getEmailTemplate(
+                "candidate_action_required",
+                "Candidate Action Required"
+        );
+
+        // 4️⃣ Prepare variables
+        Map<String, Object> variables = new HashMap<>();
+        variables.put("candidateName", profile.getFirstName());
+        variables.put("company", company.getCompanyName());
+        variables.put("checkName", checkName);
+        variables.put("actionType", actionType);
+        variables.put("reason", reason);
+        variables.put("actionMessage", actionMessage);
+        variables.put("portalUrl", "https://localhost:5173/candidate/login");
+
+        // 5️⃣ Process subject & body
+        String subject = processTemplate(emailTemplate.getSubject(), variables);
+        String processedHtml = processTemplate(emailTemplate.getBodyHtml(), variables);
+
+        // 6️⃣ Send email
+        sendEmail(
+                company.getContactEmail(),   // from
+                user.getEmail(),             // to
+                subject,
+                processedHtml
+        );
+
+        log.info(
+            "Candidate action-required email sent | userId={} | check={} | action={}",
+            candidateUserId, checkName, actionType
+        );
+    }
+*/
+    
+    @Transactional(readOnly = true)
+    public void sendCandidateActionRequiredEmail(
+            Long caseId,
+            Long checkId,
+            ActionType actionType,
+            String reason,
+            String actionMessage
+    ) {
+    	
+    	
+
+        // 1️⃣ Load verification case
+        VerificationCase verificationCase =
+                verificationCaseRepository.findById(caseId)
+                        .orElseThrow(() ->
+                                new EntityNotFoundException("Verification case not found: " + caseId));
+        
+        String checkName = verificationCaseCheckRepository
+                .findById(checkId)
+                .map(c -> c.getCategory().getName())
+                .orElse("Verification Check");
+        
+        // 2️⃣ Resolve candidate
+        Candidate candidate =
+                candidateRepository.findById(verificationCase.getCandidateId())
+                        .orElseThrow(() ->
+                                new EntityNotFoundException("Candidate not found"));
+
+        // 3️⃣ Resolve user for candidate
+        User user =
+                userRepository.findById(candidate.getUser().getUserId())
+                        .orElseThrow(() ->
+                                new EntityNotFoundException("User not found for candidate"));
+
+        // 4️⃣ Resolve company
+        Company company =
+                companyRepository.findById(verificationCase.getCompanyId())
+                        .orElseThrow(() ->
+                                new EntityNotFoundException("Company not found"));
+
+        // 5️⃣ Load email template
+        EmailTemplate emailTemplate = getEmailTemplate(
+                "candidate_action_required",
+                "Candidate Action Required"
+        );
+        
+        Profile profile = profileRepository.findByUserUserId(user.getUserId());
+        if (profile == null) {
+            throw new EntityNotFoundException("Candidate profile not found for userId: " + user.getUserId());
+        }
+
+        // 6️⃣ Prepare placeholders
+        Map<String, Object> variables = new HashMap<>();
+        variables.put("candidateName", profile.getFirstName() + profile.getLastName());
+        variables.put("checkName", checkName);
+        variables.put("actionType", actionType);
+        variables.put("reason", reason);
+        variables.put("actionMessage", actionMessage);
+        variables.put("companyName", company.getCompanyName());
+        variables.put("caseRef", verificationCase.getCaseNumber());
+        variables.put("portalUrl", "https://candidate.bgv.com/login");
+
+        // 7️⃣ Process subject & body
+        String subject = processTemplate(emailTemplate.getSubject(), variables);
+        String body = processTemplate(emailTemplate.getBodyHtml(), variables);
+
+        // 8️⃣ Send email
+        sendEmail(
+                company.getContactEmail(),
+                user.getEmail(),
+                subject,
+                body
+        );
+
+        log.info(
+            "Candidate action email sent | caseId={} | candidateId={} | action={}",
+            caseId, candidate.getCandidateId(), actionType
+        );
+    }
+
     
     
 }

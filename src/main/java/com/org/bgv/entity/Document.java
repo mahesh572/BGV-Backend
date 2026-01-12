@@ -9,6 +9,7 @@ import com.org.bgv.candidate.entity.Candidate;
 import com.org.bgv.common.DocumentEntityType;
 import com.org.bgv.common.DocumentStatus;
 import com.org.bgv.constants.CaseStatus;
+import com.org.bgv.vendor.entity.VerificationAction;
 
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
@@ -136,5 +137,9 @@ public class Document implements BaseDocument {
     
     @Column(name = "deleted_at")
     private LocalDateTime deletedAt;
+    
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "last_action_id")
+    private VerificationAction lastAction;
 	
 }

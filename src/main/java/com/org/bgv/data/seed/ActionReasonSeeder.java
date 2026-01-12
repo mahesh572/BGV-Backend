@@ -80,7 +80,13 @@ public class ActionReasonSeeder implements CommandLineRunner {
             entry("UNVERIFIABLE",
                 build("UNVERIFIABLE", "Unable to Verify",
                       ActionType.REQUEST_INFO, ActionLevel.SECTION, false)),
-
+            entry("DOCUMENT_CLARIFICATION_REQUIRED",
+            	    build("DOCUMENT_CLARIFICATION_REQUIRED",
+            	          "Document clarification required",
+            	          ActionType.REQUEST_INFO,
+            	          ActionLevel.DOCUMENT,
+            	          false)),
+           
             // ---------- CATEGORY-SPECIFIC ----------
             entry("UNIVERSITY_NOT_RECOGNIZED",
                 build("UNIVERSITY_NOT_RECOGNIZED", "University Not Recognized",
@@ -128,7 +134,8 @@ public class ActionReasonSeeder implements CommandLineRunner {
             "FAKE_DOCUMENT",
             "DOCUMENT_NOT_CLEAR",
             "INFORMATION_MISMATCH",
-            "EXPIRED_DOCUMENT"
+            "EXPIRED_DOCUMENT",
+            "RECORD_NOT_FOUND"
         );
 
         map("Education", persistedReasons,

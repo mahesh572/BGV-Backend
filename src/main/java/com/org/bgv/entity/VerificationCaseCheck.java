@@ -5,6 +5,7 @@ import java.util.List;
 import java.util.ArrayList;
 import com.org.bgv.constants.CaseCheckStatus;
 import com.org.bgv.constants.CaseStatus;
+import com.org.bgv.vendor.entity.VerificationAction;
 
 import jakarta.persistence.*;
 import lombok.*;
@@ -61,6 +62,10 @@ public class VerificationCaseCheck {
     @OneToMany(mappedBy = "verificationCaseCheck", cascade = CascadeType.ALL, fetch = FetchType.LAZY)
     @Builder.Default
     private List<VerificationCaseDocument> documents = new ArrayList<>();
+    
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "last_action_id")
+    private VerificationAction lastAction;
     
     @PreUpdate
     protected void onUpdate() {

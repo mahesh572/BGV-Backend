@@ -3,6 +3,7 @@ package com.org.bgv.vendor.dto;
 import com.fasterxml.jackson.annotation.JsonInclude;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.org.bgv.common.DocumentTypeInfo;
+import com.org.bgv.vendor.action.dto.ActionDTO;
 
 import lombok.AllArgsConstructor;
 import lombok.Builder;
@@ -43,6 +44,8 @@ public class VerificationCheckResponseDTO {
     
     @JsonProperty("candidate")
     private CandidateInfoDTO candidate;
+    
+    private List<ActionDTO> actions;
     
     @JsonProperty("objects")
     private List<ObjectDTO> objects;
