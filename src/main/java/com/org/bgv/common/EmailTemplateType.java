@@ -1,5 +1,14 @@
 package com.org.bgv.common;
 
-public class EmailTemplateType {
-
+public enum EmailTemplateType {
+    ACCOUNT_CREATED,
+    PASSWORD_RESET,
+    REQUEST_INFO,
+    CASE_ASSIGNED,
+    DOCUMENT_REJECTED,
+    ACCOUNT_CREATION,
+    PASSWORD_CHANGE,
+    EMAIL_VERIFICATION,
+    TWO_FACTOR_AUTH
 }
+

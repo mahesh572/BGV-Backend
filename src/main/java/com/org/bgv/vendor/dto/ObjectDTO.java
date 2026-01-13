@@ -28,10 +28,13 @@ public class ObjectDTO {
     @JsonProperty("displayName")
     private String displayName;
     
+    private String status;
+    
     private List<ActionDTO> actions;
     
     @JsonProperty("data")
     private Map<String, Object> data;
+    
     
     @JsonProperty("documentTypes")
     private List<DocumentTypeVerificationDTO> documentTypes;

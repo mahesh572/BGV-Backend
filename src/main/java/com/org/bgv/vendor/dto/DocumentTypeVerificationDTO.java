@@ -30,6 +30,8 @@ public class DocumentTypeVerificationDTO {
     
     private List<ActionDTO> actions;
     
+    private List<ObjectFieldDTO> fields;
+    
     @JsonProperty("files")
     private List<VerificationFileDTO> files;
 }

@@ -14,6 +14,7 @@ public enum DocumentStatus {
     INSUFFICIENT,
     REQUEST_INFO,
     DELETED,            // Soft delete
-	ACTION_REQUIRED;
+	ACTION_REQUIRED,
+	FAILED;
 	
 }

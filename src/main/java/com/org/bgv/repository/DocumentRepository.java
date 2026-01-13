@@ -15,6 +15,8 @@ import com.org.bgv.entity.VerificationCase;
 
 @Repository
 public interface DocumentRepository extends JpaRepository<Document, Long> {
+	
+	List<Document> findByVerificationCaseCheck_CaseCheckId(Long caseCheckId);
 
     // 1. Find documents by profileId
     List<Document> findByProfile_ProfileId(Long profileId);

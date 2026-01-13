@@ -215,6 +215,9 @@ public class VerificationActionService {
 	    
 	   // updateCheckStatus(req, action);
 	    
+	    recalculateAndUpdateCheckStatus(req.getCheckId(), action);
+
+	    
 	    emailService.sendCandidateActionRequiredEmail(req.getCaseId(), req.getCheckId(), req.getActionType(), action.getReason().getLabel(), req.getRemarks());
 	    
 	    
@@ -347,7 +350,7 @@ public class VerificationActionService {
         case VIEW, DOWNLOAD -> currentStatus;
 	    };
 	}
-
+/*
 	private void updateCheckStatus(
 	        VerificationActionRequest req,
 	        VerificationAction action
@@ -362,7 +365,7 @@ public class VerificationActionService {
 	    check.setLastAction(action);
 	    check.setUpdatedAt(LocalDateTime.now());
 	}
-
+*/
 	private void updateDocumentStatus(
 	        VerificationActionRequest req,
 	        VerificationAction action
@@ -402,6 +405,49 @@ public class VerificationActionService {
 	        );
 	    };
 	}
+	private void recalculateAndUpdateCheckStatus(
+	        Long checkId,
+	        VerificationAction action
+	) {
 
+	    VerificationCaseCheck check =
+	            verificationCaseCheckRepository.getReferenceById(checkId);
+
+	    List<Document> documents =
+	            documentRepository.findByVerificationCaseCheck_CaseCheckId(checkId);
+
+	    CaseCheckStatus newStatus = resolveCheckStatusFromDocuments(documents);
+
+	    check.setStatus(newStatus);
+	    check.setLastAction(action);
+	    check.setUpdatedAt(LocalDateTime.now());
+	    
+	    verificationCaseCheckRepository.save(check);
+	}
+
+	private CaseCheckStatus resolveCheckStatusFromDocuments(List<Document> documents) {
+
+	    if (documents.stream().anyMatch(d -> d.getStatus() == DocumentStatus.REJECTED)) {
+	        return CaseCheckStatus.REJECTED;
+	    }
+
+	    if (documents.stream().anyMatch(d -> d.getStatus() == DocumentStatus.FAILED)) {
+	        return CaseCheckStatus.FAILED;
+	    }
+
+	    if (documents.stream().anyMatch(d -> d.getStatus() == DocumentStatus.REQUEST_INFO)) {
+	        return CaseCheckStatus.INFO_REQUESTED;
+	    }
+
+	    if (documents.stream().anyMatch(d -> d.getStatus() == DocumentStatus.INSUFFICIENT)) {
+	        return CaseCheckStatus.INSUFFICIENT;
+	    }
+
+	    if (documents.stream().allMatch(d -> d.getStatus() == DocumentStatus.VERIFIED)) {
+	        return CaseCheckStatus.VERIFIED;
+	    }
+
+	    return CaseCheckStatus.IN_PROGRESS;
+	}
 
 }
