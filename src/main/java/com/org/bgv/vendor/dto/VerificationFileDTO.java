@@ -1,11 +1,13 @@
 package com.org.bgv.vendor.dto;
 
 import java.time.LocalDateTime;
+import java.util.List;
 
 import com.fasterxml.jackson.annotation.JsonFormat;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.org.bgv.common.DocumentStatus;
 import com.org.bgv.dto.document.FileDTO;
+import com.org.bgv.vendor.action.dto.ActionDTO;
 
 import lombok.Builder;
 import lombok.Data;
@@ -25,6 +27,7 @@ public class VerificationFileDTO {
 	private DocumentStatus status;
 	private String fileType;
 	private String thumbnailUrl;
+	private String fileKey;
 	
 	@JsonProperty("uploadedBy")
     private String uploadedBy;
@@ -32,6 +35,8 @@ public class VerificationFileDTO {
     @JsonProperty("uploadedAt")
     @JsonFormat(shape = JsonFormat.Shape.STRING, pattern = "yyyy-MM-dd'T'HH:mm:ss'Z'")
     private LocalDateTime uploadedAt;
+    
+    private List<ActionDTO> actions;
     
     private String size;
     

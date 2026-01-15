@@ -5,23 +5,22 @@ import java.util.List;
 import org.springframework.data.jpa.repository.JpaRepository;
 
 import com.org.bgv.entity.CheckCategory;
-import com.org.bgv.vendor.dto.RejectionLevel;
 
 public interface RejectionReasonRepository
-extends JpaRepository<RejectionReason, Long> {
+extends JpaRepository<ActionReason, Long> {
 
-List<RejectionReason> findByLevelAndActiveTrueOrderBySortOrder(
-    RejectionLevel level
+List<ActionReason> findByLevelAndActiveTrueOrderBySortOrder(
+		ActionReason level
 );
 
-List<RejectionReason> findByCategory_CategoryIdAndLevelAndActiveTrueOrderBySortOrder(
+List<ActionReason> findByCategory_CategoryIdAndLevelAndActiveTrueOrderBySortOrder(
     Long categoryId,
-    RejectionLevel level
+    ActionReason level
 );
 
-List<RejectionReason> findByCategoryAndLevelAndActiveTrueOrderBySortOrder(
+List<ActionReason> findByCategoryAndLevelAndActiveTrueOrderBySortOrder(
         CheckCategory category,
-        RejectionLevel level
+        ActionReason level
 );
 
 }

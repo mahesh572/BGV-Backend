@@ -46,7 +46,7 @@ public class VerificationCase {
     private Double totalPrice;
     
     @Enumerated(EnumType.STRING)
-    private CaseStatus status = CaseStatus.CREATED;
+    private CaseStatus status = CaseStatus.INITIATED;
     
     @Builder.Default
     private LocalDateTime createdAt = LocalDateTime.now();

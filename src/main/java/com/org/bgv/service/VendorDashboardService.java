@@ -2,11 +2,11 @@ package com.org.bgv.service;
 
 import com.org.bgv.candidate.entity.Candidate;
 import com.org.bgv.candidate.repository.CandidateRepository;
+import com.org.bgv.constants.CaseCheckStatus;
 import com.org.bgv.constants.CaseStatus;
 import com.org.bgv.constants.CaseStatus;
 import com.org.bgv.entity.*;
 import com.org.bgv.repository.*;
-import com.org.bgv.vendor.service.VerificationCheckService;
 
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
@@ -34,12 +34,17 @@ public class VendorDashboardService {
     @Transactional(readOnly = true)
     public Map<String, Object> getVendorDashboardData(Long vendorId) {
         // Get all checks assigned to this vendor with specific statuses
-        List<VerificationCaseCheck> vendorChecks = verificationCaseCheckRepository
+       /*
+    	List<VerificationCaseCheck> vendorChecks = verificationCaseCheckRepository
             .findByVendorIdAndStatusIn(
                 vendorId,
                 Arrays.asList(CaseStatus.ASSIGNED, CaseStatus.IN_PROGRESS, CaseStatus.PENDING)
             );
-        
+        */
+    	List<VerificationCaseCheck> vendorChecks = verificationCaseCheckRepository
+                .findByVendorIdOrderByUpdatedAtDesc(
+                    vendorId
+                );
         // Extract unique cases from checks
         List<VerificationCase> vendorCases = vendorChecks.stream()
             .map(VerificationCaseCheck::getVerificationCase)
@@ -58,13 +63,13 @@ public class VendorDashboardService {
     private Map<String, Object> getWorkloadData(List<VerificationCaseCheck> checks) {
         long totalAssigned = checks.size();
         long inProgress = checks.stream()
-            .filter(c -> c.getStatus() == CaseStatus.IN_PROGRESS)
+            .filter(c -> c.getStatus() == CaseCheckStatus.PENDING)
             .count();
         long completed = checks.stream()
-            .filter(c -> c.getStatus() == CaseStatus.COMPLETED)
+            .filter(c -> c.getStatus() == CaseCheckStatus.COMPLETED)
             .count();
         long pending = checks.stream()
-            .filter(c -> c.getStatus() == CaseStatus.PENDING)
+            .filter(c -> c.getStatus() == CaseCheckStatus.PENDING)
             .count();
         
         return Map.of(
@@ -92,13 +97,13 @@ public class VendorDashboardService {
             Map<String, Object> categoryStats = Map.of(
                 "assigned", categoryChecks.size(),
                 "completed", categoryChecks.stream()
-                    .filter(check -> check.getStatus() == CaseStatus.COMPLETED)
+                    .filter(check -> check.getStatus() == CaseCheckStatus.COMPLETED)
                     .count(),
                 "inProgress", categoryChecks.stream()
-                    .filter(check -> check.getStatus() == CaseStatus.IN_PROGRESS)
+                    .filter(check -> check.getStatus() == CaseCheckStatus.PENDING)
                     .count(),
                 "pending", categoryChecks.stream()
-                    .filter(check -> check.getStatus() == CaseStatus.PENDING)
+                    .filter(check -> check.getStatus() == CaseCheckStatus.PENDING)
                     .count()
             );
             
@@ -122,13 +127,13 @@ public class VendorDashboardService {
         
         long assigned = categoryChecks.size();
         long completed = categoryChecks.stream()
-            .filter(check -> check.getStatus() == CaseStatus.COMPLETED)
+            .filter(check -> check.getStatus() == CaseCheckStatus.COMPLETED)
             .count();
         long inProgress = categoryChecks.stream()
-            .filter(check -> check.getStatus() == CaseStatus.IN_PROGRESS)
+            .filter(check -> check.getStatus() == CaseCheckStatus.PENDING)
             .count();
         long pending = categoryChecks.stream()
-            .filter(check -> check.getStatus() == CaseStatus.PENDING)
+            .filter(check -> check.getStatus() == CaseCheckStatus.PENDING)
             .count();
         
         return Map.of(
@@ -203,8 +208,8 @@ public class VendorDashboardService {
     
     private List<Map<String, String>> getVerificationQueue(List<VerificationCaseCheck> checks) {
         return checks.stream()
-            .filter(check -> check.getStatus() == CaseStatus.PENDING || 
-                            check.getStatus() == CaseStatus.IN_PROGRESS)
+            .filter(check -> check.getStatus() == CaseCheckStatus.PENDING || 
+                            check.getStatus() == CaseCheckStatus.PENDING)
             .map(check -> {
                 String priority = determineCheckPriority(check);
                 String waitTime = calculateWaitTime(check);
@@ -263,7 +268,7 @@ public class VendorDashboardService {
     }
     
     // Helper methods
-    private String getStatusMapping(CaseStatus status) {
+    private String getStatusMapping(CaseCheckStatus status) {
         if (status == null) return "pending";
         
         switch (status) {
@@ -271,7 +276,7 @@ public class VendorDashboardService {
             case IN_PROGRESS: return "in_progress";
             case PENDING: return "pending";
             case ON_HOLD: return "on_hold";
-            case DELAYED: return "delayed";
+          //  case DELAYED: return "delayed";
             case INSUFFICIENT: return "insufficient";
             default: return "pending";
         }
@@ -279,9 +284,9 @@ public class VendorDashboardService {
     
     private String calculateSlaStatus(VerificationCaseCheck check) {
         // Implement SLA calculation logic
-        if (check.getStatus() == CaseStatus.DELAYED) {
+        if (check.getStatus() == CaseCheckStatus.ON_HOLD) {
             return "critical";
-        } else if (check.getStatus() == CaseStatus.ON_HOLD) {
+        } else if (check.getStatus() == CaseCheckStatus.AWAITING_CANDIDATE) {
             return "warning";
         } else {
             return "normal";

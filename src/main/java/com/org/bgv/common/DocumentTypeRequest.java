@@ -1,5 +1,7 @@
 package com.org.bgv.common;
 
+import java.util.List;
+
 import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Data;
@@ -17,4 +19,6 @@ public class DocumentTypeRequest {
     private String upload;
     private String code;
     private Double price;
+    
+    List<DocumentAttributeRequest> attributes;
 }

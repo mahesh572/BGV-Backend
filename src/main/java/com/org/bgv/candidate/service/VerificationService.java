@@ -8,9 +8,17 @@ import com.org.bgv.candidate.dto.CandidateVerificationDTO;
 import com.org.bgv.candidate.dto.VerificationSectionDTO;
 import com.org.bgv.candidate.entity.CandidateVerification;
 import com.org.bgv.candidate.repository.CandidateVerificationRepository;
+import com.org.bgv.common.DocumentStatus;
+import com.org.bgv.constants.CaseCheckStatus;
+import com.org.bgv.constants.CaseStatus;
 import com.org.bgv.constants.SectionConstants;
 import com.org.bgv.constants.SectionStatus;
 import com.org.bgv.constants.VerificationStatus;
+import com.org.bgv.entity.VerificationCase;
+import com.org.bgv.entity.VerificationCaseDocument;
+import com.org.bgv.repository.VerificationCaseCheckRepository;
+import com.org.bgv.repository.VerificationCaseDocumentRepository;
+import com.org.bgv.repository.VerificationCaseRepository;
 import com.org.bgv.service.DocumentService;
 import com.org.bgv.service.EducationService;
 import com.org.bgv.service.IdentityProofService;
@@ -40,7 +48,7 @@ import java.util.Map;
 @Slf4j
 public class VerificationService {
     
-    private final CandidateVerificationRepository verificationRepository;
+    private final CandidateVerificationRepository candidateVerificationRepository;
     private final ObjectMapper objectMapper;
     private final ProfileService profileService;
     private final EducationService educationService;
@@ -48,13 +56,16 @@ public class VerificationService {
     private final IdentityProofService identityService;
     private final ProfileAddressService addressService;
     private final DocumentService documentsService;
+    private final VerificationCaseRepository verificationCaseRepository;
+    private final VerificationCaseCheckRepository verificationCaseCheckRepository;
+    private final VerificationCaseDocumentRepository verificationCaseDocumentRepository;
    
     
     @Cacheable(value = "verification", key = "#candidateId")
     public CandidateVerificationDTO getCandidateVerification(Long candidateId,Long caseId) {
         log.info("Fetching verification for candidate: {}{}", candidateId,caseId);
         
-        CandidateVerification verification = verificationRepository.findByCandidateIdAndVerificationCaseCaseId(candidateId,caseId)
+        CandidateVerification verification = candidateVerificationRepository.findByCandidateIdAndVerificationCaseCaseId(candidateId,caseId)
             .orElseThrow(() -> new EntityNotFoundException("Verification not found for candidate: " + candidateId));
         
         CandidateVerificationDTO dto = convertToDTO(verification);
@@ -76,7 +87,7 @@ public class VerificationService {
                                                         String status) throws ValidationException {
         log.info("Updating section {} status to {} for candidate: {}", section, status, candidateId);
         
-        CandidateVerification verification = verificationRepository.findByCandidateId(candidateId)
+        CandidateVerification verification = candidateVerificationRepository.findByCandidateId(candidateId)
             .orElseThrow(() -> new EntityNotFoundException("Verification not found"));
         
         // Update section status in JSON field
@@ -92,7 +103,7 @@ public class VerificationService {
         try {
             verification.setSectionStatus(objectMapper.writeValueAsString(sectionStatusMap));
             verification.setUpdatedAt(LocalDateTime.now());
-            verification = verificationRepository.save(verification);
+            verification = candidateVerificationRepository.save(verification);
         } catch (Exception e) {
             log.error("Error updating section status: {}", e.getMessage());
             throw new ValidationException("Failed to update section status");
@@ -108,44 +119,108 @@ public class VerificationService {
             verification.setSubmittedAt(LocalDateTime.now());
         }
         
-        verification = verificationRepository.save(verification);
+        verification = candidateVerificationRepository.save(verification);
         
         return convertToDTO(verification);
     }
     
     @Transactional
     @CacheEvict(value = "verification", key = "#candidateId")
-    public CandidateVerificationDTO submitForVerification(Long candidateId) throws ValidationException {
-        log.info("Submitting verification for candidate: {}", candidateId);
-        
-        CandidateVerification verification = verificationRepository.findByCandidateId(candidateId)
-            .orElseThrow(() -> new EntityNotFoundException("Verification not found"));
-        
-        // Check if all required sections are completed
-        int progress = calculateProgress(verification);
-        if (progress < 100) {
-            throw new ValidationException("Cannot submit verification. Please complete all required sections. Progress: " + progress + "%");
+    public CandidateVerificationDTO submitForVerification(Long candidateId, Long caseId)
+            throws ValidationException {
+
+        log.info("Submitting verification for candidate: {}, case: {}", candidateId, caseId);
+
+        CandidateVerification candidateverification =
+        		candidateVerificationRepository.findByCandidateId(candidateId)
+                        .orElseThrow(() -> new EntityNotFoundException("Verification not found"));
+
+        VerificationCase verificationCase =
+                verificationCaseRepository.findById(caseId)
+                        .orElseThrow(() -> new EntityNotFoundException("Verification case not found"));
+
+        // 🔐 Ownership validation
+        if (!verificationCase.getCandidateId().equals(candidateId)) {
+            throw new ValidationException("Candidate does not own this case");
         }
+
+        // ✅ Progress validation
+        int progress = calculateProgress(candidateverification);
+        if (progress < 100) {
+            throw new ValidationException(
+                    "Cannot submit verification. Complete all required sections. Progress: " + progress + "%"
+            );
+        }
+
+        // -----------------------------
+        // 1️⃣ Candidate Verification
+        // -----------------------------
+        candidateverification.setStatus(VerificationStatus.SUBMITTED);
+        candidateverification.setSubmittedAt(LocalDateTime.now());
+        candidateverification.setUpdatedAt(LocalDateTime.now());
+        candidateVerificationRepository.save(candidateverification);
+        // -----------------------------
+        // 2️⃣ Verification Case
+        // -----------------------------
+        verificationCase.setStatus(CaseStatus.SUBMITTED);
+        verificationCase.setUpdatedAt(LocalDateTime.now());
+        verificationCaseRepository.save(verificationCase);
+
+        // -----------------------------
+        // 3️⃣ Checks + Documents
+        // -----------------------------
+        verificationCase.getCaseChecks().forEach(check -> {
+
+            // Candidate side submit → vendor pending
+            if (check.getStatus() == CaseCheckStatus.AWAITING_CANDIDATE
+                    || check.getStatus() == CaseCheckStatus.INSUFFICIENT
+                    || check.getStatus() == CaseCheckStatus.PENDING_CANDIDATE) {
+
+                check.setStatus(CaseCheckStatus.PENDING);
+                check.setUpdatedAt(LocalDateTime.now());
+            }
+            verificationCaseCheckRepository.save(check);
+
+         //   List<VerificationCaseDocument> findByVerificationCase_CaseIdAndVerificationCaseCheck_CaseCheckId(caseId,check.get);
+            
+            // Documents
+            check.getDocuments().forEach(document -> {
+                if (document.getVerificationStatus() == DocumentStatus.UPLOADED
+                        || document.getVerificationStatus() == DocumentStatus.IN_PROGRESS
+                        || document.getVerificationStatus() == DocumentStatus.INSUFFICIENT
+                        || document.getVerificationStatus() == DocumentStatus.NONE) {
+
+                    document.setVerificationStatus(DocumentStatus.PENDING);
+                    document.setUpdatedAt(LocalDateTime.now());
+                    verificationCaseDocumentRepository.save(document);
+                }
+            });
+           
+        });
+       
+
+        // -----------------------------
+        // 4️⃣ Persist (cascade)
+        // -----------------------------
         
-        verification.setStatus(VerificationStatus.SUBMITTED);
-        verification.setSubmittedAt(LocalDateTime.now());
-        verification.setUpdatedAt(LocalDateTime.now());
-        
-        verification = verificationRepository.save(verification);
-        
-        // Trigger notification
-        sendVerificationSubmittedNotification(verification);
-        
-        return convertToDTO(verification);
+       
+
+        // -----------------------------
+        // 5️⃣ Notify vendor / system
+        // -----------------------------
+        sendVerificationSubmittedNotification(candidateverification);
+
+        return convertToDTO(candidateverification);
     }
+
     
     @Transactional
     @CacheEvict(value = "verification", key = "#candidateId")
-    public CandidateVerificationDTO createVerification(Long candidateId, CandidateVerificationDTO request) throws ValidationException {
+    public CandidateVerificationDTO createCandidateVerification(Long candidateId, CandidateVerificationDTO request) throws ValidationException {
         log.info("Creating verification for candidate: {}", candidateId);
         
         // Check if verification already exists
-        if (verificationRepository.findByCandidateId(candidateId).isPresent()) {
+        if (candidateVerificationRepository.findByCandidateId(candidateId).isPresent()) {
             throw new ValidationException("Verification already exists for this candidate");
         }
         
@@ -165,7 +240,7 @@ public class VerificationService {
         // Set section requirements based on package
         setSectionRequirements(verification, request.getPackageId());
         
-        verification = verificationRepository.save(verification);
+        verification = candidateVerificationRepository.save(verification);
         
         return convertToDTO(verification);
     }

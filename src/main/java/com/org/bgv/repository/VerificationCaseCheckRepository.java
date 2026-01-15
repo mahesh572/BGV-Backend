@@ -26,7 +26,7 @@ public interface VerificationCaseCheckRepository
      */
     List<VerificationCaseCheck> findByVerificationCase_CaseIdAndStatus(
             Long caseId,
-            CaseStatus status
+            CaseCheckStatus status
     );
 
     /**
@@ -45,9 +45,11 @@ public interface VerificationCaseCheckRepository
     /**
      * Count checks by status for dashboard
      */
-    long countByStatus(CaseStatus status);
+    long countByStatus(CaseCheckStatus status);
     
     List<VerificationCaseCheck> findTop10ByVendorIdOrderByUpdatedAtDesc(Long vendorId);
+    
+    List<VerificationCaseCheck> findByVendorIdOrderByUpdatedAtDesc(Long vendorId);
     
     List<VerificationCaseCheck> findByVerificationCase(VerificationCase verificationCase);
     
@@ -59,7 +61,7 @@ public interface VerificationCaseCheckRepository
     
     long countByVendorIdAndStatusIn(
             Long vendorId,
-            List<CaseStatus> statuses
+            List<CaseCheckStatus> statuses
     );
     
     List<VerificationCaseCheck> findByVendorIdAndStatusIn(

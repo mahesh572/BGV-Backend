@@ -67,6 +67,9 @@ public class WorkExperienceDTO {
     private boolean verified;
     private String verificationStatus;
     private String verifiedBy;
+    
+    private Integer durationInMonths;
+    private Double durationInYears;
    
    
     private List<DocumentResponse> documents;

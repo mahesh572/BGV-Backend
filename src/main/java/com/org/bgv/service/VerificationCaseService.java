@@ -32,7 +32,6 @@ import com.org.bgv.constants.VerificationStatus;
 import com.org.bgv.dto.*;
 import com.org.bgv.entity.*;
 import com.org.bgv.repository.*;
-import com.org.bgv.vendor.entity.VerificationRejection;
 
 import lombok.AllArgsConstructor;
 import lombok.Data;
@@ -124,7 +123,7 @@ public class VerificationCaseService {
                 .basePrice(pricing.getBasePrice())
                 .addonPrice(pricing.getAddonPrice())
                 .totalPrice(pricing.getTotalPrice())
-                .status(CaseStatus.CREATED)
+                .status(CaseStatus.INITIATED)
                 .build();
         
         String caseRef =
@@ -192,7 +191,7 @@ public class VerificationCaseService {
                 VerificationCaseCheck caseCheck = VerificationCaseCheck.builder()
                         .verificationCase(verificationCase)
                         .category(checkCategory)
-                        .status(CaseStatus.PENDING)
+                        .status(CaseCheckStatus.PENDING_CANDIDATE)
                         .build();
                 
                 String checkRef = referenceNumberGenerator.generateCheckCaseNumber();
@@ -412,7 +411,7 @@ public class VerificationCaseService {
                             .documentType(employerDoc.getDocumentType())
                             .isAddOn(isAddOn)
                             .required(isSelected)
-                            .verificationStatus(VerificationStatus.PENDING)
+                            .verificationStatus(DocumentStatus.NONE)
                             .createdAt(LocalDateTime.now())
                             .build();
 
@@ -465,7 +464,7 @@ public class VerificationCaseService {
                                     .documentType(documentType)
                                     .isAddOn(true)
                                     .required(true)
-                                    .verificationStatus(VerificationStatus.PENDING)
+                                    .verificationStatus(DocumentStatus.NONE)
                                     .createdAt(LocalDateTime.now())
                                     .build();
 
@@ -504,7 +503,7 @@ public class VerificationCaseService {
                         VerificationCaseDocumentLink.builder()
                                 .caseDocument(caseDoc)
                                 .document(document)
-                                .status(DocumentStatus.UPLOADED) // ✅ FIXED (NOT NULL)
+                                .status(DocumentStatus.NONE) // ✅ FIXED (NOT NULL)
                                 .linkedAt(LocalDateTime.now())
                                 .build()
                 );
@@ -576,20 +575,21 @@ public class VerificationCaseService {
         
         long totalDocuments = documents.size();
         long pendingDocuments = documents.stream()
-                .filter(doc -> doc.getVerificationStatus() == VerificationStatus.PENDING)
+                .filter(doc -> doc.getVerificationStatus() == DocumentStatus.PENDING)
                 .count();
         long uploadedDocuments = documents.stream()
-                .filter(doc -> doc.getVerificationStatus() == VerificationStatus.UPLOADED)
+                .filter(doc -> doc.getVerificationStatus() == DocumentStatus.UPLOADED)
                 .count();
+      /*
         long underReviewDocuments = documents.stream()
-                .filter(doc -> doc.getVerificationStatus() == VerificationStatus.UNDER_REVIEW)
+                .filter(doc -> doc.getVerificationStatus() == DocumentStatus.UNDER_REVIEW)
                 .count();
+                */
         long verifiedDocuments = documents.stream()
-                .filter(doc -> doc.getVerificationStatus() == VerificationStatus.VERIFIED ||
-                              doc.getVerificationStatus() == VerificationStatus.COMPLETED)
+                .filter(doc -> doc.getVerificationStatus() == DocumentStatus.VERIFIED )
                 .count();
         long rejectedDocuments = documents.stream()
-                .filter(doc -> doc.getVerificationStatus() == VerificationStatus.REJECTED)
+                .filter(doc -> doc.getVerificationStatus() == DocumentStatus.REJECTED)
                 .count();
         
         double completionPercentage = totalDocuments > 0 ? (double) verifiedDocuments / totalDocuments * 100 : 0;
@@ -607,7 +607,7 @@ public class VerificationCaseService {
                 .uploadedDocuments(uploadedDocuments)
                 .verifiedDocuments(verifiedDocuments)
                 .rejectedDocuments(rejectedDocuments)
-                .underReviewDocuments(underReviewDocuments)
+              //  .underReviewDocuments(underReviewDocuments)
                 .completionPercentage(completionPercentage)
                 .overallStatus(overallStatus)
                 .build();
@@ -634,15 +634,14 @@ public class VerificationCaseService {
         
         long totalDocuments = documents.size();
         long verifiedDocuments = documents.stream()
-                .filter(doc -> doc.getVerificationStatus() == VerificationStatus.VERIFIED ||
-                              doc.getVerificationStatus() == VerificationStatus.COMPLETED)
+                .filter(doc -> doc.getVerificationStatus() == DocumentStatus.VERIFIED )
                 .count();
         
         if (verifiedDocuments == totalDocuments) {
             candidateCase.setStatus(CaseStatus.COMPLETED);
             verificationCaseRepository.save(candidateCase);
         } else if (verifiedDocuments > 0) {
-            candidateCase.setStatus(CaseStatus.UNDER_REVIEW);
+            candidateCase.setStatus(CaseStatus.IN_PROGRESS);
             verificationCaseRepository.save(candidateCase);
         }
     }
@@ -729,7 +728,7 @@ public class VerificationCaseService {
     // NEW METHOD: Get pending candidate cases for a company (ASSIGNED status)
     public List<VerificationCaseResponse> getPendingCandidateCases(Long companyId) {
         List<VerificationCase> cases = verificationCaseRepository.findByCompanyIdAndStatus(
-                companyId, CaseStatus.ASSIGNED);
+                companyId, CaseStatus.IN_PROGRESS);
         return cases.stream()
                 .map(this::mapToVerificationCaseResponse)
                 .collect(Collectors.toList());
@@ -746,7 +745,7 @@ public class VerificationCaseService {
     
     // NEW METHOD: Get in-progress candidate cases for a company
     public List<VerificationCaseResponse> getInProgressCandidateCases(Long companyId) {
-        List<CaseStatus> inProgressStatuses = List.of(CaseStatus.IN_PROGRESS, CaseStatus.UNDER_REVIEW);
+        List<CaseStatus> inProgressStatuses = List.of(CaseStatus.IN_PROGRESS);
         List<VerificationCase> cases = verificationCaseRepository.findByCompanyIdAndStatusIn(companyId, inProgressStatuses);
         return cases.stream()
                 .map(this::mapToVerificationCaseResponse)
@@ -758,9 +757,9 @@ public class VerificationCaseService {
         List<VerificationCase> allCases = verificationCaseRepository.findByCompanyId(companyId);
         
         long totalCases = allCases.size();
-        long assignedCases = allCases.stream().filter(c -> c.getStatus() == CaseStatus.ASSIGNED).count();
+      //  long assignedCases = allCases.stream().filter(c -> c.getStatus() == CaseStatus.ASSIGNED).count();
         long inProgressCases = allCases.stream().filter(c -> c.getStatus() == CaseStatus.IN_PROGRESS).count();
-        long underReviewCases = allCases.stream().filter(c -> c.getStatus() == CaseStatus.UNDER_REVIEW).count();
+      //  long underReviewCases = allCases.stream().filter(c -> c.getStatus() == CaseStatus.UNDER_REVIEW).count();
         long completedCases = allCases.stream().filter(c -> c.getStatus() == CaseStatus.COMPLETED).count();
         long cancelledCases = allCases.stream().filter(c -> c.getStatus() == CaseStatus.CANCELLED).count();
         
@@ -768,9 +767,9 @@ public class VerificationCaseService {
         
         return CandidateCaseStatisticsResponse.builder()
                 .totalCases(totalCases)
-                .assignedCases(assignedCases)
+             //   .assignedCases(assignedCases)
                 .inProgressCases(inProgressCases)
-                .underReviewCases(underReviewCases)
+            //    .underReviewCases(underReviewCases)
                 .completedCases(completedCases)
                 .cancelledCases(cancelledCases)
                 .completionRate(completionRate)
@@ -985,10 +984,10 @@ public class VerificationCaseService {
                 candidateId, com.org.bgv.constants.CaseStatus.COMPLETED))
             .inProgressCases(verificationCaseRepository.countByCandidateIdAndStatus(
                 candidateId, com.org.bgv.constants.CaseStatus.IN_PROGRESS))
-            .pendingCases(verificationCaseRepository.countByCandidateIdAndStatus(
-                candidateId, com.org.bgv.constants.CaseStatus.PENDING))
+          //  .pendingCases(verificationCaseRepository.countByCandidateIdAndStatus(
+          //      candidateId, com.org.bgv.constants.CaseStatus.PENDING))
             .rejectedCases(verificationCaseRepository.countByCandidateIdAndStatus(
-                candidateId, com.org.bgv.constants.CaseStatus.REJECTED))
+                candidateId, com.org.bgv.constants.CaseStatus.CANCELLED))
             .build();
     }
     
@@ -1007,7 +1006,7 @@ public class VerificationCaseService {
         List<VerificationCaseCheck> checks = verificationCaseCheckRepository.findByVerificationCase(verificationCase);
         Integer totalChecks = checks.size();
         Integer checksCompleted = (int) checks.stream()
-            .filter(check -> check.getStatus() == CaseStatus.COMPLETED)
+            .filter(check -> check.getStatus() == CaseCheckStatus.COMPLETED)
             .count();
         /*
         // Get package details from EmployerPackage

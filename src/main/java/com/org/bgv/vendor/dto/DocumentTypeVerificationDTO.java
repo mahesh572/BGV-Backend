@@ -3,6 +3,7 @@ package com.org.bgv.vendor.dto;
 import com.fasterxml.jackson.annotation.JsonInclude;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.org.bgv.common.FileDTO;
+import com.org.bgv.vendor.action.dto.ActionDTO;
 
 import lombok.AllArgsConstructor;
 import lombok.Builder;
@@ -26,6 +27,10 @@ public class DocumentTypeVerificationDTO {
     
     @JsonProperty("status")
     private String status;
+    
+    private List<ActionDTO> actions;
+    
+    private List<ObjectFieldDTO> fields;
     
     @JsonProperty("files")
     private List<VerificationFileDTO> files;

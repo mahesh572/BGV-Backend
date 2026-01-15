@@ -14,11 +14,12 @@ import org.springframework.web.multipart.MultipartFile;
 import com.org.bgv.api.response.CustomApiResponse;
 import com.org.bgv.vendor.dto.EvidenceResponseDTO;
 import com.org.bgv.vendor.dto.VerificationEvidenceResponseDTO;
-import com.org.bgv.vendor.service.VerificationEvidenceService;
+//import com.org.bgv.vendor.service.VerificationEvidenceService;
 
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 
+/*
 @RestController
 @RequestMapping("/api/cases/{caseId}/evidence")
 @RequiredArgsConstructor
@@ -114,3 +115,4 @@ public class VerificationEvidenceController {
     }
 
 }
+*/

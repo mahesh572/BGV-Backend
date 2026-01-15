@@ -15,11 +15,11 @@ import com.org.bgv.service.CompanyService;
 import com.org.bgv.service.ProfileService;
 import com.org.bgv.service.UserService;
 import com.org.bgv.vendor.dto.CreateRejectionRequest;
-import com.org.bgv.vendor.service.RejectionService;
+// import com.org.bgv.vendor.service.RejectionService;
 
 import lombok.AllArgsConstructor;
 import lombok.RequiredArgsConstructor;
-
+/*
 @RestController
 @RequestMapping("/api/vendor/rejections")
 @RequiredArgsConstructor
@@ -54,3 +54,5 @@ public class VendorVerificationRejectionController {
 	}
 	
 }
+
+*/

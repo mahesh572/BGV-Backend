@@ -74,12 +74,13 @@ public class CandidateVerificationController {
     @Operation(summary = "Submit verification for review")
     @PostMapping("/submit")
     public ResponseEntity<CandidateVerificationDTO> submitVerification(
-    		@PathVariable Long candidateId
+    		@PathVariable Long candidateId,
+    		@RequestParam Long caseId
             ) throws ValidationException {
         
         log.info("POST /api/verification/submit?candidateId={} by {}", candidateId);
         
-        CandidateVerificationDTO verification = verificationService.submitForVerification(candidateId);
+        CandidateVerificationDTO verification = verificationService.submitForVerification(candidateId,caseId);
         return ResponseEntity.ok(verification);
     }
     
@@ -92,7 +93,7 @@ public class CandidateVerificationController {
         
         log.info("POST /api/verification/create?candidateId={} by {}", candidateId, username);
         
-        CandidateVerificationDTO verification = verificationService.createVerification(candidateId, request);
+        CandidateVerificationDTO verification = verificationService.createCandidateVerification(candidateId, request);
         return ResponseEntity.ok(verification);
     }
     /*

@@ -4,6 +4,7 @@ import jakarta.persistence.*;
 import lombok.*;
 import java.time.LocalDateTime;
 
+import com.org.bgv.common.DocumentStatus;
 import com.org.bgv.constants.VerificationStatus;
 
 @Entity
@@ -47,8 +48,11 @@ public class VerificationCaseDocument {
 
     @Enumerated(EnumType.STRING)
     @Column(name = "verification_status", nullable = false)
-    private VerificationStatus verificationStatus;
+    private DocumentStatus verificationStatus;
 
     @Builder.Default
     private LocalDateTime createdAt = LocalDateTime.now();
+    
+    @Builder.Default
+    private LocalDateTime updatedAt = LocalDateTime.now();
 }
