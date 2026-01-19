@@ -9,6 +9,7 @@ import lombok.NoArgsConstructor;
 import java.time.LocalDateTime;
 
 import com.org.bgv.common.EmailTemplateType;
+import com.org.bgv.notifications.PolicySource;
 
 @NoArgsConstructor
 @AllArgsConstructor
@@ -28,6 +29,10 @@ public class EmailTemplate {
     @Column(name = "type", length = 50, nullable = false)
     private String type; // e.g., "account_creation", "password_reset"
 
+    private Long companyId; // NULL = platform default
+    
+    private String templateCode;
+    
     /*
     @Enumerated(EnumType.STRING)
     @Column(name = "type", nullable = false, length = 50)
@@ -36,11 +41,16 @@ public class EmailTemplate {
     @Column(name = "subject", length = 255, nullable = false)
     private String subject;
 
-    @Column(name = "body_html", columnDefinition = "TEXT", nullable = false)
+    
+    @Lob
+    @Column(name = "body_html", columnDefinition = "TEXT")
     private String bodyHtml;
 
     @Column(name = "body_text", columnDefinition = "TEXT")
     private String bodyText;
+    
+    @Enumerated(EnumType.STRING)
+    private PolicySource source;
 
     @Column(name = "is_active", nullable = false)
     private Boolean isActive = true;

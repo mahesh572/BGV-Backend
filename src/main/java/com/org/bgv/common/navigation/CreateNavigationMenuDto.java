@@ -13,33 +13,35 @@ import lombok.NoArgsConstructor;
 
 @Data
 @Builder
-@AllArgsConstructor
 @NoArgsConstructor
+@AllArgsConstructor
 public class CreateNavigationMenuDto {
-    
-   
-    private String name;
-    
-    private String href;
-    
-   
-    private String icon;
-    
-    private String color;
-    
-    private String label;
-    private String type;
-    
-    private List<String> permissions;
-    
-    private Integer order = 0;
-    
-    private Boolean isActive = true;
-    
-    private Long parentId;
-    
-    private List<CreateNavigationMenuDto> children;
-    
-    private String createdBy;
 
+    @NotBlank
+    private String name;
+
+    // Required only for LINK
+    private String href;
+
+    private String icon;
+    private String color;
+
+    @NotBlank
+    private String label;
+
+    @NotNull
+    private NavigationType type;
+
+    @NotNull
+    private PortalType portal;
+
+    private List<String> permissions;
+    private Integer order = 0;
+    private Boolean isActive = true;
+
+    private Long parentId;
+    private List<CreateNavigationMenuDto> children;
+
+    private String createdBy;
 }
+

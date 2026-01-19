@@ -19,13 +19,13 @@ import java.util.Map;
 @RestController
 @RequestMapping("/api/email-templates")
 @CrossOrigin(origins = "*")
-public class EmailTemplateController {
+public class EmailTemplatefirstController {
 
-    private static final Logger logger = LoggerFactory.getLogger(EmailTemplateController.class);
+    private static final Logger logger = LoggerFactory.getLogger(EmailTemplatefirstController.class);
     
     private final EmailService emailTemplateService;
 
-    public EmailTemplateController(EmailService emailTemplateService) {
+    public EmailTemplatefirstController(EmailService emailTemplateService) {
         this.emailTemplateService = emailTemplateService;
     }
 

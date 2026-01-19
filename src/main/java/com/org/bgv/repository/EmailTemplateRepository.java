@@ -25,4 +25,22 @@ public interface EmailTemplateRepository extends JpaRepository<EmailTemplate, Lo
     boolean existsByTypeAndName(String type, String name);
     
     Optional<EmailTemplate> findByTypeAndName(String type, String name);
+    
+    @Query("""
+            SELECT t FROM EmailTemplate t
+            WHERE t.templateCode = :code
+              AND (t.companyId = :companyId OR t.companyId IS NULL)
+            ORDER BY t.companyId DESC
+        """)
+        Optional<EmailTemplate> findResolvedTemplate(
+                @Param("code") String code,
+                @Param("companyId") Long companyId
+        );
+
+        List<EmailTemplate> findByCompanyId(Long companyId);
+
+        List<EmailTemplate> findByCompanyIdIsNull();
+        
+        Optional<EmailTemplate> findByTemplateCodeAndCompanyId(String templateCode, Long companyId);
+
 }

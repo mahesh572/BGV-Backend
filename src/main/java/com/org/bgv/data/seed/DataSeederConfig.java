@@ -82,7 +82,7 @@ public class DataSeederConfig implements CommandLineRunner {
         seedSingleOtherRecord();
         seedDefaultAdminUser(); 
        // seedBGVCategoriesAndCheckTypes();
-        setdefaultnavigationSeed();
+       // setdefaultnavigationSeed();
        // emailTemplateService.initializeTemplatesFromFiles();
 
     }
@@ -561,7 +561,7 @@ public class DataSeederConfig implements CommandLineRunner {
     private CreateNavigationMenuDto createDefaultNavigation(String name,String label,String href,String icon,String type,List<String> permissions,Boolean isActive,Long parentId,Long menuOrder) {
     	return CreateNavigationMenuDto.builder()
     	.name(name)
-    	.type(type)
+    	// .type(type)
     	.label(label)
     	.href(href)
     	.icon(icon)
