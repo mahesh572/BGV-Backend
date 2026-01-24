@@ -45,7 +45,6 @@ import com.org.bgv.company.dto.EmployerDTO;
 import com.org.bgv.company.dto.PersonDTO;
 import com.org.bgv.entity.Company;
 import com.org.bgv.entity.CompanyUser;
-import com.org.bgv.entity.EmailTemplate;
 import com.org.bgv.entity.Profile;
 import com.org.bgv.entity.Role;
 import com.org.bgv.entity.User;

@@ -6,9 +6,10 @@ import java.util.Map;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
-import com.org.bgv.entity.EmailTemplate;
 import com.org.bgv.notifications.PolicySource;
 import com.org.bgv.notifications.dto.EmailTemplateDTO;
+import com.org.bgv.notifications.dto.EmailTemplateOptionDTO;
+import com.org.bgv.notifications.entity.EmailTemplate;
 import com.org.bgv.repository.EmailTemplateRepository;
 
 import jakarta.persistence.EntityNotFoundException;
@@ -20,6 +21,25 @@ import lombok.RequiredArgsConstructor;
 public class EmailTemplateService {
 
     private final EmailTemplateRepository repository;
+
+    
+    /**
+     * Admin use-case:
+     * Fetch platform email templates (companyId = null)
+     */
+    public List<EmailTemplateOptionDTO> getPlatformTemplatesForAdmin() {
+
+        return repository
+                .findByCompanyIdIsNullAndIsActiveTrue()
+                .stream()
+                .map(t -> EmailTemplateOptionDTO.builder()
+                        .templateCode(t.getTemplateCode())
+                        .displayName(t.getName())
+                        // .description(t.getDescription()) // if/when available
+                        .build()
+                )
+                .toList();
+    }
 
    
     @Transactional(readOnly = true)

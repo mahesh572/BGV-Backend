@@ -14,7 +14,9 @@ public class NotificationPolicyDTO {
     private NotificationEvent event;
     private Long companyId; // null = platform default
     private boolean active;
-    private PolicySource source;
+    private PolicySource source; // PLATFORM_DEFAULT / EMPLOYER_OVERRIDE
+    
+    private List<NotificationRecipientPolicyDTO> recipients;
 
-    private List<NotificationPolicyChannelDTO> channels;
+   // private List<NotificationPolicyChannelDTO> channels;
 }

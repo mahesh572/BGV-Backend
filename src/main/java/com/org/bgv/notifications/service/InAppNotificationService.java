@@ -10,6 +10,7 @@ import com.org.bgv.notifications.InAppNotification;
 import com.org.bgv.notifications.InAppTemplate;
 import com.org.bgv.notifications.dto.NotificationContext;
 import com.org.bgv.notifications.entity.NotificationPolicyChannel;
+import com.org.bgv.notifications.entity.NotificationPolicyRecipient;
 import com.org.bgv.notifications.repository.InAppNotificationRepository;
 import com.org.bgv.notifications.repository.InAppTemplateRepository;
 
@@ -18,47 +19,47 @@ import lombok.RequiredArgsConstructor;
 
 @Service
 @RequiredArgsConstructor
-public class InAppNotificationService{
+public class InAppNotificationService {
 
     private final InAppTemplateRepository templateRepository;
     private final InAppNotificationRepository notificationRepository;
 
-   
     @Transactional
     public void create(
+            NotificationPolicyRecipient recipient,
             NotificationPolicyChannel channel,
             NotificationContext context
     ) {
+
         // 1️⃣ Channel disabled → do nothing
         if (!channel.isEnabled()) {
             return;
         }
 
-        // 2️⃣ Resolve template (override → platform)
+        // 2️⃣ Template code missing
+        if (channel.getTemplateCode() == null) {
+            return;
+        }
+
+        // 3️⃣ Resolve template (company → platform fallback)
         InAppTemplate template =
                 templateRepository
                         .findResolvedTemplate(
                                 channel.getTemplateCode(),
                                 context.getCompanyId()
                         )
-                        .orElseThrow(() ->
-                                new EntityNotFoundException(
-                                        "In-app template not found: "
-                                                + channel.getTemplateCode()
-                                )
-                        );
+                        .orElse(null);
 
-        // 3️⃣ Template inactive → do nothing
-        if (!template.isActive()) {
+        if (template == null || !template.isActive()) {
             return;
         }
 
-        // 4️⃣ Resolve recipient
+        // 4️⃣ Resolve recipient userId
         Long recipientUserId =
-                resolveRecipient(channel, context);
+                resolveRecipient(recipient, context);
 
         if (recipientUserId == null) {
-            return; // nothing to deliver
+            return;
         }
 
         // 5️⃣ Create notification
@@ -92,9 +93,16 @@ public class InAppNotificationService{
         notificationRepository.save(notification);
     }
 
-
-    private Long resolveRecipient(NotificationPolicyChannel channel,
-                                  NotificationContext context) {
-        return context.getUserId(); // simplified
+    private Long resolveRecipient(
+            NotificationPolicyRecipient recipient,
+            NotificationContext context
+    ) {
+        return switch (recipient.getRecipient()) {
+            case CANDIDATE -> context.getCandidateUserId();
+            case EMPLOYER -> context.getEmployerAdminUserId();
+            case RECRUITER -> context.getRecruiterUserId();
+            case VENDOR -> context.getVendorUserId();
+		    default -> throw new IllegalArgumentException("Unexpected value: " + recipient.getRecipient());
+        };
     }
 }

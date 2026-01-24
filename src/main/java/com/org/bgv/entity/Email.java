@@ -3,6 +3,8 @@ package com.org.bgv.entity;
 import jakarta.persistence.*;
 import java.time.LocalDateTime;
 
+import com.org.bgv.notifications.entity.EmailTemplate;
+
 @Entity
 @Table(name = "emails")
 public class Email {

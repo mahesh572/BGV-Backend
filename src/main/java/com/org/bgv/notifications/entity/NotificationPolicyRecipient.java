@@ -1,9 +1,11 @@
 package com.org.bgv.notifications.entity;
 
-import com.org.bgv.notifications.NotificationChannel;
-import com.org.bgv.notifications.NotificationPriority;
+import java.util.ArrayList;
+import java.util.List;
+
 import com.org.bgv.notifications.RecipientType;
 
+import jakarta.persistence.CascadeType;
 import jakarta.persistence.Entity;
 import jakarta.persistence.EnumType;
 import jakarta.persistence.Enumerated;
@@ -13,13 +15,14 @@ import jakarta.persistence.GenerationType;
 import jakarta.persistence.Id;
 import jakarta.persistence.JoinColumn;
 import jakarta.persistence.ManyToOne;
+import jakarta.persistence.OneToMany;
 import jakarta.persistence.Table;
 import lombok.Data;
 
-@Data
 @Entity
-@Table(name = "notification_policy_channel")
-public class NotificationPolicyChannel {
+@Table(name = "notification_policy_recipient")
+@Data
+public class NotificationPolicyRecipient {
 
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
@@ -30,22 +33,12 @@ public class NotificationPolicyChannel {
     private NotificationPolicy policy;
 
     @Enumerated(EnumType.STRING)
-    private NotificationChannel channel;
+    private RecipientType recipient;
 
-    private boolean enabled;
-
-	/*
-	 * @Enumerated(EnumType.STRING) private RecipientType recipient;
-	 */
-
-    // Template to use (resolved later)
-    private String templateCode;
-
-    @Enumerated(EnumType.STRING)
-    private NotificationPriority priority;
-    
-    @ManyToOne(fetch = FetchType.LAZY)
-    @JoinColumn(name = "policy_recipient_id")
-    private NotificationPolicyRecipient recipient;
-    
+    @OneToMany(
+        mappedBy = "recipient",
+        cascade = CascadeType.ALL,
+        orphanRemoval = true
+    )
+    private List<NotificationPolicyChannel> channels = new ArrayList();
 }

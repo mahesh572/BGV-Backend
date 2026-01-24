@@ -23,10 +23,10 @@ import com.org.bgv.company.dto.EmployeeDTO;
 import com.org.bgv.config.SecurityUtils;
 import com.org.bgv.entity.Company;
 import com.org.bgv.entity.Email;
-import com.org.bgv.entity.EmailTemplate;
 import com.org.bgv.entity.Profile;
 import com.org.bgv.entity.User;
 import com.org.bgv.entity.VerificationCase;
+import com.org.bgv.notifications.entity.EmailTemplate;
 import com.org.bgv.repository.CompanyRepository;
 import com.org.bgv.repository.EmailTemplateRepository;
 import com.org.bgv.repository.ProfileRepository;
@@ -82,11 +82,12 @@ public class EmailService {
             
             try {
                 // Check if template already exists
-                if (emailTemplateRepository.existsByType(type)) {
+                /*
+            	if (emailTemplateRepository.existsByType(type)) {
                 	log.info("Template {} already exists, skipping initialization", type);
                     continue;
                 }
-                
+                */
                 // Read content from files
                 String htmlContent = fileReaderService.readFileFromClasspath(config.getHtmlFilePath());
                 String textContent = fileReaderService.fileExists(config.getTextFilePath()) ? 
@@ -142,6 +143,8 @@ public class EmailService {
     /**
      * Reload all templates from files
      */
+    
+    /*
     public void reloadAllTemplatesFromFiles() {
     	log.info("Reloading all templates from files...");
         
@@ -151,7 +154,7 @@ public class EmailService {
             }
         }
     }
-
+*/
     private String getDefaultSubject(String type) {
         switch (type) {
             case "account_creation":
@@ -171,11 +174,18 @@ public class EmailService {
 	/**
      * Get all active email templates
      */
+    @Transactional
     public List<EmailTemplateDTO> getAllActiveTemplates() {
-        return emailTemplateRepository.findByIsActiveTrue()
+    	List<EmailTemplateDTO> list =null;
+    	try {
+    		list = emailTemplateRepository.findByIsActiveTrue()
                 .stream()
                 .map(this::convertToDTO)
                 .collect(Collectors.toList());
+    	}catch (Exception e) {
+			e.printStackTrace();
+		}
+    	return list;
     }
    
     /**
@@ -225,7 +235,8 @@ public class EmailService {
         }
 
         EmailTemplate template = new EmailTemplate();
-        template.setName(templateDTO.getName());
+        template.setName(templateDTO.getDisplayName());
+        template.setTemplateCode(templateDTO.getTemplateCode());
         template.setType(templateDTO.getType());
         template.setSubject(templateDTO.getSubject());
         template.setBodyHtml(templateDTO.getBodyHtml());
@@ -242,15 +253,15 @@ public class EmailService {
     public EmailTemplateDTO updateTemplate(Long id, EmailTemplateDTO templateDTO) throws Exception {
         EmailTemplate existingTemplate = emailTemplateRepository.findById(id)
                 .orElseThrow(() -> new EntityNotFoundException("Template not found for id: " + id));
-
+/*
         // Check if type is being changed and if new type already exists
         if (!existingTemplate.getType().equals(templateDTO.getType()) && 
             emailTemplateRepository.existsByType(templateDTO.getType())) {
             throw new Exception("Template with type '" + templateDTO.getType() + "' already exists");
         }
-
+*/
         existingTemplate.setName(templateDTO.getName());
-        existingTemplate.setType(templateDTO.getType());
+      //  existingTemplate.setType(templateDTO.getType());
         existingTemplate.setSubject(templateDTO.getSubject());
         existingTemplate.setBodyHtml(templateDTO.getBodyHtml());
         existingTemplate.setBodyText(templateDTO.getBodyText());
@@ -316,6 +327,9 @@ public class EmailService {
         dto.setBodyText(template.getBodyText());
         dto.setIsActive(template.getIsActive());
         dto.setCreatedAt(template.getCreatedAt());
+        if (dto.getCompanyId() != null && dto.getCompanyId() <= 0) {
+            dto.setCompanyId(null);
+        }
         return dto;
     }
     

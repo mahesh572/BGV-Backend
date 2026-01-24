@@ -6,6 +6,7 @@ import com.org.bgv.notifications.NotificationChannel;
 import com.org.bgv.notifications.NotificationLog;
 import com.org.bgv.notifications.dto.NotificationContext;
 import com.org.bgv.notifications.entity.NotificationPolicyChannel;
+import com.org.bgv.notifications.entity.NotificationPolicyRecipient;
 
 import lombok.extern.slf4j.Slf4j;
 
@@ -19,33 +20,40 @@ public final class NotificationLogFactory {
 
     public static NotificationLog email(
             NotificationContext context,
+            NotificationPolicyRecipient recipient,
             NotificationPolicyChannel channel,
             boolean success,
             String failureReason
     ) {
-        return baseLog(context, channel, NotificationChannel.EMAIL, success, failureReason);
+        return baseLog(context, recipient, channel, NotificationChannel.EMAIL, success, failureReason);
     }
+
 
     public static NotificationLog sms(
             NotificationContext context,
+            NotificationPolicyRecipient recipient,
             NotificationPolicyChannel channel,
             boolean success,
             String failureReason
     ) {
-        return baseLog(context, channel, NotificationChannel.SMS, success, failureReason);
+    	 return baseLog(context, recipient, channel, NotificationChannel.SMS, success, failureReason);
+       
     }
 
     public static NotificationLog inApp(
             NotificationContext context,
+            NotificationPolicyRecipient recipient,
             NotificationPolicyChannel channel,
             boolean success,
             String failureReason
     ) {
-        return baseLog(context, channel, NotificationChannel.IN_APP, success, failureReason);
+        
+        return baseLog(context, recipient, channel, NotificationChannel.IN_APP, success, failureReason);
     }
     
     private static NotificationLog baseLog(
             NotificationContext context,
+            NotificationPolicyRecipient recipient,
             NotificationPolicyChannel policyChannel,
             NotificationChannel channel,
             boolean success,
@@ -58,7 +66,7 @@ public final class NotificationLogFactory {
         log.setChannel(channel);
 
         log.setRecipient(
-                resolveRecipient(policyChannel, context)
+                resolveRecipient(recipient, context)
         );
 
         log.setTemplateCode(
@@ -71,18 +79,21 @@ public final class NotificationLogFactory {
 
         return log;
     }
+
     
     private static String resolveRecipient(
-            NotificationPolicyChannel channel,
+            NotificationPolicyRecipient recipient,
             NotificationContext context
     ) {
-        return switch (channel.getRecipient()) {
+        return switch (recipient.getRecipient()) {
             case CANDIDATE -> context.getCandidateEmail();
-            case EMPLOYER_ADMIN -> context.getEmployerAdminEmail();
+            case EMPLOYER -> context.getEmployerAdminEmail();
             case RECRUITER -> context.getRecruiterEmail();
             case VENDOR -> context.getVendorEmail();
+		    default -> throw new IllegalArgumentException("Unexpected value: " + recipient.getRecipient());
         };
     }
+
 
 
 }

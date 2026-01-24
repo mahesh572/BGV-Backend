@@ -9,25 +9,28 @@ import org.springframework.web.bind.annotation.*;
 
 import com.org.bgv.api.response.CustomApiResponse;
 import com.org.bgv.common.EmailTemplateDTO;
+import com.org.bgv.notifications.dto.EmailTemplateOptionDTO;
+import com.org.bgv.notifications.service.EmailTemplateService;
 import com.org.bgv.service.EmailService;
 
 import jakarta.persistence.EntityNotFoundException;
 import jakarta.validation.Valid;
+import lombok.RequiredArgsConstructor;
+
 import java.util.List;
 import java.util.Map;
 
 @RestController
-@RequestMapping("/api/email-templates")
+@RequestMapping("/api/admin/email-templates")
+@RequiredArgsConstructor
 @CrossOrigin(origins = "*")
 public class EmailTemplatefirstController {
 
     private static final Logger logger = LoggerFactory.getLogger(EmailTemplatefirstController.class);
     
     private final EmailService emailTemplateService;
-
-    public EmailTemplatefirstController(EmailService emailTemplateService) {
-        this.emailTemplateService = emailTemplateService;
-    }
+    private final EmailTemplateService emTemplateService;
+    
 
     /**
      * Get all active templates
@@ -53,6 +56,7 @@ public class EmailTemplatefirstController {
     /**
      * Get template by type - used when dropdown selection changes
      */
+    /*
     @GetMapping("/type/{type}")
     public ResponseEntity<CustomApiResponse<EmailTemplateDTO>> getTemplateByType(@PathVariable String type) {
         try {
@@ -74,7 +78,7 @@ public class EmailTemplatefirstController {
                     .body(CustomApiResponse.failure("Failed to retrieve template: " + e.getMessage(), HttpStatus.INTERNAL_SERVER_ERROR));
         }
     }
-
+*/
     /**
      * Get template by ID
      */
@@ -267,10 +271,41 @@ public class EmailTemplatefirstController {
                     .body(CustomApiResponse.failure("Failed to reload template: " + e.getMessage(), HttpStatus.INTERNAL_SERVER_ERROR));
         }
     }
+    
+    /**
+     * Used while configuring notification policy
+     */
+    @GetMapping("/options")
+    public ResponseEntity<CustomApiResponse<List<EmailTemplateOptionDTO>>> getEmailTemplateOptions() {
+
+        try {
+            List<EmailTemplateOptionDTO> options =
+            		emTemplateService.getPlatformTemplatesForAdmin();
+
+            return ResponseEntity.ok(
+                    CustomApiResponse.success(
+                            "Email template options fetched successfully",
+                            options,
+                            HttpStatus.OK
+                    )
+            );
+
+        } catch (Exception e) {
+            logger.error("Failed to fetch email template options", e);
+
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
+                    .body(CustomApiResponse.failure(
+                            "Failed to fetch email template options",
+                            HttpStatus.INTERNAL_SERVER_ERROR
+                    ));
+        }
+    }
+
 
     /**
      * Reload all templates from files
      */
+    /*
     @PutMapping("/reload-all")
     public ResponseEntity<CustomApiResponse<Void>> reloadAllTemplatesFromFiles() {
         try {
@@ -284,4 +319,5 @@ public class EmailTemplatefirstController {
                     .body(CustomApiResponse.failure("Failed to reload templates: " + e.getMessage(), HttpStatus.INTERNAL_SERVER_ERROR));
         }
     }
+    */
 }

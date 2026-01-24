@@ -3,6 +3,7 @@ package com.org.bgv.notifications.entity;
 import java.util.List;
 
 import com.org.bgv.notifications.NotificationEvent;
+import com.org.bgv.notifications.RecipientType;
 
 import jakarta.persistence.CollectionTable;
 import jakarta.persistence.Column;
@@ -50,6 +51,16 @@ public class NotificationEventMaster {
     )
     @Column(name = "channel")
     private List<String> supportedChannels;
+    
+    @ElementCollection(fetch = FetchType.EAGER)
+    @CollectionTable(
+        name = "notification_event_recipients",
+        joinColumns = @JoinColumn(name = "event_id")
+    )
+    @Enumerated(EnumType.STRING)
+    @Column(name = "recipient")
+    private List<RecipientType> supportedRecipients;
+
 
     private Boolean isActive = true;
 }

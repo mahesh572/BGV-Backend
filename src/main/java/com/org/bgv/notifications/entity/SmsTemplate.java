@@ -18,7 +18,7 @@ import lombok.Data;
 @Table(
     name = "sms_template",
     uniqueConstraints = @UniqueConstraint(
-        columnNames = {"template_code", "employer_id"}
+        columnNames = {"template_code", "company_id"}
     )
 )
 public class SmsTemplate {

@@ -9,8 +9,10 @@ import com.org.bgv.notifications.NotificationEvent;
 import com.org.bgv.notifications.PolicySource;
 import com.org.bgv.notifications.dto.NotificationPolicyChannelDTO;
 import com.org.bgv.notifications.dto.NotificationPolicyDTO;
+import com.org.bgv.notifications.dto.NotificationRecipientPolicyDTO;
 import com.org.bgv.notifications.entity.NotificationPolicy;
 import com.org.bgv.notifications.entity.NotificationPolicyChannel;
+import com.org.bgv.notifications.entity.NotificationPolicyRecipient;
 import com.org.bgv.notifications.repository.NotificationPolicyRepository;
 
 import jakarta.persistence.EntityNotFoundException;
@@ -61,30 +63,117 @@ public class NotificationPolicyService {
 
 
    
+    @Transactional
     public NotificationPolicyDTO savePolicy(
             NotificationEvent event,
             Long companyId,
             NotificationPolicyDTO dto
     ) {
-        NotificationPolicy policy =
-                policyRepository
-                        .findByEventAndCompanyId(event, companyId)
-                        .orElseGet(() -> createNewPolicy(event, companyId));
+        NotificationPolicy policy = findOrCreatePolicy(event, companyId);
 
         policy.setActive(dto.isActive());
+        policy.setSource(
+                companyId == null
+                    ? PolicySource.PLATFORM_DEFAULT
+                    : PolicySource.COMPANY_OVERRIDE
+        );
 
-        // Replace channels (simple + safe)
-        policy.getChannels().clear();
-
-        for (NotificationPolicyChannelDTO chDto : dto.getChannels()) {
-            policy.getChannels().add(
-                    toEntity(chDto, policy)
-            );
-        }
+        syncRecipients(policy, dto.getRecipients());
 
         return toDto(policyRepository.save(policy));
     }
 
+
+    private NotificationPolicy findOrCreatePolicy(
+            NotificationEvent event,
+            Long companyId
+    ) {
+        return policyRepository
+                .findByEventAndCompanyId(event, companyId)
+                .orElseGet(() -> {
+
+                    if (companyId != null) {
+                        NotificationPolicy base =
+                                policyRepository
+                                        .findByEventAndCompanyId(event, null)
+                                        .orElseThrow(() ->
+                                                new IllegalStateException(
+                                                        "Platform default missing for " + event
+                                                )
+                                        );
+                        return clonePolicy(base, companyId);
+                    }
+
+                    NotificationPolicy policy = new NotificationPolicy();
+                    policy.setEvent(event);
+                    policy.setCompanyId(null);
+                    policy.setSource(PolicySource.PLATFORM_DEFAULT);
+                    policy.setActive(true);
+                    return policy;
+                });
+    }
+
+
+    private NotificationPolicy clonePolicy(
+            NotificationPolicy base,
+            Long companyId
+    ) {
+        NotificationPolicy copy = new NotificationPolicy();
+        copy.setEvent(base.getEvent());
+        copy.setCompanyId(companyId);
+        copy.setSource(PolicySource.COMPANY_OVERRIDE);
+        copy.setActive(base.isActive());
+
+        base.getRecipients().forEach(r -> {
+            NotificationPolicyRecipient nr = new NotificationPolicyRecipient();
+            nr.setRecipient(r.getRecipient());
+            nr.setPolicy(copy);
+
+            r.getChannels().forEach(c -> {
+                NotificationPolicyChannel nc = new NotificationPolicyChannel();
+                nc.setChannel(c.getChannel());
+                nc.setEnabled(c.isEnabled());
+                nc.setTemplateCode(c.getTemplateCode());
+                nc.setPriority(c.getPriority());
+                nc.setRecipient(nr);
+                nr.getChannels().add(nc);
+            });
+
+            copy.getRecipients().add(nr);
+        });
+
+        return copy;
+    }
+
+
+    private void syncRecipients(
+            NotificationPolicy policy,
+            List<NotificationRecipientPolicyDTO> dtoRecipients
+    ) {
+        policy.getRecipients().clear();
+
+        dtoRecipients.forEach(rdto -> {
+            NotificationPolicyRecipient recipient = new NotificationPolicyRecipient();
+            recipient.setRecipient(rdto.getRecipient());
+            recipient.setPolicy(policy);
+
+            rdto.getChannels().forEach(cdto -> {
+                NotificationPolicyChannel channel = new NotificationPolicyChannel();
+                channel.setChannel(cdto.getChannel());
+                channel.setEnabled(cdto.isEnabled());
+                channel.setTemplateCode(cdto.getTemplateCode());
+                channel.setPriority(cdto.getPriority());
+                channel.setRecipient(recipient);
+
+                recipient.getChannels().add(channel);
+            });
+
+            policy.getRecipients().add(recipient);
+        });
+    }
+
+
+    
    
     public void resetToPlatformDefault(
             NotificationEvent event,
@@ -124,17 +213,34 @@ public class NotificationPolicyService {
         dto.setActive(entity.isActive());
         dto.setSource(entity.getSource());
 
-        dto.setChannels(
-                entity.getChannels()
-                        .stream()
-                        .map(this::toDto)
-                        .toList()
+        dto.setRecipients(
+            entity.getRecipients()
+                  .stream()
+                  .map(this::toRecipientDto)
+                  .toList()
         );
 
         return dto;
     }
+    
+    private NotificationRecipientPolicyDTO toRecipientDto(
+            NotificationPolicyRecipient entity
+    ) {
+        NotificationRecipientPolicyDTO dto =
+                new NotificationRecipientPolicyDTO();
 
-    private NotificationPolicyChannelDTO toDto(
+        dto.setRecipient(entity.getRecipient());
+
+        dto.setChannels(
+            entity.getChannels()
+                  .stream()
+                  .map(this::toChannelDto)
+                  .toList()
+        );
+
+        return dto;
+    }
+    private NotificationPolicyChannelDTO toChannelDto(
             NotificationPolicyChannel entity
     ) {
         NotificationPolicyChannelDTO dto =
@@ -143,27 +249,26 @@ public class NotificationPolicyService {
         dto.setId(entity.getId());
         dto.setChannel(entity.getChannel());
         dto.setEnabled(entity.isEnabled());
-        dto.setRecipient(entity.getRecipient());
         dto.setTemplateCode(entity.getTemplateCode());
         dto.setPriority(entity.getPriority());
 
         return dto;
     }
 
+
     private NotificationPolicyChannel toEntity(
             NotificationPolicyChannelDTO dto,
-            NotificationPolicy policy
+            NotificationPolicyRecipient recipient
     ) {
-        NotificationPolicyChannel entity =
-                new NotificationPolicyChannel();
+        NotificationPolicyChannel entity = new NotificationPolicyChannel();
 
-        entity.setPolicy(policy);
+        entity.setRecipient(recipient);   // ✅ correct owner
         entity.setChannel(dto.getChannel());
         entity.setEnabled(dto.isEnabled());
-        entity.setRecipient(dto.getRecipient());
         entity.setTemplateCode(dto.getTemplateCode());
         entity.setPriority(dto.getPriority());
 
         return entity;
     }
+
 }

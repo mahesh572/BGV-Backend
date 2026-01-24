@@ -5,7 +5,10 @@ import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.security.core.userdetails.UserDetails;
 import org.springframework.stereotype.Component;
 
+import lombok.extern.slf4j.Slf4j;
+
 @Component
+@Slf4j
 public class SecurityUtils {
 
     // Get current username (email in your case)
@@ -37,8 +40,10 @@ public class SecurityUtils {
 
     // Check if user has specific role/authority
     public static boolean hasRole(String role) {
+    	log.info("role::::::::::::::::::::::::::::::{}",role);
         Authentication authentication = getCurrentAuthentication();
         if (authentication != null && authentication.isAuthenticated()) {
+        	log.info("getAuthorities::::::::::::::::::::::::::::::{}",authentication.getAuthorities());
             return authentication.getAuthorities().stream()
                 .anyMatch(authority -> authority.getAuthority().equals(role));
         }

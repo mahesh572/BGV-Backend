@@ -19,9 +19,11 @@ public class NotificationDispatcherService {
     private final SmsNotificationService smsService;
     private final InAppNotificationService inAppService;
 
-   
     @Transactional
-    public void dispatch(NotificationEvent event, NotificationContext context) {
+    public void dispatch(
+            NotificationEvent event,
+            NotificationContext context
+    ) {
 
         NotificationPolicy policy =
                 policyResolver.resolve(event, context.getCompanyId());
@@ -30,17 +32,26 @@ public class NotificationDispatcherService {
             return;
         }
 
-        for (NotificationPolicyChannel channel : policy.getChannels()) {
+        policy.getRecipients().forEach(recipient -> {
 
-            if (!channel.isEnabled()) continue;
+            recipient.getChannels().forEach(channel -> {
 
-            switch (channel.getChannel()) {
+                if (!channel.isEnabled()) {
+                    return;
+                }
 
-                case EMAIL -> emailService.send(channel, context);
-                case SMS -> smsService.send(channel, context);
-                case IN_APP -> inAppService.create(channel, context);
-            }
-        }
+                switch (channel.getChannel()) {
+
+                    case EMAIL ->
+                        emailService.send(recipient, channel, context);
+
+                    case SMS ->
+                        smsService.send(recipient, channel, context);
+
+                    case IN_APP ->
+                        inAppService.create(recipient, channel, context);
+                }
+            });
+        });
     }
 }
-

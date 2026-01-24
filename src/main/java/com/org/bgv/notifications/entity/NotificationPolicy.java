@@ -51,5 +51,13 @@ public class NotificationPolicy {
         fetch = FetchType.LAZY
     )
     private List<NotificationPolicyChannel> channels = new ArrayList();
+    
+    @OneToMany(
+            mappedBy = "policy",
+            cascade = CascadeType.ALL,
+            orphanRemoval = true,
+            fetch = FetchType.LAZY
+        )
+        private List<NotificationPolicyRecipient> recipients = new ArrayList<>();
 }
 

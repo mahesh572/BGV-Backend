@@ -34,6 +34,7 @@ public class NotificationEventService {
         return eventRepository.findByIsActiveTrue()
                 .stream()
                 .map(e -> NotificationEventDTO.builder()
+                		.id(e.getId())
                         .eventCode(e.getEventCode())
                         .displayName(e.getDisplayName())
                         .category(e.getCategory())
