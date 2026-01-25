@@ -20,6 +20,8 @@ public class NotificationContext {
     // Entity references
     private Long caseId;
     private Long documentId;
+    
+    private String userEmailAddress;
 
     // 🔐 Resolved USER IDs (for In-App / Push)
     private Long candidateUserId;
@@ -37,6 +39,10 @@ public class NotificationContext {
     private String candidateMobile;
     private String recruiterMobile;
     private String vendorMobile;
+    
+    // EMPLOYER
+    private String companySupportEmail;
+
 }
 
 

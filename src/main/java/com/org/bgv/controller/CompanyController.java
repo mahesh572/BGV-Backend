@@ -227,7 +227,7 @@ public class CompanyController {
     }
     
     // Employee related 
-    
+    /*
     @PostMapping("/{companyId}/employee")
     public ResponseEntity<CustomApiResponse<Boolean>> addEmployee(
     		@PathVariable Long companyId,
@@ -264,7 +264,7 @@ public class CompanyController {
                     ));
         }
     }
-
+*/
     @PostMapping("/{companyId}/candidate")
     public ResponseEntity<CustomApiResponse<Boolean>> addCandidate(
     		@PathVariable Long companyId,

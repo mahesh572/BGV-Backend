@@ -8,15 +8,19 @@ import com.org.bgv.notifications.entity.NotificationPolicyChannel;
 import com.org.bgv.notifications.entity.NotificationPolicyRecipient;
 import com.org.bgv.notifications.repository.NotificationLogRepository;
 import com.org.bgv.repository.EmailTemplateRepository;
+import com.org.bgv.service.EmailService;
 
 import lombok.RequiredArgsConstructor;
 
-@Service
 @RequiredArgsConstructor
+@Service
 public class EmailNotificationService {
 
     private final EmailTemplateRepository templateRepository;
     private final NotificationLogRepository logRepository;
+    private final EmailService emailService;
+    private final RecipientResolver recipientResolver;
+    private final EmailSenderResolver senderResolver;
 
     public void send(
             NotificationPolicyRecipient recipient,
@@ -24,23 +28,18 @@ public class EmailNotificationService {
             NotificationContext context
     ) {
 
-        // 🔐 Channel sanity checks
-        if (!channel.isEnabled()) {
-            return;
-        }
-
-        if (channel.getTemplateCode() == null) {
+        String to = recipientResolver.resolve(recipient, context);
+        if (to == null) {
             logRepository.save(
                 NotificationLogFactory.email(
-                    context,
-                    recipient,
-                    channel,
-                    false,
-                    "Template code not configured"
+                    context, recipient, channel, false,
+                    "Recipient email not resolved"
                 )
             );
             return;
         }
+
+        String from = senderResolver.resolveFrom(context);
 
         EmailTemplate template =
                 templateRepository
@@ -50,27 +49,11 @@ public class EmailNotificationService {
                         )
                         .orElse(null);
 
-        if (template == null) {
+        if (template == null || !Boolean.TRUE.equals(template.getIsActive())) {
             logRepository.save(
                 NotificationLogFactory.email(
-                    context,
-                    recipient,
-                    channel,
-                    false,
-                    "Template not found"
-                )
-            );
-            return;
-        }
-
-        if (!Boolean.TRUE.equals(template.getIsActive())) {
-            logRepository.save(
-                NotificationLogFactory.email(
-                    context,
-                    recipient,
-                    channel,
-                    false,
-                    "Template is inactive"
+                    context, recipient, channel, false,
+                    "Template missing or inactive"
                 )
             );
             return;
@@ -87,28 +70,18 @@ public class EmailNotificationService {
                     context.getVariables()
             );
 
-            // 🔁 Actual email sending (SMTP / SES / SendGrid)
-            boolean success = true;
+            emailService.sendEmail(from, to, subject, body);
 
             logRepository.save(
                 NotificationLogFactory.email(
-                        context,
-                        recipient,
-                        channel,
-                        success,
-                        null
+                    context, recipient, channel, true, null
                 )
             );
 
         } catch (Exception ex) {
-
             logRepository.save(
                 NotificationLogFactory.email(
-                        context,
-                        recipient,
-                        channel,
-                        false,
-                        ex.getMessage()
+                    context, recipient, channel, false, ex.getMessage()
                 )
             );
         }

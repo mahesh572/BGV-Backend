@@ -90,7 +90,12 @@ public final class NotificationLogFactory {
             case EMPLOYER -> context.getEmployerAdminEmail();
             case RECRUITER -> context.getRecruiterEmail();
             case VENDOR -> context.getVendorEmail();
+		    
+		    case USER -> context.getUserEmailAddress();
+		    case ADMIN -> throw new UnsupportedOperationException("Unimplemented case: " + recipient.getRecipient());
 		    default -> throw new IllegalArgumentException("Unexpected value: " + recipient.getRecipient());
+            
+		    
         };
     }
 

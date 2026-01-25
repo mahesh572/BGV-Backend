@@ -205,7 +205,7 @@ public class CompanyService {
 	        
 	        return updatedCompany;
 	    }
-	    
+	    /*
 	    public Boolean addEmployee(Long companyId, EmployeeDTO employeeDTO,String type) {
 	    	log.info("addEmployee::::::::::::::::::::::STARTED");
 	    	   	    		    	
@@ -256,7 +256,7 @@ public class CompanyService {
 	        return true;
 	    }
 
-
+*/
 	    public Boolean addCandidate(Long companyId, PersonDTO employeeDTO) {
 	    	log.info("addCandidate::::::::::::::::::::::STARTED");
 	    	

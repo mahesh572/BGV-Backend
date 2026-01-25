@@ -6,6 +6,42 @@ import java.util.Set;
 
 public enum PlaceholderRolePolicy {
 
+	PLATFORM_NAME(EnumSet.of(
+            TemplateUserRole.ADMINISTRATOR,
+            TemplateUserRole.COMPANY_ADMINISTRATOR
+    )),
+	
+	SUPPORT_EMAIL(EnumSet.of(
+            TemplateUserRole.ADMINISTRATOR,
+            TemplateUserRole.COMPANY_ADMINISTRATOR
+    )),
+	
+	// 🔹 Employee / Employer Account
+    EMPLOYEE_NAME(EnumSet.of(
+            TemplateUserRole.ADMINISTRATOR,
+            TemplateUserRole.COMPANY_ADMINISTRATOR
+    )),
+
+    EMPLOYEE_EMAIL(EnumSet.of(
+            TemplateUserRole.ADMINISTRATOR,
+            TemplateUserRole.COMPANY_ADMINISTRATOR
+    )),
+
+    TEMPORARY_PASSWORD(EnumSet.of(
+            TemplateUserRole.ADMINISTRATOR   // 🔒 restricted
+    )),
+
+    RESET_PASSWORD_LINK(EnumSet.of(
+            TemplateUserRole.ADMINISTRATOR,
+            TemplateUserRole.COMPANY_ADMINISTRATOR
+    )),
+
+    LINK_EXPIRY_DURATION(EnumSet.of(
+            TemplateUserRole.ADMINISTRATOR,
+            TemplateUserRole.COMPANY_ADMINISTRATOR
+    )),
+	
+	
     COMPANY_NAME(EnumSet.of(TemplateUserRole.ADMINISTRATOR, TemplateUserRole.COMPANY_ADMINISTRATOR)),
     EVENT_NAME(EnumSet.of(TemplateUserRole.ADMINISTRATOR, TemplateUserRole.COMPANY_ADMINISTRATOR)),
 

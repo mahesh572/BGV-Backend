@@ -433,7 +433,7 @@ public class EmailService {
     }
     
     
-    private void sendEmail(String from,String to, String subject, String htmlContent) {
+    public void sendEmail(String from,String to, String subject, String htmlContent) {
         MimeMessage message = mailSender.createMimeMessage();
         
         try {

@@ -1,5 +1,8 @@
 package com.org.bgv.service;
 
+import com.org.bgv.auth.dto.ResetPasswordRequest;
+import com.org.bgv.auth.entity.PasswordResetToken;
+import com.org.bgv.auth.service.ResetTokenService;
 import com.org.bgv.common.CandidateDTO;
 import com.org.bgv.common.ChangePasswordRequest;
 import com.org.bgv.common.ColumnMetadata;
@@ -79,6 +82,7 @@ public class UserService {
     private final ProfileRepository profileRepository;
     private final VendorRepository vendorRepository;
     private final VerificationCaseService verificationCaseService;
+    private final ResetTokenService resetTokenService;
     
     private static final Logger logger = LoggerFactory.getLogger(UserService.class);
 
@@ -488,6 +492,33 @@ try {
             throw new RuntimeException("Password must contain at least one uppercase letter, one lowercase letter, one number, and one special character");
         }
     }
+    
+    public void resetPassword(String token, ResetPasswordRequest request) {
+
+        validatePasswords(request);
+
+        PasswordResetToken resetToken = resetTokenService.validateToken(token);
+
+        User user = userRepository.findById(resetToken.getUserId())
+                .orElseThrow(() -> new RuntimeException("User not found with id: " + resetToken.getUserId()));
+
+        String encodedPassword = passwordEncoder.encode(request.getNewPassword());
+        user.setPassword(encodedPassword);
+        user.setUpdatedAt(java.time.LocalDateTime.now());
+        user.setPasswordResetrequired(Boolean.FALSE);
+
+        userRepository.save(user);
+
+        resetTokenService.markUsed(resetToken);
+    }
+
+    private void validatePasswords(ResetPasswordRequest request) {
+        if (!request.getNewPassword().equals(request.getConfirmPassword())) {
+            throw new IllegalArgumentException("Passwords do not match");
+        }
+    }
+    
+    
 
     /**
      * Password strength validation

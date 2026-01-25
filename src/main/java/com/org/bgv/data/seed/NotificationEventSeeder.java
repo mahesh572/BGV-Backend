@@ -75,6 +75,14 @@ public class NotificationEventSeeder implements ApplicationRunner {
                 "CRITICAL",
                 List.of("EMAIL", "IN_APP"),
                 List.of(RecipientType.USER, RecipientType.ADMIN));
+        
+        create(NotificationEvent.EMPLOYEE_ACCOUNT_CREATED,
+                "Employee Account Created",
+                "Account",
+                "Triggered when an employer creates an employee account",
+                "INFO",
+                List.of("EMAIL"),
+                List.of(RecipientType.USER));
 
         // ================= CANDIDATE =================
         create(NotificationEvent.CANDIDATE_INVITE,

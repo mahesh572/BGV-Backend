@@ -59,6 +59,7 @@ public enum NotificationEvent {
     EMPLOYER_DEACTIVATED,
     VENDOR_ASSIGNED,
     VENDOR_REPLACED,
+    EMPLOYEE_ACCOUNT_CREATED,
 
     // ======================
     // REPORT

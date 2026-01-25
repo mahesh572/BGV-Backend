@@ -1,5 +1,6 @@
 package com.org.bgv.candidate.entity;
 
+import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.util.ArrayList;
 import java.util.List;
@@ -47,6 +48,33 @@ public class Candidate {
     
     @Column(name = "candidate_ref", nullable = false, unique = true)
     private String candidateRef;
+    
+    @Column(name = "first_name")
+    private String firstName;
+    
+    @Column(name = "last_name")
+    private String lastName;
+     
+            
+    @Column(name = "nationality")
+    private String nationality;
+
+    @Column(name = "gender")
+    private String gender;
+    
+    @Column(name = "date_of_birth")
+    private LocalDate dateOfBirth;
+    
+    @Column(name = "phone_number", unique = true)
+    private String phoneNumber;
+    
+    @Column(name = "marital_status")
+    private String maritalStatus;
+    
+    @Column(name = "email_address")
+    private String emailAddress;
+
+    
     
     private String sourceType;
     
