@@ -270,5 +270,24 @@ public class NotificationPolicyService {
 
         return entity;
     }
+    
+    
+    @Transactional
+    public void deletePolicy(Long policyId) {
+        NotificationPolicy policy =
+                policyRepository.findById(policyId)
+                    .orElseThrow(() ->
+                        new EntityNotFoundException("Policy not found")
+                    );
+/*
+        if (policy.getCompanyId() == null) {
+            throw new IllegalStateException(
+                "Cannot delete platform default policy"
+            );
+        }
+*/
+        policyRepository.delete(policy);
+    }
+
 
 }

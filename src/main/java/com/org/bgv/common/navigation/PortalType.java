@@ -4,5 +4,7 @@ public enum PortalType {
     ADMIN,
     VENDOR,
     EMPLOYER,
-    CANDIDATE
+    CANDIDATE,
+    USER,
+    COMPANY
 }

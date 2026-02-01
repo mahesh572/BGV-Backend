@@ -22,7 +22,7 @@ import com.org.bgv.service.ProfileService;
 public class BasicDetailsController {
     
     private final ProfileService profileService;
-    
+    /*
     @Operation(summary = "Get candidate basic details")
     @GetMapping("/{candidateId}/basic-details")
     public ResponseEntity<BasicDetailsDTO> getBasicDetails(
@@ -34,7 +34,7 @@ public class BasicDetailsController {
         BasicDetailsDTO basicDetails = profileService.getBasicDetails(candidateId);
         return ResponseEntity.ok(basicDetails);
     }
-    
+    */
     
     /*
     @Operation(summary = "Save/update candidate basic details")

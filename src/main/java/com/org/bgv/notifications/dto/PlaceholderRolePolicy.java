@@ -3,20 +3,35 @@ package com.org.bgv.notifications.dto;
 import java.util.EnumSet;
 import java.util.Set;
 
-
 public enum PlaceholderRolePolicy {
 
-	PLATFORM_NAME(EnumSet.of(
+    // 🔹 Employer / Organization
+    EMPLOYER_BRAND_NAME(EnumSet.of(
             TemplateUserRole.ADMINISTRATOR,
             TemplateUserRole.COMPANY_ADMINISTRATOR
     )),
-	
-	SUPPORT_EMAIL(EnumSet.of(
+
+    EMPLOYER_LEGAL_NAME(EnumSet.of(
+            TemplateUserRole.ADMINISTRATOR // 🔒 legal only
+    )),
+    EMPLOYER_SUPPORT_EMAIL(EnumSet.of(
+            TemplateUserRole.ADMINISTRATOR)),
+
+    // 🔹 Platform
+    PLATFORM_BRAND_NAME(EnumSet.of(
             TemplateUserRole.ADMINISTRATOR,
             TemplateUserRole.COMPANY_ADMINISTRATOR
     )),
-	
-	// 🔹 Employee / Employer Account
+
+    PLATFORM_SUPPORT_EMAIL(EnumSet.of(
+            TemplateUserRole.ADMINISTRATOR,
+            TemplateUserRole.COMPANY_ADMINISTRATOR
+    )),
+    
+    PLATFORM_LEGAL_NAME(EnumSet.of(
+            TemplateUserRole.ADMINISTRATOR)),
+
+    // 🔹 Employee / Employer Account
     EMPLOYEE_NAME(EnumSet.of(
             TemplateUserRole.ADMINISTRATOR,
             TemplateUserRole.COMPANY_ADMINISTRATOR
@@ -28,7 +43,7 @@ public enum PlaceholderRolePolicy {
     )),
 
     TEMPORARY_PASSWORD(EnumSet.of(
-            TemplateUserRole.ADMINISTRATOR   // 🔒 restricted
+            TemplateUserRole.ADMINISTRATOR // 🔒 very sensitive
     )),
 
     RESET_PASSWORD_LINK(EnumSet.of(
@@ -40,22 +55,47 @@ public enum PlaceholderRolePolicy {
             TemplateUserRole.ADMINISTRATOR,
             TemplateUserRole.COMPANY_ADMINISTRATOR
     )),
-	
-	
-    COMPANY_NAME(EnumSet.of(TemplateUserRole.ADMINISTRATOR, TemplateUserRole.COMPANY_ADMINISTRATOR)),
-    EVENT_NAME(EnumSet.of(TemplateUserRole.ADMINISTRATOR, TemplateUserRole.COMPANY_ADMINISTRATOR)),
 
-    CANDIDATE_NAME(EnumSet.of(TemplateUserRole.ADMINISTRATOR, TemplateUserRole.COMPANY_ADMINISTRATOR)),
-    CANDIDATE_EMAIL(EnumSet.of(TemplateUserRole.ADMINISTRATOR)),
+    // 🔹 Candidate
+    CANDIDATE_NAME(EnumSet.of(
+            TemplateUserRole.ADMINISTRATOR,
+            TemplateUserRole.COMPANY_ADMINISTRATOR
+    )),
 
-    CASE_ID(EnumSet.of(TemplateUserRole.ADMINISTRATOR, TemplateUserRole.COMPANY_ADMINISTRATOR)),
-    CASE_STATUS(EnumSet.of(TemplateUserRole.ADMINISTRATOR, TemplateUserRole.COMPANY_ADMINISTRATOR)),
+    CANDIDATE_EMAIL(EnumSet.of(
+            TemplateUserRole.ADMINISTRATOR // 🔒 PII
+    )),
 
-    DOCUMENT_NAME(EnumSet.of(TemplateUserRole.ADMINISTRATOR, TemplateUserRole.COMPANY_ADMINISTRATOR)),
-    REJECTION_REASON(EnumSet.of(TemplateUserRole.ADMINISTRATOR, TemplateUserRole.COMPANY_ADMINISTRATOR)),
+    // 🔹 Case
+    CASE_ID(EnumSet.of(
+            TemplateUserRole.ADMINISTRATOR,
+            TemplateUserRole.COMPANY_ADMINISTRATOR
+    )),
 
-    SLA_DEADLINE(EnumSet.of(TemplateUserRole.ADMINISTRATOR)),
-    INTERNAL_REMARKS(EnumSet.of(TemplateUserRole.ADMINISTRATOR));
+    CASE_STATUS(EnumSet.of(
+            TemplateUserRole.ADMINISTRATOR,
+            TemplateUserRole.COMPANY_ADMINISTRATOR
+    )),
+
+    // 🔹 Document
+    DOCUMENT_NAME(EnumSet.of(
+            TemplateUserRole.ADMINISTRATOR,
+            TemplateUserRole.COMPANY_ADMINISTRATOR
+    )),
+
+    REJECTION_REASON(EnumSet.of(
+            TemplateUserRole.ADMINISTRATOR,
+            TemplateUserRole.COMPANY_ADMINISTRATOR
+    )),
+
+    // 🔹 SLA / Internal
+    SLA_DEADLINE(EnumSet.of(
+            TemplateUserRole.ADMINISTRATOR
+    )),
+
+    INTERNAL_REMARKS(EnumSet.of(
+            TemplateUserRole.ADMINISTRATOR
+    ));
 
     private final Set<TemplateUserRole> roles;
 

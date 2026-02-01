@@ -96,6 +96,8 @@ public class RoleController {
                     .body(CustomApiResponse.failure("Failed to fetch roles: " + e.getMessage(), HttpStatus.INTERNAL_SERVER_ERROR));
         }
     }
+    
+    
     @GetMapping("/group")
     @Operation(summary = "Get all roles", description = "Retrieves all roles grouped by type")
     @ApiResponses({
@@ -112,7 +114,25 @@ public class RoleController {
                     .body(CustomApiResponse.failure("Failed to fetch roles: " + e.getMessage(), HttpStatus.INTERNAL_SERVER_ERROR));
         }
     }
-
+    
+    /*
+    @GetMapping("/group")
+    @Operation(summary = "Get all roles", description = "Retrieves all roles grouped by type")
+    @ApiResponses({
+        @ApiResponse(responseCode = "200", description = "Roles retrieved successfully"),
+        @ApiResponse(responseCode = "500", description = "Internal server error")
+    })
+    public ResponseEntity<CustomApiResponse<List<RoleResponse>>> getCompanyAllRoles() {
+        try {
+            List<RoleResponse> roles = roleService.getAllRolesGroupedByType();
+            String message = roles.isEmpty() ? "No roles found" : "Roles retrieved successfully";
+            return ResponseEntity.ok(CustomApiResponse.success(message, roles, HttpStatus.OK));
+        } catch (Exception e) {
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
+                    .body(CustomApiResponse.failure("Failed to fetch roles: " + e.getMessage(), HttpStatus.INTERNAL_SERVER_ERROR));
+        }
+    }
+*/
     @GetMapping("/{id}")
     @Operation(summary = "Get role by ID", description = "Retrieves a role by its unique identifier")
     @ApiResponses({

@@ -60,13 +60,13 @@ public class ProfileService {
         BasicDetailsDTO basicdetailsDTO = BasicDetailsDTO.builder()
             	.firstName(profile.getFirstName())
             	.lastName(profile.getLastName())
-            	.email(profile.getEmailAddress())
+            	//.email(profile.getEmailAddress())
             	.dateOfBirth(profile.getDateOfBirth())
             	.phone(profile.getPhoneNumber())
             	.profileId(profile.getProfileId())
             	.gender(profile.getGender())
             	.user_id(profile.getUser().getUserId())
-            	.verificationStatus(profile.getVerificationStatus()==null ?"":profile.getVerificationStatus())
+            	//.verificationStatus(profile.getVerificationStatus()==null ?"":profile.getVerificationStatus())
             	.status(profile.getStatus())
             	.build();
         
@@ -94,7 +94,7 @@ public class ProfileService {
       //  BasicdetailsDTO basicdetailsDTO  = profileDTO.getBasicDetails();
         existingProfile.setFirstName(basicdetailsDTO.getFirstName());
         existingProfile.setLastName(basicdetailsDTO.getLastName());
-        existingProfile.setEmailAddress(basicdetailsDTO.getEmail());
+       // existingProfile.setEmailAddress(basicdetailsDTO.getEmail());
         existingProfile.setPhoneNumber(basicdetailsDTO.getPhone());
         existingProfile.setDateOfBirth(basicdetailsDTO.getDateOfBirth());
         existingProfile.setGender(basicdetailsDTO.getGender());
@@ -142,7 +142,7 @@ public class ProfileService {
               //  .profileId(dto.getBasicDetails().getProfileId())
                 .firstName(dto.getFirstName())
                 .lastName(dto.getLastName())
-                .emailAddress(dto.getEmail())
+              //  .emailAddress(dto.getEmail())
                 .phoneNumber(dto.getPhone())
                 .dateOfBirth(dto.getDateOfBirth())
                 .gender(dto.getGender())
@@ -158,13 +158,13 @@ public class ProfileService {
     	BasicDetailsDTO basicdetailsDTO = BasicDetailsDTO.builder()
     	    	.firstName(entity.getFirstName())
     	    	.lastName(entity.getLastName())
-    	    	.email(entity.getEmailAddress())
+    	    //	.email(entity.getEmailAddress())
     	    	.dateOfBirth(entity.getDateOfBirth())
     	    	.phone(entity.getPhoneNumber())
     	    	.profileId(entity.getProfileId())
     	    	.gender(entity.getGender())
     	    	.user_id(entity.getUser().getUserId())
-    	    	.verificationStatus(entity.getVerificationStatus()==null ?"":entity.getVerificationStatus())
+    	    //	.verificationStatus(entity.getVerificationStatus()==null ?"":entity.getVerificationStatus())
     	    	.status(entity.getStatus())
     	    	.linkedIn(entity.getLinkedinUrl())
     	    	.build();
@@ -230,7 +230,7 @@ public class ProfileService {
     
     
     // verification 
-    
+    /*
     @Cacheable(value = "basicDetails", key = "#candidateId")
     public BasicDetailsDTO getBasicDetails(Long candidateId) {
     	logger.info("Fetching basic details for candidate: {}", candidateId);
@@ -240,13 +240,13 @@ public class ProfileService {
         
         return convertToDTO(profile);
     }
-    
+    */
     private BasicDetailsDTO convertToDTO(Profile profile) {
         BasicDetailsDTO dto = new BasicDetailsDTO();
-        dto.setCandidateId(profile.getCandidateId());
+      //  dto.setCandidateId(profile.getCandidateId());
         dto.setFirstName(profile.getFirstName());
         dto.setLastName(profile.getLastName());
-        dto.setEmail(profile.getEmailAddress());
+     //   dto.setEmail(profile.getEmailAddress());
         dto.setPhone(profile.getPhoneNumber());
         dto.setDateOfBirth(profile.getDateOfBirth());
         dto.setGender(profile.getGender());
@@ -254,9 +254,9 @@ public class ProfileService {
         dto.setNationality(profile.getNationality());
         dto.setPassportNumber(profile.getPassportNumber());
         dto.setPassportExpiry(profile.getPassportExpiry());
-        dto.setVerified(profile.getVerified());
-        dto.setVerifiedAt(profile.getVerifiedAt());
-        dto.setVerifiedBy(profile.getVerifiedBy());
+     //   dto.setVerified(profile.getVerified());
+     //   dto.setVerifiedAt(profile.getVerifiedAt());
+     //   dto.setVerifiedBy(profile.getVerifiedBy());
         return dto;
     }
 

@@ -26,6 +26,9 @@ public class SecurityConfig {
 
     @Autowired
     private CorsConfigurationSource corsConfigurationSource;
+    
+    @Autowired
+    private JwtAuthenticationEntryPoint authenticationEntryPoint;
 
     @Bean
     public PasswordEncoder passwordEncoder() {
@@ -35,50 +38,72 @@ public class SecurityConfig {
     @Bean
     public SecurityFilterChain filterChain(HttpSecurity http) throws Exception {
         return http
-                // Enable CORS using the configuration source
-                .cors(cors -> cors.configurationSource(corsConfigurationSource))
-                .csrf(AbstractHttpConfigurer::disable)
-                .authorizeHttpRequests(auth -> auth
-                    .requestMatchers("/auth/**",
-                            "/swagger-ui.html",
-                            "/swagger-ui/**",
-                            "/v3/api-docs/**",
-                            "/api-docs/**",
-                            "/swagger-resources/**",
-                            "/webjars/**",
-                            "/configuration/ui",
-                            "/configuration/security"
-                        )
-                    .permitAll() 
-                    .anyRequest().authenticated())
-                .userDetailsService(userDetailsService)
-                .sessionManagement(sess -> sess.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
-                .addFilterBefore(jwtFilter(), UsernamePasswordAuthenticationFilter.class)
-                .exceptionHandling(exceptions -> exceptions
-                    .authenticationEntryPoint((request, response, authException) -> {
-                        response.setStatus(HttpServletResponse.SC_UNAUTHORIZED);
-                        response.setContentType("application/json");
-                        response.getWriter().write("{\"error\": \"Unauthorized: Authentication required\"}");
-                    })
-                    .accessDeniedHandler((request, response, accessDeniedException) -> {
-                        response.setStatus(HttpServletResponse.SC_FORBIDDEN);
-                        response.setContentType("application/json");
-                        response.getWriter().write("{\"error\": \"Forbidden: Insufficient permissions\"}");
-                    })
-                )
-                .build();
+            .cors(cors -> cors.configurationSource(corsConfigurationSource))
+            .csrf(AbstractHttpConfigurer::disable)
+
+            .authorizeHttpRequests(auth -> auth
+                .requestMatchers(
+                    "/auth/**",
+                    "/swagger-ui.html",
+                    "/swagger-ui/**",
+                    "/v3/api-docs/**",
+                    "/api-docs/**",
+                    "/swagger-resources/**",
+                    "/webjars/**",
+                    "/configuration/ui",
+                    "/configuration/security"
+                ).permitAll()
+                .anyRequest().authenticated()
+            )
+
+            .sessionManagement(sess ->
+                sess.sessionCreationPolicy(SessionCreationPolicy.STATELESS)
+            )
+
+            .userDetailsService(userDetailsService)
+
+            .exceptionHandling(ex -> ex
+                .authenticationEntryPoint(authenticationEntryPoint)   // 401
+                .accessDeniedHandler((request, response, ex2) -> {    // 403
+                    response.setStatus(HttpServletResponse.SC_FORBIDDEN);
+                    response.setContentType("application/json");
+                    response.getWriter().write("""
+                    {
+                      "success": false,
+                      "message": "Forbidden: Insufficient permissions",
+                      "status": 403
+                    }
+                    """);
+                })
+            )
+
+            .addFilterBefore(jwtFilter(), UsernamePasswordAuthenticationFilter.class)
+
+            .build();
     }
-    
+
     @Bean
     public JwtAuthFilter jwtFilter() {
         return new JwtAuthFilter();
     }
-
+/*
     @Bean
     public AuthenticationManager authManager(HttpSecurity http) throws Exception {
         return http.getSharedObject(AuthenticationManagerBuilder.class)
                 .userDetailsService(userDetailsService)
                 .passwordEncoder(passwordEncoder())
                 .and().build();
+    }
+    */
+    @Bean
+    public AuthenticationManager authenticationManager(
+            HttpSecurity http,
+            PortalAuthenticationProvider provider
+    ) throws Exception {
+
+        return http
+            .getSharedObject(AuthenticationManagerBuilder.class)
+            .authenticationProvider(provider)
+            .build();
     }
 }

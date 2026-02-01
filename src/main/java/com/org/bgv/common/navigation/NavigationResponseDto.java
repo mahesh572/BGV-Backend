@@ -36,7 +36,7 @@ public class NavigationResponseDto {
 
     public NavigationResponseDto(NavigationMenu menu) {
     	
-    	log.info("menu.getName()::::::::::{}",menu.getName());
+    //	log.info("menu.getName()::::::::::{}",menu.getName());
     	
         this.id = menu.getId();
         this.name = menu.getName();
@@ -54,7 +54,7 @@ public class NavigationResponseDto {
         this.parentId = menu.getParent() != null ? menu.getParent().getId() : null;
         this.portal = menu.getPortal();
 
-        log.info("menu.getName():::::menu.getChildren()::::{}",menu.getChildren()!=null);
+    //    log.info("menu.getName():::::menu.getChildren()::::{}",menu.getChildren()!=null);
         
         if (menu.getChildren() != null) {
             this.children = menu.getChildren()

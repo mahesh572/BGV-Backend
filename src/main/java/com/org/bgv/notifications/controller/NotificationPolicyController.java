@@ -186,5 +186,23 @@ public class NotificationPolicyController {
                     ));
         }
     }
+    
+    @DeleteMapping("/{policyId}")
+    public ResponseEntity<CustomApiResponse<Void>> deletPolicyId(
+            @PathVariable Long policyId
+    ) {
+        log.info("Resetting notification policy override for policyId={}", policyId);
+
+        policyService.deletePolicy(policyId);
+
+        return ResponseEntity.ok(
+                CustomApiResponse.success(
+                        "Notification policy reset to platform default",
+                        null,
+                        HttpStatus.OK
+                )
+        );
+    }
+
 }
 

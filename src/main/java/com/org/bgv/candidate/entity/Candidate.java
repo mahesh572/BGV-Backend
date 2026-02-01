@@ -117,9 +117,12 @@ public class Candidate {
     @OneToMany(mappedBy = "candidate", cascade = CascadeType.ALL, fetch = FetchType.LAZY)
     private List<JobApplication> jobApplications = new ArrayList();
     
-    @OneToOne(fetch = FetchType.LAZY)
+    
+    @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "company_id", nullable = false)
     private Company company;
+
+    
     
     @OneToMany(mappedBy = "candidate", 
             cascade = CascadeType.ALL, 

@@ -10,6 +10,6 @@ import lombok.NoArgsConstructor;
 @NoArgsConstructor
 @AllArgsConstructor
 public class PaginationRequest {
-    private int page;
-    private int size;
+    private Integer page;
+    private Integer size;
 }

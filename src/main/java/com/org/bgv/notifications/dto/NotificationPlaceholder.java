@@ -2,15 +2,21 @@ package com.org.bgv.notifications.dto;
 
 public enum NotificationPlaceholder {
 
-    // 🔹 Common
-    COMPANY_NAME("companyName", "Company Name"),
-    EVENT_NAME("eventName", "Event Name"),
-    PLATFORM_NAME("platformName", "Platform Name"),
-    SUPPORT_EMAIL("supportEmail", "Support Email"),
+    // 🔹 Employer / Organization
+    EMPLOYER_BRAND_NAME("employerBrandName", "Employer Brand Name"),
+    EMPLOYER_LEGAL_NAME("employerLegalName", "Employer Legal Name"),
+    EMPLOYER_SUPPORT_EMAIL("employerSupportEmail","Employer Support Email"),
+    
+    
+    // 🔹 Platform
+    PLATFORM_LEGAL_NAME("platformLegalName","Platform Legal Name"),
+    PLATFORM_BRAND_NAME("platformBrandName", "Platform Brand Name"),
+    PLATFORM_SUPPORT_EMAIL("platformSupportEmail", "Platform Support Email"),
 
     // 🔹 Employee / Employer Account
     EMPLOYEE_NAME("employeeName", "Employee Name"),
     EMPLOYEE_EMAIL("employeeEmail", "Employee Email"),
+
     TEMPORARY_PASSWORD("temporaryPassword", "Temporary Password"),
     RESET_PASSWORD_LINK("resetPasswordLink", "Reset Password Link"),
     LINK_EXPIRY_DURATION("linkExpiryDuration", "Reset Link Expiry Duration"),
@@ -47,3 +53,5 @@ public enum NotificationPlaceholder {
         return label;
     }
 }
+
+// employerSupportEmail,platformLegalName

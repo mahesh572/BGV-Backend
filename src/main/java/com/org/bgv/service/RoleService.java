@@ -100,7 +100,7 @@ public class RoleService {
         
         return roleMapper.toDto(updatedRole);
     }
-
+/*
     public List<RoleResponse> getAllRolesGroupedByType() {
     	
     	List<Role> allRoles = null;
@@ -143,6 +143,59 @@ public class RoleService {
         
         return roleGroups;
     }
+    */
+    
+    public List<RoleResponse> getAllRolesGroupedByType() {
+
+        boolean isCompanyAdmin = SecurityUtils.hasRole("Company Administrator");
+        boolean isSystemAdmin  = SecurityUtils.hasRole("Administrator");
+
+        Long companyId = isCompanyAdmin
+                ? SecurityUtils.getCurrentUserCompanyId()
+                : null;
+
+        List<Role> allRoles;
+
+        if (isSystemAdmin) {
+            allRoles = roleRepository.findAll();
+        } else if (isCompanyAdmin) {
+            allRoles = roleRepository.findByType(RoleConstants.TYPE_COMPANY);
+        } else {
+            return Collections.emptyList();
+        }
+
+        final boolean finalIsCompanyAdmin = isCompanyAdmin;
+        final Long finalCompanyId = companyId;
+
+        return allRoles.stream()
+            .collect(Collectors.groupingBy(Role::getType))
+            .entrySet()
+            .stream()
+            .map(entry -> {
+
+                List<RoleDetailDto> roleDetailDtos = entry.getValue().stream()
+                    .map(role -> {
+                        Integer assignedCount = finalIsCompanyAdmin
+                            ? userRoleRepository.countByRoleAndCompany(role, finalCompanyId)
+                            : userRoleRepository.countByRole(role);
+
+                        return roleMapper.toDetailDto(role, assignedCount);
+                    })
+                    .toList();
+
+                return RoleResponse.builder()
+                    .roleType(mapConstantToRoleType(entry.getKey()))
+                    .label(getTypeLabelByConstant(entry.getKey()))
+                    .roles(roleDetailDtos)
+                    .build();
+            })
+            .toList();
+    }
+
+    
+    
+    
+    
     public void deleteRole(Long id) {
         Role role = roleRepository.findById(id)
                 .orElseThrow(() -> new RuntimeException("Role not found with id: " + id));

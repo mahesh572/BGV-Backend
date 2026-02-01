@@ -18,5 +18,19 @@ public class CommonUtils {
         return sb.toString();
     }
 	
-	
+    public static String cleanBase64(String base64) {
+        if (base64 == null) {
+            return null;
+        }
+
+        // Remove data URI prefix if present
+        if (base64.contains(",")) {
+            base64 = base64.substring(base64.indexOf(",") + 1);
+        }
+
+        // Remove whitespace & line breaks
+        return base64
+                .replaceAll("\\s+", "")
+                .trim();
+    }
 }

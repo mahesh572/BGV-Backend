@@ -11,6 +11,7 @@ import org.springframework.security.core.userdetails.UsernameNotFoundException;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import com.org.bgv.common.RoleConstants;
 import com.org.bgv.config.CustomUserDetails;
 import com.org.bgv.entity.CompanyUser;
 import com.org.bgv.entity.User;
@@ -31,19 +32,20 @@ public class CustomUserDetailsService implements UserDetailsService {
     @Override
     @Transactional(readOnly = true)
     public UserDetails loadUserByUsername(String email) throws UsernameNotFoundException {
+
         log.info("Loading user by email: {}", email);
-        
+
         try {
             User user = userRepository.findByEmailWithRoles(email)
-                    .orElseThrow(() -> {
-                        log.error("User not found with email: {}", email);
-                        return new UsernameNotFoundException("User not found with email: " + email);
-                    });
-            
+                    .orElseThrow(() ->
+                            new UsernameNotFoundException(
+                                    "User not found with email: " + email
+                            )
+                    );
+
             log.info("User found: {}", user.getEmail());
-            log.debug("User roles count: {}", user.getRoles().size());
-            
-            // Convert roles to authorities
+
+            // 🔐 Map roles → authorities
             List<GrantedAuthority> authorities = user.getRoles().stream()
                     .map(userRole -> {
                         String roleName = userRole.getRole().getName();
@@ -51,22 +53,34 @@ public class CustomUserDetailsService implements UserDetailsService {
                         return new SimpleGrantedAuthority(roleName);
                     })
                     .collect(Collectors.toList());
-            
-            // Get company information
-            Long companyId = getCompanyIdForUser(user);
-            
-            log.info("User authenticated successfully with {} authorities", authorities.size());
-            
+
+            boolean isAdmin = authorities.stream()
+                    .anyMatch(a -> a.getAuthority().equals(RoleConstants.ADMINISTRATOR));
+
+            Long companyId = null;
+
+            // 🏢 Resolve company ONLY if needed
+            if (!isAdmin) {
+                companyId = getCompanyIdForUser(user);
+            }
+
+            log.info(
+                "User authenticated | email={} | admin={} | companyId={}",
+                email, isAdmin, companyId
+            );
+
             return buildCustomUserDetails(user, authorities, companyId);
-            
+
         } catch (UsernameNotFoundException e) {
             throw e;
         } catch (Exception e) {
             log.error("Error loading user by email: {}", email, e);
-            throw new UsernameNotFoundException("Error loading user: " + e.getMessage(), e);
+            throw new UsernameNotFoundException(
+                    "Error loading user: " + e.getMessage(), e
+            );
         }
     }
-    
+
     private Long getCompanyIdForUser(User user) {
         try {
             List<CompanyUser> companyUsers = companyUserRepository.findByUserUserId(user.getUserId());
@@ -77,6 +91,7 @@ public class CustomUserDetailsService implements UserDetailsService {
             return null;
         } catch (Exception e) {
             log.error("Error fetching company for user: {}", user.getEmail(), e);
+            e.printStackTrace();
             return null;
         }
     }

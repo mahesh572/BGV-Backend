@@ -5,6 +5,8 @@ import lombok.NoArgsConstructor;
 import lombok.AllArgsConstructor;
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
+import jakarta.persistence.EnumType;
+import jakarta.persistence.Enumerated;
 import jakarta.persistence.GeneratedValue;
 import jakarta.persistence.GenerationType;
 import jakarta.persistence.Id;
@@ -14,6 +16,11 @@ import jakarta.persistence.Table;
 
 import java.time.LocalDate;
 import java.time.LocalDateTime;
+
+import com.org.bgv.company.dto.CompanyLegalType;
+import com.org.bgv.company.dto.CompanySize;
+import com.org.bgv.company.dto.CompanyType;
+import com.org.bgv.company.dto.IndustryType;
 
 @Entity
 @Table(name = "companies")
@@ -30,8 +37,15 @@ public class Company {
     @Column(name = "company_name", nullable = false)
     private String companyName;
     
-    @Column(name = "company_type")
-    private String companyType;
+    
+    
+    @Enumerated(EnumType.STRING)
+    @Column(nullable = false)
+    private CompanyType companyType;
+    
+    @Enumerated(EnumType.STRING)
+    @Column(nullable = false)
+    private CompanyLegalType legalType;
     
     @Column(name = "registration_number", unique = true)
     private String registrationNumber;
@@ -42,11 +56,13 @@ public class Company {
     @Column(name = "incorporation_date")
     private LocalDate incorporationDate;
     
-    @Column(name = "industry")
-    private String industry;
     
-    @Column(name = "company_size")
-    private String companySize;
+    @Enumerated(EnumType.STRING)
+    @Column(nullable = false)
+    private IndustryType industry;
+    
+    @Enumerated(EnumType.STRING)
+    private CompanySize companySize;
     
     @Column(name = "website")
     private String website;
@@ -103,6 +119,15 @@ public class Company {
     
     @Column(name = "updated_at")
     private LocalDateTime updatedAt;
+    
+    @Column(name = "logo_url")
+    private String logoUrl;
+
+    @Column(name = "logo_key") 
+    private String logoKey; // storage reference (important)
+
+    @Column(name = "logo_uploaded_at")
+    private LocalDateTime logoUploadedAt;
     
     @PrePersist
     protected void onCreate() {

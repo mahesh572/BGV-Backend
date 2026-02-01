@@ -506,7 +506,7 @@ public class DataSeederConfig implements CommandLineRunner {
     private Company createDefaultCompany() {
         Company company = new Company();
         company.setCompanyName("default");
-        company.setCompanyType("default");
+       // company.setCompanyType("default");
       //  company.setRegistrationNumber("BGV-ADMIN-001");
       //  company.setTaxId("TAX-ADMIN-001");
       //  company.setIncorporationDate(LocalDate.now());

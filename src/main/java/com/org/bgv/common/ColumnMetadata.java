@@ -9,4 +9,5 @@ public class ColumnMetadata {
     private String field;
     private String displayName;
     private boolean visible;
+    private Boolean sortable;
 }

@@ -23,7 +23,7 @@ public interface ProfileRepository extends JpaRepository<Profile, Long> {
     // FIXED: Use the correct property name
     boolean existsByUserUserId(Long userId);
     
-    Optional<Profile> findByEmailAddress(String emailAddress);
+   // Optional<Profile> findByEmailAddress(String emailAddress);
     
     @Query("SELECT p FROM Profile p WHERE p.user.email = :email")
     Optional<Profile> findByUserEmail(@Param("email") String email);
@@ -33,14 +33,14 @@ public interface ProfileRepository extends JpaRepository<Profile, Long> {
     
     // verification
     
-    Optional<Profile> findByCandidateId(Long candidateId);
+  //  Optional<Profile> findByCandidateId(Long candidateId);
     
     
-    boolean existsByCandidateId(Long candidateId);
+  //  boolean existsByCandidateId(Long candidateId);
     
-    boolean existsByEmailAddress(String email);
+  //  boolean existsByEmailAddress(String email);
     
-    @Query("SELECT cp FROM Profile cp WHERE cp.candidateId = :candidateId AND cp.status = 'active'")
-    Optional<Profile> findActiveByCandidateId(@Param("candidateId") Long candidateId);
+  //  @Query("SELECT cp FROM Profile cp WHERE cp.candidateId = :candidateId AND cp.status = 'active'")
+  //  Optional<Profile> findActiveByCandidateId(@Param("candidateId") Long candidateId);
 
 }

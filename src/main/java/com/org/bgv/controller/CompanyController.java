@@ -1,5 +1,6 @@
 package com.org.bgv.controller;
 
+import java.util.List;
 import java.util.Map;
 
 import org.slf4j.Logger;
@@ -18,11 +19,18 @@ import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
+import org.springframework.web.multipart.MultipartFile;
 
 import com.org.bgv.api.response.CustomApiResponse;
+import com.org.bgv.candidate.CandidateSearchRequest;
+import com.org.bgv.candidate.dto.CreateCandidateRequest;
+import com.org.bgv.candidate.entity.Candidate;
 import com.org.bgv.common.CandidateDTO;
+import com.org.bgv.common.CandidateDetailsDTO;
+import com.org.bgv.common.PaginationResponse;
 import com.org.bgv.common.RemoveUsersRequest;
 import com.org.bgv.common.RoleConstants;
+import com.org.bgv.common.SortingRequest;
 import com.org.bgv.common.Status;
 import com.org.bgv.company.dto.CompanyRegistrationRequestDTO;
 import com.org.bgv.company.dto.CompanyRegistrationResponse;
@@ -31,9 +39,16 @@ import com.org.bgv.company.dto.PersonDTO;
 import com.org.bgv.config.SecurityUtils;
 import com.org.bgv.constants.Constants;
 import com.org.bgv.entity.Company;
+import com.org.bgv.entity.User;
+import com.org.bgv.role.dto.RoleResponse;
 import com.org.bgv.service.CandidateService;
 import com.org.bgv.service.CompanyService;
 
+import io.swagger.v3.oas.annotations.Operation;
+import io.swagger.v3.oas.annotations.responses.ApiResponse;
+import io.swagger.v3.oas.annotations.responses.ApiResponses;
+import jakarta.persistence.EntityNotFoundException;
+import jakarta.transaction.Transactional;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 
@@ -47,55 +62,7 @@ public class CompanyController {
 	private final CompanyService companyService;
 	private final CandidateService candidateService;
 
-	@PostMapping("/register")
-    public ResponseEntity<CustomApiResponse<CompanyRegistrationResponse>> registerCompany(
-    		@RequestBody CompanyRegistrationRequestDTO request) {
-        
-        log.info("Received company registration request for: {}", request.getCompanyName());
-        
-        try {
-            CompanyRegistrationResponse response = companyService.registerCompany(request);
-            return ResponseEntity.ok(CustomApiResponse.success(
-                "Company registered successfully", 
-                response, 
-                HttpStatus.CREATED
-            ));
-            
-        } catch (IllegalArgumentException e) {
-            log.warn("Validation error in company registration: {}", e.getMessage());
-            return ResponseEntity.status(HttpStatus.BAD_REQUEST)
-                    .body(CustomApiResponse.failure(e.getMessage(), HttpStatus.BAD_REQUEST));
-                    
-        } catch (Exception e) {
-            log.error("Unexpected error during company registration: {}", e.getMessage(), e);
-            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
-                    .body(CustomApiResponse.failure(
-                        "Internal server error during registration", 
-                        HttpStatus.INTERNAL_SERVER_ERROR
-                    ));
-        }
-    }
-
-    @GetMapping("/check-registration-number")
-    public ResponseEntity<CustomApiResponse<Map<String, Boolean>>> checkRegistrationNumber(
-            @RequestParam String registrationNumber) {
-        
-        try {
-            boolean exists = companyService.isRegistrationNumberExists(registrationNumber);
-            Map<String, Boolean> response = Map.of("exists", exists);
-            String message = exists ? "Registration number already exists" : "Registration number available";
-            
-            return ResponseEntity.ok(CustomApiResponse.success(message, response, HttpStatus.OK));
-            
-        } catch (Exception e) {
-            log.error("Error checking registration number: {}", e.getMessage(), e);
-            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
-                    .body(CustomApiResponse.failure(
-                        "Failed to check registration number: " + e.getMessage(), 
-                        HttpStatus.INTERNAL_SERVER_ERROR
-                    ));
-        }
-    }
+    
 
     @GetMapping("/check-admin-email")
     public ResponseEntity<CustomApiResponse<Map<String, Boolean>>> checkAdminEmail(
@@ -265,10 +232,13 @@ public class CompanyController {
         }
     }
 */
+    
+   
+    
     @PostMapping("/{companyId}/candidate")
     public ResponseEntity<CustomApiResponse<Boolean>> addCandidate(
     		@PathVariable Long companyId,
-            @RequestBody CandidateDTO candidateDTO
+            @RequestBody CreateCandidateRequest candidateDTO
             ) {
         
         log.info("Received Candidate addition request for company ID: {}, Candidate: {}", 
@@ -276,7 +246,7 @@ public class CompanyController {
         
         try {
         	candidateDTO.setCompanyId(companyId);
-        	candidateDTO.setSourceType(Constants.CANDIDATE_SOURCE_EMPLOYER);
+        	// candidateDTO.setSourceType(Constants.CANDIDATE_SOURCE_EMPLOYER);
             
             Boolean response = candidateService.addCandidate(candidateDTO);
             return ResponseEntity.ok(CustomApiResponse.success(
@@ -305,6 +275,7 @@ public class CompanyController {
         }
     }
     
+    
     @PostMapping("/{companyId}/users")
     public ResponseEntity<CustomApiResponse<String>> removeUsersFromCompany(
             @PathVariable Long companyId,
@@ -329,5 +300,186 @@ public class CompanyController {
                 .body(CustomApiResponse.failure(e.getMessage(),HttpStatus.INTERNAL_SERVER_ERROR));
         }
     }
+    
+ 
+    @PostMapping("/{companyId}/candidates/search")
+    public ResponseEntity<CustomApiResponse<PaginationResponse<CandidateDTO>>> searchCandidates(
+    		 @PathVariable Long companyId,
+             @RequestBody CandidateSearchRequest searchRequest) {
+
+        log.info("Candidate search request received");
+
+        try {
+
+            /* ---------- Role based company scoping ---------- */
+            if (SecurityUtils.hasAnyRole(
+                    RoleConstants.ROLE_COMAPNY_ADMINISTRATOR
+                    )) {
+
+               // Long companyId = SecurityUtils.getCurrentUserCompanyId();
+                log.info("Applying company scope. companyId={}", companyId);
+
+                searchRequest.setCompanyId(companyId);
+            }
+
+            /* ---------- Default sorting ---------- */
+            if (searchRequest.getSorting() == null) {
+                searchRequest.setSorting(SortingRequest.builder()
+                        .sortBy("createdAt")
+                        .sortDirection("desc")
+                        .build());
+            }
+
+            /* ---------- Remove empty filters ---------- */
+            if (searchRequest.getFilters() != null) {
+                searchRequest.getFilters().removeIf(filter ->
+                        filter.getField() == null ||
+                        filter.getField().isEmpty() ||
+                        !Boolean.TRUE.equals(filter.getIsSelected())
+                );
+            }
+
+            PaginationResponse<CandidateDTO> result =
+                    candidateService.searchCandidates(searchRequest);
+
+            log.info("Candidate search successful. totalElements={}",
+                    result.getPagination().getTotalElements());
+
+            return ResponseEntity.ok(
+                    CustomApiResponse.success(
+                            "Candidates retrieved successfully",
+                            result,
+                            HttpStatus.OK
+                    )
+            );
+
+        } catch (RuntimeException e) {
+            log.warn("Candidate search failed: {}", e.getMessage());
+            e.printStackTrace();
+            return ResponseEntity.status(HttpStatus.BAD_REQUEST)
+                    .body(CustomApiResponse.failure(e.getMessage(), HttpStatus.BAD_REQUEST));
+
+        } catch (Exception e) {
+            log.error("Unexpected error during candidate search", e);
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
+                    .body(CustomApiResponse.failure(
+                            "Unexpected error while searching candidates",
+                            HttpStatus.INTERNAL_SERVER_ERROR
+                    ));
+        }
+    }
+
+    
+    @GetMapping("/{companyId}/candidate/{candidateId}")
+	 public ResponseEntity<CustomApiResponse<CandidateDetailsDTO>> getCandidateDetails(
+			 @PathVariable Long companyId,
+	         @PathVariable Long candidateId) {
+	     
+		// Long companyId = SecurityUtils.getCurrentUserCompanyId();
+		 
+	     try {
+	         log.info("Request received for candidate details with candidateId: {}", candidateId);
+	         
+	         if (candidateId == null || candidateId <= 0) {
+	             return ResponseEntity.status(HttpStatus.BAD_REQUEST)
+	                     .body(CustomApiResponse.failure(
+	                         "Invalid candidate ID. Candidate ID must be a positive number", 
+	                         HttpStatus.BAD_REQUEST));
+	         }
+	         
+	         CandidateDetailsDTO candidateDetails = candidateService.getCandidateDetails(companyId,candidateId);
+	         
+	         if (candidateDetails == null) {
+	             return ResponseEntity.status(HttpStatus.NOT_FOUND)
+	                     .body(CustomApiResponse.failure(
+	                         "Candidate not found with ID: " + candidateId, 
+	                         HttpStatus.NOT_FOUND));
+	         }
+	         
+	         return ResponseEntity.ok(
+	             CustomApiResponse.success(
+	                 "Candidate details fetched successfully", 
+	                 candidateDetails, 
+	                 HttpStatus.OK
+	             )
+	         );
+	         
+	     } catch (EntityNotFoundException e) {
+	         log.error("Candidate not found with ID: {}", candidateId, e);
+	         return ResponseEntity.status(HttpStatus.NOT_FOUND)
+	                 .body(CustomApiResponse.failure(
+	                     "Candidate not found: " + e.getMessage(), 
+	                     HttpStatus.NOT_FOUND));
+	                     
+	     } catch (IllegalArgumentException e) {
+	         log.error("Invalid request for candidate ID: {}", candidateId, e);
+	         return ResponseEntity.status(HttpStatus.BAD_REQUEST)
+	                 .body(CustomApiResponse.failure(
+	                     "Invalid request: " + e.getMessage(), 
+	                     HttpStatus.BAD_REQUEST));
+	                     
+	     } catch (Exception e) {
+	         log.error("Unexpected error fetching candidate details for ID: {}", candidateId, e);
+	         return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
+	                 .body(CustomApiResponse.failure(
+	                     "Internal server error while fetching candidate details", 
+	                     HttpStatus.INTERNAL_SERVER_ERROR));
+	     }
+	 }
+    
+    @PostMapping("/{companyId}/logo")
+    public ResponseEntity<CustomApiResponse<String>> uploadLogo(
+            @PathVariable Long companyId,
+            @RequestParam("file") MultipartFile file) {
+
+        log.info("Uploading logo for companyId={}", companyId);
+
+        try {
+            companyService.uploadLogo(companyId, file);
+
+            log.info("Logo uploaded successfully for companyId={}", companyId);
+
+            return ResponseEntity.ok(
+                    CustomApiResponse.success(
+                            "Company logo uploaded successfully",
+                            "",
+                            HttpStatus.OK
+                    )
+            );
+
+        } catch (RuntimeException e) {
+            log.error("Error uploading logo for companyId={}: {}", companyId, e.getMessage());
+
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
+                    .body(CustomApiResponse.failure(
+                            e.getMessage(),
+                            HttpStatus.INTERNAL_SERVER_ERROR
+                    ));
+        } catch (Exception e) {
+            log.error("Unexpected error while uploading logo for companyId={}", companyId, e);
+
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
+                    .body(CustomApiResponse.failure(
+                            "Unexpected error while uploading company logo",
+                            HttpStatus.INTERNAL_SERVER_ERROR
+                    ));
+        }
+    }
+
+    @GetMapping("/{companyId}/logo")
+    public ResponseEntity<CustomApiResponse<Map<String, Object>>> getLogo(
+            @PathVariable Long companyId) {
+
+        Map<String, Object> response = companyService.getOrganizationLogo(companyId);
+
+        return ResponseEntity.ok(
+                CustomApiResponse.success(
+                        "Logo fetched successfully",
+                        response,
+                        HttpStatus.OK
+                )
+        );
+    }
+    
     
 }

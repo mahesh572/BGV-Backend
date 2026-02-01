@@ -25,6 +25,7 @@ public interface CandidateRepository extends JpaRepository<Candidate, Long>, Jpa
 	// Check if candidate has any consent records
     boolean existsByCandidateId(Long candidateId);
     
+    boolean existsByUserUserIdAndCompanyId(Long userId,Long companyId);
     
     List<Candidate> findByCompanyId(Long companyId);
     
@@ -45,4 +46,6 @@ public interface CandidateRepository extends JpaRepository<Candidate, Long>, Jpa
     
     Optional<Candidate> findByCandidateRef(String candidateRef);
     
+    
+    Optional<Candidate> findByUserUserIdAndCompanyId(Long userId,Long companyId);
 }

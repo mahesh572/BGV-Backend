@@ -830,7 +830,8 @@ public class VerificationCheckService {
 	private CandidateInfoDTO mapCandidateInfo(Candidate candidate) {
 		return CandidateInfoDTO.builder()
 				.name(candidate.getProfile().getFirstName() + " " + candidate.getProfile().getLastName())
-				.email(candidate.getProfile().getEmailAddress()).phone(candidate.getProfile().getPhoneNumber())
+				// .email(candidate.getProfile().getEmailAddress())
+				.phone(candidate.getProfile().getPhoneNumber())
 				.candidateId(String.valueOf(candidate.getCandidateId())).candidateRef(candidate.getCandidateRef())
 				.build();
 	}

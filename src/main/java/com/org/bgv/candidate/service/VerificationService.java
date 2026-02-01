@@ -297,8 +297,8 @@ public class VerificationService {
             Map<String, Map<String, Object>> statusMap = getSectionStatusMap(verification);
             
             // Basic Details
-            addSection(sections, SectionConstants.BASIC_DETAILS.getValue(), "Basic Details", requirementsMap, statusMap, 
-                      () -> profileService.getBasicDetails(candidateId));
+          //  addSection(sections, SectionConstants.BASIC_DETAILS.getValue(), "Basic Details", requirementsMap, statusMap, 
+          //            () -> profileService.getBasicDetails(candidateId));
             // Identity
             addSection(sections, SectionConstants.IDENTITY.getValue(), "Identity", requirementsMap, statusMap, 
                       () -> identityService.getIdentityInfo(candidateId));

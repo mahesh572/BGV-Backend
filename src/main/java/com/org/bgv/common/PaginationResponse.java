@@ -18,4 +18,5 @@ public class PaginationResponse<T> {
     private SortingMetadata sorting;
     private List<FilterMetadata> filters;
     private List<ColumnMetadata> columns;
+    private List<ActionMetadata> actions;
 }

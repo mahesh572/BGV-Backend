@@ -10,12 +10,12 @@ import lombok.Data;
 public class CompanyDetailsDTO {
 	// Company Information
     private String companyName;
-    private String companyType;
+    private CompanyType companyType;
     private String registrationNumber;
     private String taxId;
     private LocalDate incorporationDate;
-    private String industry;
-    private String companySize;
+    private IndustryType industry;
+    private CompanySize companySize;
     private String website;
     private String description;
     

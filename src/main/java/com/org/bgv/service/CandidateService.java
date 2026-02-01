@@ -11,6 +11,7 @@ import java.util.Arrays;
 import java.util.Base64;
 import java.util.List;
 import java.util.Optional;
+import java.util.UUID;
 import java.util.stream.Collectors;
 import java.util.stream.IntStream;
 
@@ -29,9 +30,12 @@ import org.springframework.web.multipart.MultipartFile;
 
 import com.org.bgv.candidate.CandidateMapper;
 import com.org.bgv.candidate.CandidateSearchRequest;
+import com.org.bgv.candidate.dto.CreateCandidateRequest;
 import com.org.bgv.candidate.entity.Candidate;
+import com.org.bgv.candidate.entity.CandidateIdentity;
 import com.org.bgv.candidate.repository.CandidateConsentRepository;
 import com.org.bgv.candidate.repository.CandidateRepository;
+import com.org.bgv.candidate.service.IdentityHashUtil;
 import com.org.bgv.common.CandidateDTO;
 import com.org.bgv.common.CandidateDetailsDTO;
 import com.org.bgv.common.ColumnMetadata;
@@ -90,185 +94,187 @@ public class CandidateService {
     private final EmailService emailService;
     private final CandidateMapper candidateMapper;
     private final CandidateDetailsMapper candidateDetailsMapper;
+    private final IdentityHashUtil identityHashUtil;
+    private final ReferenceNumberGenerator referenceNumberGenerator;
     
     private static final Logger log = LoggerFactory.getLogger(CandidateService.class);
     
-	public Boolean addCandidate(CandidateDTO candidateDTO) {
+    
+   
+    @Transactional
+    public Boolean addCandidate(CreateCandidateRequest dto) {
 
-		// source type - university,individual,company
-		try {
-			String tempPassword = CommonUtils.generateTempPassword();
-			User user = User.builder().email(candidateDTO.getEmail())
-					// .password(UUID.randomUUID().toString())
-					.password(passwordEncoder.encode(tempPassword))
-					.userType(Constants.USER_TYPE_CANDIDATE)
-					.status(Constants.USER_STATUS_ACTIVE)
-					.passwordResetrequired(Boolean.TRUE)
-					.build();
+        log.info("Starting candidate creation. Email={}, CompanyId={}",
+                dto.getEmail(), dto.getCompanyId());
 
-			// Save user first (if User is a new entity)
-			userRepository.save(user);
+        try {
 
-			// Find Role
-			Role companyRole = roleRepository.findByName(RoleConstants.ROLE_CANDIDATE)
-					.orElseThrow(() -> new RuntimeException(RoleConstants.ROLE_CANDIDATE + " not found"));
+            // 1️⃣ Find or create USER (global)
+            User user = userRepository.findByEmail(dto.getEmail())
+                .orElseGet(() -> {
+                    log.info("User not found. Creating new user for email={}", dto.getEmail());
 
-			// Create UserRole mapping
-			UserRole userRole = UserRole.builder().user(user).role(companyRole).build();
+                    String tempPassword = CommonUtils.generateTempPassword();
 
-			userRoleRepository.save(userRole);
+                    User newUser = User.builder()
+                            .email(dto.getEmail())
+                            .password(passwordEncoder.encode(tempPassword))
+                            .passwordResetrequired(true)
+                            .build();
 
-			// Find Company
-			Company company = companyRepository.findById(candidateDTO.getCompanyId()).orElseThrow(
-					() -> new RuntimeException("Company not found with ID: " + candidateDTO.getCompanyId()));
+                    userRepository.save(newUser);
 
-			// Create CompanyUser mapping
-			CompanyUser companyUser = new CompanyUser();
-			companyUser.setCompany(company);
-			companyUser.setUser(user);
+                    log.info("User created successfully. userId={}", newUser.getUserId());
 
-			companyUserRepository.save(companyUser);
-			
-			
+                    // Invite will be sent later
+                    // emailService.sendCandidateInvite(newUser, tempPassword);
 
-	        Profile profile =  Profile.builder()
-            //  .profileId(dto.getBasicDetails().getProfileId())
-              .firstName(candidateDTO.getFirstName())
-              .lastName(candidateDTO.getLastName())
-              .emailAddress(candidateDTO.getEmail())
-              .phoneNumber(candidateDTO.getMobileNo())
-             // .dateOfBirth(employeeDTO.getDateOfBirth())
-              .gender(candidateDTO.getGender())
-             // .userId(dto.getUser_id())
-              .user(user)
-              .status(Constants.CANDIDATE_STATUS_CREATED)
-              .build();
-			
-	        profileRepository.save(profile);
-	        
-	        Candidate candidate = Candidate.builder()
-	        .company(company)
-	        .createdAt(LocalDateTime.now())
-	        .isActive(Boolean.TRUE)
-	        .isVerified(Boolean.FALSE)
-	        .sourceType(Constants.CANDIDATE_SOURCE_EMPLOYER)
-	        .verificationStatus(Constants.CANDIDATE_STATUS_CREATED)
-	        .user(user)
-	        .isConsentProvided(Boolean.FALSE)
-	        .build();  
-	        
-	        candidateRepository.save(candidate);
-	        
-	        
-	        // Send an Email - Account creation
-	        
-	        emailService.sendEmailToEmployeeRegistrationSuccess(user,tempPassword);
-			
-			return Boolean.TRUE;
-		} catch (Exception e) {
-			log.error("Exception while creating Candidate::::::{}", e.getMessage());
-		}
-		return Boolean.FALSE;
-	}
+                    return newUser;
+                });
+
+            log.debug("Using userId={} for candidate creation", user.getUserId());
+
+            // 2️⃣ Validate company
+            Company company = companyRepository.findById(dto.getCompanyId())
+                .orElseThrow(() -> {
+                    log.warn("Company not found. companyId={}", dto.getCompanyId());
+                    return new RuntimeException("Company not found");
+                });
+
+            log.debug("Company validated. companyId={}", company.getId());
+
+            // 3️⃣ Check candidate already exists for this company
+            if (candidateRepository.existsByUserUserIdAndCompanyId(
+                    user.getUserId(), dto.getCompanyId())) {
+
+                log.warn("Candidate already exists. userId={}, companyId={}",
+                        user.getUserId(), dto.getCompanyId());
+
+                throw new RuntimeException("Candidate already exists for this company");
+            }
+            
+            String candidtaeRef = referenceNumberGenerator.generateCandidateRef();
+
+            // 4️⃣ Create Candidate
+            Candidate candidate = Candidate.builder()
+                    .company(company)
+                    .user(user)
+                    .sourceType(Constants.CANDIDATE_SOURCE_EMPLOYER)
+                    .verificationStatus(null)
+                    .isActive(true)
+                    .isVerified(false)
+                    .isConsentProvided(false)
+                    .candidateRef(candidtaeRef)
+                    .createdAt(LocalDateTime.now())
+                    .build();
+
+            candidateRepository.save(candidate);
+
+            log.info("Candidate created successfully. candidateId={}, userId={}, companyId={}",
+                    candidate.getCandidateId(), user.getUserId(), company.getId());
+
+            // 5️⃣ CompanyUser mapping
+            if (!companyUserRepository.existsByCompanyIdAndUserId(
+                    company.getId(), user.getUserId())) {
+
+                CompanyUser cu = new CompanyUser();
+                cu.setCompany(company);
+                cu.setUser(user);
+                companyUserRepository.save(cu);
+
+                log.info("CompanyUser mapping created. userId={}, companyId={}",
+                        user.getUserId(), company.getId());
+            } else {
+                log.debug("CompanyUser mapping already exists. userId={}, companyId={}",
+                        user.getUserId(), company.getId());
+            }
+
+            log.info("Candidate creation completed successfully. Email={}, CompanyId={}",
+                    dto.getEmail(), dto.getCompanyId());
+
+            return Boolean.TRUE;
+
+        } catch (RuntimeException e) {
+            // Business / validation issues
+            log.warn("Candidate creation failed due to business rule. Email={}, CompanyId={}, Reason={}",
+                    dto.getEmail(), dto.getCompanyId(), e.getMessage());
+            throw e; // Let controller decide response
+        } catch (Exception e) {
+            // Unexpected errors
+            log.error("Unexpected error while creating candidate. Email={}, CompanyId={}",
+                    dto.getEmail(), dto.getCompanyId(), e);
+            return Boolean.FALSE;
+        }
+    }
+
+
 	
+    
+	@Transactional
 	public ConsentResponse saveConsent(ConsentRequest consentRequest) {
-	    try {
-	        log.info("Received consent request - candidateId: {}, consentType: {}", 
-	                 consentRequest.getCandidateId(), consentRequest.getConsentType());
-	        
-	        CandidateConsent.ConsentType consentType = CandidateConsent.ConsentType.valueOf(
-	            consentRequest.getConsentType().toUpperCase()
-	        );
 
-	        CandidateConsent.CandidateConsentBuilder consentBuilder = CandidateConsent.builder()
-	                .candidateId(consentRequest.getCandidateId())
-	                .consentType(consentType)
-	                .policyVersion(consentRequest.getPolicyVersion())
-	                .ipAddress(consentRequest.getIpAddress())
-	                .userAgent(consentRequest.getUserAgent())
-	                .consentedAt(java.time.LocalDateTime.now());
+	    Candidate candidate = candidateRepository.findById(consentRequest.getCandidateId())
+	            .orElseThrow(() -> new RuntimeException("Candidate not found"));
 
-	        // Handle signature data - remove quotes if present
-	        if (consentRequest.getSignatureData() != null && !consentRequest.getSignatureData().isEmpty()) {
-	            String signatureData = consentRequest.getSignatureData();
-	            
-	            // Remove surrounding quotes if present
-	            if (signatureData.startsWith("\"") && signatureData.endsWith("\"")) {
-	                signatureData = signatureData.substring(1, signatureData.length() - 1);
-	                log.info("Removed quotes from signature data");
-	            }
-	            
-	            // Check if it's a base64 image data URL
-	            if (signatureData.startsWith("data:image/")) {
-	                log.info("Processing base64 image signature data");
-	                
-	                try {
-	                    // Extract base64 data
-	                    String[] parts = signatureData.split(",");
-	                    String imageData = parts[1];
-	                    String mimeType = parts[0].split(":")[1].split(";")[0];
-	                    
-	                    log.info("MIME type: {}, Data length: {}", mimeType, imageData.length());
-	                    
-	                    // Convert base64 to MultipartFile for S3 upload
-	                    MultipartFile signatureImage = base64ToMultipartFile(imageData, mimeType, "signature.png");
-	                    
-	                    // Upload signature image to S3
-	                    Pair<String, String> uploadResult = s3StorageService.uploadFile(
-	                        signatureImage, 
-	                        "signatures"
-	                    );
-	                    
-	                    consentBuilder.signatureUrl(uploadResult.getFirst());
-	                    consentBuilder.signatureS3Key(uploadResult.getSecond());
-	                    
-	                    log.info("Signature image uploaded to S3 for candidate: {}, URL: {}", 
-	                             consentRequest.getCandidateId(), uploadResult.getFirst());
-	                    
-	                } catch (Exception e) {
-	                    log.error("Error processing base64 signature data: {}", e.getMessage());
-	                    // Don't store anything if processing fails
-	                }
-	            } else {
-	                log.warn("Signature data doesn't start with 'data:image/' after quote removal");
-	                log.info("Data starts with: '{}'", 
-	                    signatureData.substring(0, Math.min(20, signatureData.length())));
-	            }
-	        }
+	    CandidateConsent.ConsentType consentType =
+	            CandidateConsent.ConsentType.valueOf(consentRequest.getConsentType().toUpperCase());
 
-	        // Handle file upload to S3
-	        if (consentRequest.getConsentFile() != null && !consentRequest.getConsentFile().isEmpty()) {
-	            Pair<String, String> uploadResult = s3StorageService.uploadFile(
-	                consentRequest.getConsentFile(), 
-	                "consents"
-	            );
-	            
-	            consentBuilder.documentUrl(uploadResult.getFirst());
-	            consentBuilder.documentS3Key(uploadResult.getSecond());
-	            consentBuilder.originalFileName(consentRequest.getConsentFile().getOriginalFilename());
-	            consentBuilder.fileType(consentRequest.getConsentFile().getContentType());
-	            consentBuilder.fileSize(consentRequest.getConsentFile().getSize());
-	            
-	            log.info("Document uploaded to S3 for candidate: {}, URL: {}", 
-	                     consentRequest.getCandidateId(), uploadResult.getFirst());
-	        }
+	    // 🔁 Revoke previous active consent of same type
+	    consentRepository.revokeActiveConsent(
+	            candidate.getCandidateId(),
+	            consentType
+	    );
 
-	        CandidateConsent savedConsent = consentRepository.save(consentBuilder.build());
-	        
-	        log.info("consent saved successfully::::::::{}",consentRequest.getCandidateId());
-	        
-	        // Update candidate's consent status
-	        updateCandidateConsentStatus(consentRequest.getCandidateId());
-	        
-	        return mapToResponse(savedConsent, "Consent saved successfully");
+	    CandidateConsent consent = CandidateConsent.builder()
+	            .candidate(candidate)
+	            .consentType(consentType)
+	            .policyVersion(consentRequest.getPolicyVersion())
+	            .consentSource("CANDIDATE")
+	            .status("ACTIVE")
+	            .ipAddress(consentRequest.getIpAddress())
+	            .userAgent(consentRequest.getUserAgent())
+	            .consentedAt(LocalDateTime.now())
+	            .build();
 
-	    } catch (IllegalArgumentException e) {
-	        throw new RuntimeException("Invalid consent type: " + consentRequest.getConsentType());
-	    } catch (Exception e) {
-	        log.error("Error saving consent for candidate: {}", consentRequest.getCandidateId(), e);
-	        throw new RuntimeException("Error saving consent: " + e.getMessage());
+	    /* ---------- Signature handling ---------- */
+	    if (StringUtils.hasText(consentRequest.getSignatureData())) {
+	        String cleanBase64 = CommonUtils.cleanBase64(consentRequest.getSignatureData());
+
+	        MultipartFile signatureFile =
+	                base64ToMultipartFile(cleanBase64, "image/png", "signature.png");
+
+	        Pair<String, String> upload =
+	                s3StorageService.uploadFile(signatureFile, "candidate/signatures");
+
+	        consent.setSignatureUrl(upload.getFirst());
+	        consent.setSignatureS3Key(upload.getSecond());
+
+	        // 🔐 hash for legal integrity
+	        consent.setSignatureHash(identityHashUtil.hash(cleanBase64));
 	    }
+
+	    /* ---------- File upload ---------- */
+	    if (consentRequest.getConsentFile() != null) {
+	        Pair<String, String> upload =
+	                s3StorageService.uploadFile(consentRequest.getConsentFile(), "candidate/consents");
+
+	        consent.setDocumentUrl(upload.getFirst());
+	        consent.setDocumentS3Key(upload.getSecond());
+	        consent.setOriginalFileName(consentRequest.getConsentFile().getOriginalFilename());
+	        consent.setFileType(consentRequest.getConsentFile().getContentType());
+	        consent.setFileSize(consentRequest.getConsentFile().getSize());
+	    }
+
+	    CandidateConsent saved = consentRepository.save(consent);
+
+	    // ✅ Mark candidate consented
+	    candidate.setIsConsentProvided(Boolean.TRUE);
+	    candidateRepository.save(candidate);
+
+	    return mapToResponse(saved, "Consent saved successfully");
 	}
+
+	
 	public static MultipartFile base64ToMultipartFile(String base64Data, String mimeType, String fileName) {
         try {
             // Remove data URL prefix if present
@@ -331,7 +337,7 @@ public class CandidateService {
         }
     }
     public List<ConsentResponse> getConsentsByCandidateId(Long candidateId) {
-        return consentRepository.findByCandidateId(candidateId)
+        return consentRepository.findByCandidateCandidateId(candidateId)
                 .stream()
                 .map(this::mapToResponse)
                 .collect(Collectors.toList());
@@ -339,7 +345,7 @@ public class CandidateService {
 
     public List<ConsentResponse> getConsentsByCandidateIdAndType(Long candidateId, String consentType) {
         CandidateConsent.ConsentType type = CandidateConsent.ConsentType.valueOf(consentType.toUpperCase());
-        return consentRepository.findByCandidateIdAndConsentType(candidateId, type)
+        return consentRepository.findByCandidateCandidateIdAndConsentType(candidateId, type)
                 .stream()
                 .map(this::mapToResponse)
                 .collect(Collectors.toList());
@@ -434,8 +440,8 @@ public class CandidateService {
 
     private ConsentResponse mapToResponse(CandidateConsent consent, String message) {
         ConsentResponse response = new ConsentResponse();
-        response.setId(consent.getId());
-        response.setCandidateId(consent.getCandidateId());
+        response.setId(consent.getConsentId());
+        response.setCandidateId(consent.getCandidate().getCandidateId());
         response.setConsentType(consent.getConsentType().toString());
         response.setSignatureUrl(consent.getSignatureUrl());
         response.setDocumentUrl(consent.getDocumentUrl());
@@ -493,15 +499,31 @@ public class CandidateService {
     
 
     public PaginationResponse<CandidateDTO> searchCandidates(CandidateSearchRequest searchRequest) {
-        Pageable pageable = createPageable(searchRequest.getPagination(), searchRequest.getSorting());
-        log.info("Candidate service ::::searchCandidates::");
-        // Build specification for filtering
+
+    	Page<Candidate> candidatePage = null;
+    	
+    	try {
+        log.debug("CandidateService.searchCandidates started. companyId={}, search={}",
+                searchRequest.getCompanyId(),
+                searchRequest.getSearch());
+
+        Pageable pageable = createPageable(
+                searchRequest.getPagination(),
+                searchRequest.getSorting()
+        );
+
         Specification<Candidate> spec = buildSearchSpecification(searchRequest);
-        
-        Page<Candidate> candidatePage = candidateRepository.findAll(spec, pageable);
-        
+
+        candidatePage = candidateRepository.findAll(spec, pageable);
+
+        log.debug("Candidate search query executed. totalElements={}",
+                candidatePage.getTotalElements());
+}catch (Exception e) {
+	e.printStackTrace();
+}
         return buildCompletePaginationResponse(candidatePage, searchRequest);
     }
+
     
 
     private Pageable createPageable(PaginationRequest pagination, SortingRequest sorting) {
@@ -528,48 +550,41 @@ public class CandidateService {
     }
 
     private Specification<Candidate> buildSearchSpecification(CandidateSearchRequest searchRequest) {
+
         return (root, query, cb) -> {
 
             List<Predicate> predicates = new ArrayList<>();
 
-            /* ---------- Company Filter (mandatory in BGV apps) ---------- */
-            if (searchRequest.getCompanyId() != null && searchRequest.getCompanyId() != 0) {
-                Join<Candidate, Company> companyJoin = root.join("company", JoinType.INNER);
-                predicates.add(cb.equal(companyJoin.get("id"), searchRequest.getCompanyId()));
-            }
-
-            /* ---------- Search Term ---------- */
-            if (StringUtils.hasText(searchRequest.getSearch())) {
-                String searchTerm = "%" + searchRequest.getSearch().toLowerCase() + "%";
-
-                Join<Candidate, Profile> profileJoin = root.join("profile", JoinType.LEFT);
-                Join<Candidate, User> userJoin = root.join("user", JoinType.LEFT);
-
-                Predicate firstName = cb.like(cb.lower(profileJoin.get("firstName")), searchTerm);
-                Predicate lastName  = cb.like(cb.lower(profileJoin.get("lastName")), searchTerm);
-                Predicate phone     = cb.like(cb.lower(profileJoin.get("phoneNumber")), searchTerm);
-                Predicate email     = cb.like(cb.lower(userJoin.get("email")), searchTerm);
-
-                Predicate sourceType = cb.like(cb.lower(root.get("sourceType")), searchTerm);
-                Predicate verificationStatus = cb.like(cb.lower(root.get("verificationStatus")), searchTerm);
-                Predicate jobSearchStatus = cb.like(cb.lower(root.get("jobSearchStatus")), searchTerm);
-
-                predicates.add(cb.or(
-                    firstName,
-                    lastName,
-                    phone,
-                    email,
-                    sourceType,
-                    verificationStatus,
-                    jobSearchStatus
+            /* ---------- Company Filter (MANDATORY) ---------- */
+            if (searchRequest.getCompanyId() != null && searchRequest.getCompanyId() > 0) {
+                predicates.add(cb.equal(
+                        root.get("company").get("id"),
+                        searchRequest.getCompanyId()
                 ));
             }
 
-            /* ---------- Filters ---------- */
+            /* ---------- Free Text Search ---------- */
+            if (StringUtils.hasText(searchRequest.getSearch())) {
+
+                String searchTerm = "%" + searchRequest.getSearch().toLowerCase() + "%";
+
+                Join<Candidate, User> userJoin = root.join("user", JoinType.LEFT);
+
+                Predicate firstName = cb.like(cb.lower(root.get("firstName")), searchTerm);
+                Predicate lastName  = cb.like(cb.lower(root.get("lastName")), searchTerm);
+                Predicate phone     = cb.like(cb.lower(root.get("phoneNumber")), searchTerm);
+                Predicate email     = cb.like(cb.lower(userJoin.get("email")), searchTerm);
+
+                predicates.add(cb.or(firstName, lastName, phone, email));
+            }
+
+            /* ---------- Filters (Exact Match) ---------- */
             if (searchRequest.getFilters() != null) {
+
                 for (FilterRequest filter : searchRequest.getFilters()) {
 
-                    if (!Boolean.TRUE.equals(filter.getIsSelected()) || filter.getSelectedValue() == null) {
+                    if (!Boolean.TRUE.equals(filter.getIsSelected())
+                            || filter.getSelectedValue() == null) {
                         continue;
                     }
 
@@ -577,52 +592,56 @@ public class CandidateService {
 
                         case "isActive":
                             predicates.add(cb.equal(
-                                root.get("isActive"),
-                                Boolean.valueOf(filter.getSelectedValue().toString())
+                                    root.get("isActive"),
+                                    Boolean.valueOf(filter.getSelectedValue().toString())
                             ));
                             break;
 
                         case "isVerified":
                             predicates.add(cb.equal(
-                                root.get("isVerified"),
-                                Boolean.valueOf(filter.getSelectedValue().toString())
+                                    root.get("isVerified"),
+                                    Boolean.valueOf(filter.getSelectedValue().toString())
                             ));
                             break;
 
                         case "verificationStatus":
                             predicates.add(cb.equal(
-                                root.get("verificationStatus"),
-                                filter.getSelectedValue()
+                                    root.get("verificationStatus"),
+                                    filter.getSelectedValue()
                             ));
                             break;
 
                         case "jobSearchStatus":
                             predicates.add(cb.equal(
-                                root.get("jobSearchStatus"),
-                                filter.getSelectedValue()
+                                    root.get("jobSearchStatus"),
+                                    filter.getSelectedValue()
                             ));
                             break;
 
                         case "isConsentProvided":
                             predicates.add(cb.equal(
-                                root.get("isConsentProvided"),
-                                Boolean.valueOf(filter.getSelectedValue().toString())
+                                    root.get("isConsentProvided"),
+                                    Boolean.valueOf(filter.getSelectedValue().toString())
                             ));
                             break;
 
                         case "sourceType":
                             predicates.add(cb.equal(
-                                root.get("sourceType"),
-                                filter.getSelectedValue()
+                                    root.get("sourceType"),
+                                    filter.getSelectedValue()
                             ));
                             break;
 
                         case "createdDate":
                             try {
-                                LocalDateTime date = LocalDateTime.parse(filter.getSelectedValue().toString());
-                                predicates.add(cb.greaterThanOrEqualTo(root.get("createdAt"), date));
+                                LocalDateTime date =
+                                        LocalDateTime.parse(filter.getSelectedValue().toString());
+                                predicates.add(cb.greaterThanOrEqualTo(
+                                        root.get("createdAt"), date
+                                ));
                             } catch (Exception e) {
-                                log.warn("Invalid createdDate filter value: {}", filter.getSelectedValue());
+                                log.warn("Invalid createdDate filter value: {}",
+                                        filter.getSelectedValue());
                             }
                             break;
                     }
