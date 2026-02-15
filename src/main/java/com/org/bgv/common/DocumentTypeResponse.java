@@ -20,6 +20,6 @@ public class DocumentTypeResponse {
     private String upload;
     private String code; // AADHAAR
     private Double price;
-    
+    private Integer maxFiles;
     private List<DocumentAttributeResponse> attributes;
 }

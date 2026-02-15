@@ -69,6 +69,7 @@ public class DocumentTypeService {
                 .upload(documentType.getUpload())
                 .code(documentType.getCode())
                 .price(documentType.getPrice())
+                .maxFiles(documentType.getMaxFiles())
                 .attributes(attributes)
                 .build();
     }
@@ -88,6 +89,7 @@ public class DocumentTypeService {
                 .upload(request.getUpload())
                 .code(request.getCode())
                 .price(request.getPrice())
+                .maxFiles(request.getMaxFiles())
                 .build();
     }
 
@@ -187,6 +189,7 @@ public class DocumentTypeService {
         documentType.setLabel(request.getLabel());
         documentType.setRequired(Boolean.TRUE.equals(request.getIsRequired()));
         documentType.setUpload(request.getUpload());
+        documentType.setMaxFiles(request.getMaxFiles());
         documentType.setPrice(request.getPrice());
 
         if (request.getCategoryId() != null) {

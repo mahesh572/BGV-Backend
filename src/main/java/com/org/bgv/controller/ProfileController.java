@@ -20,7 +20,7 @@ import java.util.List;
 import java.util.Map;
 
 @RestController
-@RequestMapping("/api/profiles")
+@RequestMapping("/api/user/{userId}/profiles")
 @RequiredArgsConstructor
 public class ProfileController {
 
@@ -33,17 +33,27 @@ public class ProfileController {
     private static final Logger logger = LoggerFactory.getLogger(ProfileController.class);
     // Create a new profile
     @PostMapping
-    public ResponseEntity<CustomApiResponse<BasicDetailsDTO>> createProfile(@RequestBody BasicDetailsDTO profileDTO) {
+    public ResponseEntity<CustomApiResponse<ProfileDTO>> createProfile(
+            @RequestBody ProfileDTO profileDTO) {
         try {
-        	
-        	BasicDetailsDTO createdProfile = profileService.createProfile(profileDTO);
+
+            ProfileDTO createdProfile = profileService.createProfile(profileDTO);
+
             return ResponseEntity.status(HttpStatus.CREATED)
-                    .body(CustomApiResponse.success("Profile created successfully", createdProfile, HttpStatus.CREATED));
+                    .body(CustomApiResponse.success(
+                            "Profile created successfully",
+                            createdProfile,
+                            HttpStatus.CREATED));
+
         } catch (Exception e) {
+
             return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
-                    .body(CustomApiResponse.failure("Failed to create profile: " + e.getMessage(), HttpStatus.INTERNAL_SERVER_ERROR));
+                    .body(CustomApiResponse.failure(
+                            "Failed to create profile: " + e.getMessage(),
+                            HttpStatus.INTERNAL_SERVER_ERROR));
         }
     }
+
     /*
  // Get all profiles
     @GetMapping("/all")
@@ -58,6 +68,7 @@ public class ProfileController {
     }
 */
     // Get complete profile with all details
+    /*
     @GetMapping("/{profileId}/complete")
     public ResponseEntity<CustomApiResponse<ProfileDTO>> getCompleteProfile(@PathVariable Long profileId) {
         try {
@@ -71,38 +82,58 @@ public class ProfileController {
                     .body(CustomApiResponse.failure("Failed to retrieve profile: " + e.getMessage(), HttpStatus.INTERNAL_SERVER_ERROR));
         }
     }
-
+*/
+    
+    
     // Get basic profile info
     @GetMapping("/{profileId}")
-    public ResponseEntity<CustomApiResponse<BasicDetailsDTO>> getProfile(@PathVariable Long profileId) {
-        try {
-        	BasicDetailsDTO profileDTO = profileService.getProfile(profileId);
-            return ResponseEntity.ok(CustomApiResponse.success("Profile retrieved successfully", profileDTO, HttpStatus.OK));
-        } catch (RuntimeException e) {
-            return ResponseEntity.status(HttpStatus.NOT_FOUND)
-                    .body(CustomApiResponse.failure(e.getMessage(), HttpStatus.NOT_FOUND));
-        } catch (Exception e) {
-            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
-                    .body(CustomApiResponse.failure("Failed to retrieve profile: " + e.getMessage(), HttpStatus.INTERNAL_SERVER_ERROR));
-        }
+    public ResponseEntity<CustomApiResponse<ProfileDTO>> getProfile(
+            @PathVariable Long profileId) {
+
+        ProfileDTO profileDTO = profileService.getProfileById(profileId);
+
+        return ResponseEntity.ok(
+                CustomApiResponse.success(
+                        "Profile retrieved successfully",
+                        profileDTO,
+                        HttpStatus.OK));
     }
+    
+    @GetMapping
+    public ResponseEntity<CustomApiResponse<ProfileDTO>> getProfileByUserId(
+            @PathVariable Long userId) {
+
+        ProfileDTO profileDTO = profileService.getProfileByUserId(userId);
+
+        return ResponseEntity.ok(
+                CustomApiResponse.success(
+                        "Profile retrieved successfully",
+                        profileDTO,
+                        HttpStatus.OK
+                )
+        );
+    }
+
 
     // Update profile
     @PutMapping("/{profileId}")
-    public ResponseEntity<CustomApiResponse<BasicDetailsDTO>> updateProfile(@PathVariable Long profileId, @RequestBody BasicDetailsDTO profileDTO) {
-        try {
-        	logger.info("profileId:::UPDATE::::{}",profileId);
-        	logger.info("ProfileDTO::::UPDATE:::{}",profileDTO);
-        	BasicDetailsDTO updatedProfile = profileService.updateProfile(profileId, profileDTO);
-            return ResponseEntity.ok(CustomApiResponse.success("Profile updated successfully", updatedProfile, HttpStatus.OK));
-        } catch (RuntimeException e) {
-            return ResponseEntity.status(HttpStatus.NOT_FOUND)
-                    .body(CustomApiResponse.failure(e.getMessage(), HttpStatus.NOT_FOUND));
-        } catch (Exception e) {
-            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
-                    .body(CustomApiResponse.failure("Failed to update profile: " + e.getMessage(), HttpStatus.INTERNAL_SERVER_ERROR));
-        }
+    public ResponseEntity<CustomApiResponse<ProfileDTO>> updateProfile(
+            @PathVariable Long profileId,
+            @RequestBody ProfileDTO profileDTO) {
+
+        logger.info("Updating profile with id {}", profileId);
+        
+        logger.info("Updating profile with profileDTO {}", profileDTO);
+
+        ProfileDTO updatedProfile = profileService.updateProfile(profileId, profileDTO);
+
+        return ResponseEntity.ok(
+                CustomApiResponse.success(
+                        "Profile updated successfully",
+                        updatedProfile,
+                        HttpStatus.OK));
     }
+
 
     // Delete profile
     @DeleteMapping("/{profileId}")
@@ -193,21 +224,7 @@ public class ProfileController {
                     .body(CustomApiResponse.failure("Failed to delete address", HttpStatus.INTERNAL_SERVER_ERROR));
         }
     }
-    /*
-    @GetMapping("/{profileId}/documents")
-    public ResponseEntity<CustomApiResponse<CategoriesDTO>> getDocuments(@PathVariable Long profileId) {
-        try {
-            CategoriesDTO documents = documentService.getDocuments(profileId);
-            return ResponseEntity.ok(CustomApiResponse.success("Documents retrieved successfully", documents, HttpStatus.OK));
-        } catch (RuntimeException e) {
-            return ResponseEntity.status(HttpStatus.NOT_FOUND)
-                    .body(CustomApiResponse.failure(e.getMessage(), HttpStatus.NOT_FOUND));
-        } catch (Exception e) {
-            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
-                    .body(CustomApiResponse.failure("Failed to retrieve documents: " + e.getMessage(), HttpStatus.INTERNAL_SERVER_ERROR));
-        }
-    }
-  */
+    
     @GetMapping("/documents/types/{categoryId}")
     public ResponseEntity<CustomApiResponse<List<DocumentTypeResponse>>> getDocumentTypesByCategoryIgnoreCase(
             @PathVariable Long categoryId) {
@@ -271,9 +288,9 @@ public class ProfileController {
             @PathVariable Long profileId,
             @RequestParam String status) {
         try {
-            String updatedProfile = profileService.updateProfileStatus(profileId, status);
+           // String updatedProfile = profileService.updateProfileStatus(profileId, status);
             return ResponseEntity.ok(
-                    CustomApiResponse.success("Profile status updated successfully", updatedProfile, HttpStatus.OK)
+                    CustomApiResponse.success("Profile status updated successfully", "", HttpStatus.OK)
             );
         } catch (Exception e) {
             return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
@@ -302,6 +319,26 @@ public class ProfileController {
     
     */
     
-    
+    @PostMapping("/{profileId}/upload-photo")
+    public ResponseEntity<CustomApiResponse<String>> uploadProfilePhoto(
+            @PathVariable Long userId,
+            @RequestParam("file") MultipartFile file) {
+
+        try {
+            profileService.uploadProfilePicture(userId, file);
+            return ResponseEntity.ok(
+                    CustomApiResponse.success("Profile picture uploaded successfully", null, HttpStatus.OK));
+        } catch (EntityNotFoundException e) {
+            return ResponseEntity.status(HttpStatus.NOT_FOUND)
+                    .body(CustomApiResponse.failure(e.getMessage(), HttpStatus.NOT_FOUND));
+        } catch (IllegalArgumentException e) {
+            return ResponseEntity.status(HttpStatus.BAD_REQUEST)
+                    .body(CustomApiResponse.failure(e.getMessage(), HttpStatus.BAD_REQUEST));
+        } catch (Exception e) {
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
+                    .body(CustomApiResponse.failure("Failed to upload profile picture: " + e.getMessage(), HttpStatus.INTERNAL_SERVER_ERROR));
+        }
+    }
+
     
 }

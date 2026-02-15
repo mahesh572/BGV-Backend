@@ -305,6 +305,8 @@ public WalletBalanceResponseDto getWalletBalance(Long companyId) {
     
     Company company = companyOptional.get();
     
+    /*
+    
     // Check if company type is "default"
     if ("default".equalsIgnoreCase(company.getCompanyType())) {
         // For "default" company type, return a response without creating wallet
@@ -314,6 +316,8 @@ public WalletBalanceResponseDto getWalletBalance(Long companyId) {
                 .isActive(false)
                 .build();
     }
+    
+    */
     
     // For non-default company types, get or create wallet
     UserWallet wallet = userWalletRepository

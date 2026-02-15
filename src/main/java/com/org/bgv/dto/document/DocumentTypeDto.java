@@ -22,6 +22,7 @@ public class DocumentTypeDto {
     private String typeLabel;
     private String description;
     private Boolean isRequired;
+    private Boolean enabled;
     private Integer maxFiles;
     private String customTypeName; // For "Other" category
     private List<FileDTO> files;

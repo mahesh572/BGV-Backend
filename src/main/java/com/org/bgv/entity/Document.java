@@ -138,6 +138,9 @@ public class Document implements BaseDocument {
     @Column(name = "deleted_at")
     private LocalDateTime deletedAt;
     
+    @Column(name = "active")
+    private Boolean active;
+    
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "last_action_id")
     private VerificationAction lastAction;

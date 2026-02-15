@@ -3,6 +3,8 @@ package com.org.bgv.entity;
 
 import com.fasterxml.jackson.annotation.JsonBackReference;
 import com.fasterxml.jackson.annotation.JsonManagedReference;
+import com.org.bgv.common.navigation.NavigationType;
+import com.org.bgv.common.navigation.PortalType;
 
 import jakarta.persistence.CascadeType;
 import jakarta.persistence.CollectionTable;
@@ -28,77 +30,73 @@ import java.time.LocalDateTime;
 import java.util.ArrayList;
 import java.util.List;
 
-@Builder
-@Data
 @Entity
+@Table(name = "navigation_menus")
+@Data
+@Builder
 @NoArgsConstructor
 @AllArgsConstructor
-@Table(name = "navigation_menus")
 public class NavigationMenu {
- 
- 
 
- @Id
- @GeneratedValue(strategy = GenerationType.IDENTITY)
- private Long id;
+    @Id
+    @GeneratedValue(strategy = GenerationType.IDENTITY)
+    private Long id;
 
- @Column(name = "name", nullable = false, length = 100)
- private String name;
+    @Column(nullable = false, length = 100)
+    private String name;
+    
+    @Column(name = "base_path")
+    private String basePath;
 
- @Column(name = "href", length = 255)
- private String href;
+    // Only for LINK
+    @Column(length = 255)
+    private String href;
 
- @Column(name = "icon")
- private String icon;
+    @Column(length = 100)
+    private String icon;
 
- @Column(name = "color", length = 50)
- private String color;
+    @Column(length = 50)
+    private String color;
 
- @Column(name = "label", nullable = false)
- private String label;
- 
- @Column(name = "type", nullable = false)
- private String type;
+    @Column(nullable = false)
+    private String label;
 
- @ElementCollection
- @CollectionTable(name = "menu_permissions", joinColumns = @JoinColumn(name = "menu_id"))
- @Column(name = "permission")
- private List<String> permissions = new ArrayList<>();
+    @Enumerated(EnumType.STRING)
+    @Column(nullable = false)
+    private NavigationType type;
+    
 
- @Column(name = "menu_order", nullable = false)
- private Integer order = 0;
+    @Enumerated(EnumType.STRING)
+    @Column(nullable = false)
+    private PortalType portal;
 
- @Column(name = "is_active", nullable = false)
- private Boolean isActive = true;
+    @ElementCollection
+    @CollectionTable(
+        name = "menu_permissions",
+        joinColumns = @JoinColumn(name = "menu_id")
+    )
+    @Column(name = "permission")
+    private List<String> permissions = new ArrayList<>();
 
- @ManyToOne(fetch = FetchType.LAZY)
- @JoinColumn(name = "parent_id")
- @JsonBackReference
- private NavigationMenu parent;
+    @Column(name = "menu_order", nullable = false)
+    private Integer order = 0;
 
- @OneToMany(mappedBy = "parent", cascade = CascadeType.ALL, fetch = FetchType.LAZY)
- @JsonManagedReference
- private List<NavigationMenu> children = new ArrayList<>();
+    @Column(nullable = false)
+    private Boolean isActive = true;
+    
+    @Column
+    private Boolean hidden = false;
 
- @Column(name = "created_at", updatable = false)
- private LocalDateTime createdAt;
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "parent_id")
+    @JsonBackReference
+    private NavigationMenu parent;
 
- @Column(name = "updated_at")
- private LocalDateTime updatedAt;
+    @OneToMany(mappedBy = "parent", cascade = CascadeType.ALL)
+    @JsonManagedReference
+    private List<NavigationMenu> children = new ArrayList<>();
 
- @Column(name = "created_by", length = 100)
- private String createdBy;
-
- 
-
- // Helper methods
- public void addChild(NavigationMenu child) {
-     children.add(child);
-     child.setParent(this);
- }
-
- public void removeChild(NavigationMenu child) {
-     children.remove(child);
-     child.setParent(null);
- }
+    private LocalDateTime createdAt;
+    private LocalDateTime updatedAt;
+    private String createdBy;
 }

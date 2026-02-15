@@ -1,10 +1,12 @@
 package com.org.bgv.dto.document;
 
 import java.time.LocalDateTime;
+import java.util.List;
 
 import com.fasterxml.jackson.annotation.JsonFormat;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.org.bgv.common.DocumentStatus;
+import com.org.bgv.vendor.action.dto.ActionDTO;
 
 import lombok.Builder;
 import lombok.Data;
@@ -19,6 +21,7 @@ public class FileDTO {
 	private Long fileSize;
 	// private LocalDateTime uploadedAt;
 	private DocumentStatus status;
+	private String actionRemarks;
 	private String fileType;
 	private String thumbnailUrl;
 	
@@ -28,4 +31,9 @@ public class FileDTO {
     @JsonProperty("uploadedAt")
     @JsonFormat(shape = JsonFormat.Shape.STRING, pattern = "yyyy-MM-dd'T'HH:mm:ss'Z'")
     private LocalDateTime uploadedAt;
+    
+    private List<ActionDTO> actions;
+    
+    
+    
 }

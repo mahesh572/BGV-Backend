@@ -9,7 +9,9 @@ import com.org.bgv.candidate.dto.SectionNamesDisplayDTO;
 import com.org.bgv.candidate.dto.VerificationCaseDTO;
 import com.org.bgv.candidate.dto.VerificationCaseFilterDTO;
 import com.org.bgv.candidate.dto.VerificationCaseResponseDTO;
+import com.org.bgv.candidate.entity.Candidate;
 import com.org.bgv.candidate.entity.CandidateVerification;
+import com.org.bgv.candidate.repository.CandidateRepository;
 import com.org.bgv.candidate.repository.CandidateVerificationRepository;
 import com.org.bgv.common.CandidateCaseStatisticsResponse;
 import com.org.bgv.common.CaseDocumentSelection;
@@ -31,6 +33,7 @@ import com.org.bgv.constants.SectionConstants;
 import com.org.bgv.constants.VerificationStatus;
 import com.org.bgv.dto.*;
 import com.org.bgv.entity.*;
+import com.org.bgv.notifications.service.NotificationDispatcher;
 import com.org.bgv.repository.*;
 
 import lombok.AllArgsConstructor;
@@ -74,6 +77,10 @@ public class VerificationCaseService {
     private final CompanyRepository companyRepository;
     private final VendorAssignmentService vendorAssignmentService;
     private final ReferenceNumberGenerator referenceNumberGenerator;
+    private final NotificationDispatcher notificationDispatcher;
+    private final CandidateRepository candidateRepository;
+    private final UserRepository userRepository;
+    
     
     @Transactional
     public VerificationCaseResponse createVerificationCase(VerificationCaseRequest request) {
@@ -157,6 +164,13 @@ public class VerificationCaseService {
         vendorAssignmentService.assignVendorsToCaseChecks(caseChecks);
         
         createCandidateVerification(request.getCandidateId(), verificationCase, caseChecks, caseDocuments);
+        
+        //request.getCompanyId()
+        
+        Company company = companyRepository.findById(request.getCompanyId()).orElseThrow(null);
+        Candidate candidate = candidateRepository.findByCompanyIdAndCandidateId(request.getCompanyId(), request.getCandidateId()).orElseThrow(null);
+        
+        notificationDispatcher.dispatchCandidateBgvInvitation(company, candidate, candidate.getUser());
         
         log.info("Created candidate case with id: {} and {} documents, {} checks", 
                 savedCase.getCaseId(), caseDocuments.size(), caseChecks.size());
@@ -796,12 +810,15 @@ public class VerificationCaseService {
             // =====================================================
             // 1️⃣ BASIC DETAILS — ALWAYS MANDATORY
             // =====================================================
+            
+            /*
             addSection(
                     requirementsNode,
                     statusNode,
                     SectionConstants.BASIC_DETAILS,
                     "Personal information verification"
             );
+            */
             addSection(
                     requirementsNode,
                     statusNode,
@@ -825,11 +842,12 @@ public class VerificationCaseService {
                 SectionConstants section =
                         SectionConstants.fromNameOrValue(category.getName());
 
+                /*
                 // Avoid duplicate BASIC_DETAILS
                 if (section == SectionConstants.BASIC_DETAILS) {
                     continue;
                 }
-
+               */
                 String description =
                         category.getDescription() != null
                                 ? category.getDescription()

@@ -22,40 +22,50 @@ public class CandidateMapper {
 	
 	 private final ProfileRepository profileRepository;
     
-    public CandidateDTO toDto(Candidate candidate) {
-        if (candidate == null) {
-            return null;
-        }
-        
-        @lombok.NonNull
-		User user = candidate.getUser();
-        Company company = candidate.getCompany();
-        
-        Profile profile =profileRepository.findByUserUserId(user.getUserId());
-        
-        
-        return CandidateDTO.builder()
-                .candidateId(candidate.getCandidateId())
-                .sourceType(candidate.getSourceType())
-                .userId(user != null ? user.getUserId() : null)
-                .firstName(user != null ? profile.getFirstName() : null)
-                .lastName(user != null ? profile.getLastName() : null)
-                .email(user != null ? user.getEmail() : null)
-                .mobileNo(user != null ? profile.getPhoneNumber() : null)
-                .isActive(candidate.getIsActive())
-                .isVerified(candidate.getIsVerified())
-                .verificationStatus(candidate.getVerificationStatus())
-                .createdAt(candidate.getCreatedAt())
-                .updatedAt(candidate.getUpdatedAt())
-                .lastActiveAt(candidate.getLastActiveAt())
-                .jobSearchStatus(candidate.getJobSearchStatus())
-                .isConsentProvided(candidate.getIsConsentProvided())
-                .companyId(company != null ? company.getId() : null)
-                .companyName(company != null ? company.getCompanyName() : null)
-                .name(getFullName(candidate,profile))
-                .gender(profile.getGender())
-                .build();
-    }
+	 public CandidateDTO toDto(Candidate candidate) {
+
+		    if (candidate == null) {
+		        return null;
+		    }
+
+		    User user = candidate.getUser();          // may be null
+		    Company company = candidate.getCompany(); // may be null
+
+		    Profile profile = null;
+		    if (user != null) {
+		        profile = profileRepository.findByUserUserId(user.getUserId());
+		    }
+
+		    return CandidateDTO.builder()
+		            .candidateId(candidate.getCandidateId())
+		            .sourceType(candidate.getSourceType())
+
+		            .userId(user != null ? user.getUserId() : null)
+		            .email(user != null ? user.getEmail() : null)
+
+		            .firstName(profile != null ? profile.getFirstName() : null)
+		            .lastName(profile != null ? profile.getLastName() : null)
+		            .mobileNo(profile != null ? profile.getPhoneNumber() : null)
+		            .gender(profile != null ? profile.getGender() : null)
+
+		            .name(getFullName(candidate, profile))
+
+		            .isActive(candidate.getIsActive())
+		            .isVerified(candidate.getIsVerified())
+		            .verificationStatus(candidate.getVerificationStatus())
+		           // .jobSearchStatus(candidate.getJobSearchStatus())
+		            .isConsentProvided(candidate.getIsConsentProvided())
+
+		            .createdAt(candidate.getCreatedAt())
+		            .updatedAt(candidate.getUpdatedAt())
+		            .lastActiveAt(candidate.getLastActiveAt())
+
+		            .companyId(company != null ? company.getId() : null)
+		            .companyName(company != null ? company.getCompanyName() : null)
+
+		            .build();
+		}
+
     
     public Candidate toEntity(CandidateDTO candidateDto) {
         if (candidateDto == null) {
@@ -74,12 +84,16 @@ public class CandidateMapper {
                 .build();
     }
     
-    private String getFullName(Candidate candidate,Profile profile) {
-        if (candidate.getUser() == null) {
+    private String getFullName(Candidate candidate, Profile profile) {
+
+        if (candidate == null || candidate.getUser() == null || profile == null) {
             return "";
         }
+
         String firstName = profile.getFirstName() != null ? profile.getFirstName() : "";
-        String lastName = profile.getLastName() != null ? profile.getLastName() : "";
+        String lastName  = profile.getLastName() != null ? profile.getLastName() : "";
+
         return (firstName + " " + lastName).trim();
     }
+
 }

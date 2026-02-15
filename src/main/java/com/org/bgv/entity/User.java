@@ -29,21 +29,7 @@ public class User {
     
     @Column(name = "user_type")
     private String userType;
-    /*
     
-    @Column(name = "first_name")
-    private String firstName;
-    
-    @Column(name = "last_name")
-    private String lastName;
-    
-    @Column(name = "phone_number", unique = true)
-    private String phoneNumber;
-    
-    @Column(name = "gender")
-    private String gender;
-    
-    */
     
     @Column(name = "is_active")
     private Boolean isActive;
@@ -68,7 +54,6 @@ public class User {
     private LocalDate dateOfBirth;
     
     @Column(name = "passwordResetrequired",
-    		nullable = false, 
             columnDefinition = "boolean default false"
     		)
     private Boolean passwordResetrequired;

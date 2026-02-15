@@ -20,6 +20,8 @@ public class RoleConstants {
 	
 	public static final String ROLE_COMAPNY_ADMINISTRATOR = "Company Administrator";
 	
+	public static final String ROLE_USER = "User";
+	
 	
 
 	
@@ -34,5 +36,7 @@ public class RoleConstants {
 
 		return TYPE_REGULAR_LABEL;
 	}
+	
+	
 
 }

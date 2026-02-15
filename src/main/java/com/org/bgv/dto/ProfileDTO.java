@@ -1,34 +1,67 @@
 package com.org.bgv.dto;
 
-import lombok.AllArgsConstructor;
-import lombok.Builder;
-import lombok.Getter;
-import lombok.NoArgsConstructor;
-import lombok.Setter;
+import lombok.*;
 
 import java.time.LocalDate;
-import java.util.List;
+import java.time.LocalDateTime;
 
-@Getter
-@Setter
+@Data
 @NoArgsConstructor
 @AllArgsConstructor
 @Builder
 public class ProfileDTO {
-	
-	private BasicDetailsDTO basicDetails;
+
+    private Long profileId;
+    private Long userId;
+
+    /* =========================
+       BASIC PERSONAL DETAILS
+       ========================= */
+
+    private String namePrefix;          // MR, MRS, MS, DR
+    private String firstName;
+    private String lastName;
+
+    private String parentName;
+    private String parentRelationship;  // FATHER, MOTHER, GUARDIAN
+
+    private String nationality;
+    private String gender;
+    private LocalDate dateOfBirth;
+    private String maritalStatus;
     
-    // Work experiences
-    private List<WorkExperienceDTO> workExperiences;
-    
-    // Addresses
-    private List<ProfileAddressDTO> addresses;
-    
-    // Education history
-    private List<EducationHistoryDTO> educationHistory;
-    
-    private List<IdentityProofDTO> Identity;
-    
-    // Documents grouped by category
-    private List<CheckCategoryGroup> documents;
+    private String profilePicUrl;
+
+    /* =========================
+       CONTACT DETAILS
+       ========================= */
+
+    private String phoneNumber;
+    private Boolean phoneVerified;
+    private LocalDateTime phoneVerifiedAt;
+
+    private String linkedinUrl;
+
+    /* =========================
+       CONSENT & LEGAL
+       ========================= */
+
+    private Boolean consentProvided;
+    private LocalDateTime consentProvidedAt;
+    private String consentSource;
+
+    /* =========================
+       SOURCE & STATUS
+       ========================= */
+
+    private String profileSource;
+    private String lastUpdatedSource;
+    private String status;
+
+    /* =========================
+       AUDIT
+       ========================= */
+
+    private LocalDateTime createdAt;
+    private LocalDateTime updatedAt;
 }

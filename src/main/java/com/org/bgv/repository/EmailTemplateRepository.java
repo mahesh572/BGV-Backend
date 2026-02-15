@@ -8,13 +8,18 @@ import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 import org.springframework.stereotype.Repository;
 
-import com.org.bgv.entity.EmailTemplate;
+import com.org.bgv.notifications.entity.EmailTemplate;
+
 
 @Repository
 public interface EmailTemplateRepository extends JpaRepository<EmailTemplate, Long> {
+	
     Optional<EmailTemplate> findByType(String type);
     List<EmailTemplate> findByIsActiveTrue();
-    boolean existsByType(String type);
+  //  boolean existsByType(String type);
+    
+    // 🔹 Admin: platform-level templates only
+    List<EmailTemplate> findByCompanyIdIsNullAndIsActiveTrue();
     
     @Query("SELECT COUNT(e) > 0 FROM EmailTemplate e WHERE e.type = :type AND e.id != :id")
     boolean existsByTypeAndIdNot(@Param("type") String type, @Param("id") Long id);
@@ -25,4 +30,22 @@ public interface EmailTemplateRepository extends JpaRepository<EmailTemplate, Lo
     boolean existsByTypeAndName(String type, String name);
     
     Optional<EmailTemplate> findByTypeAndName(String type, String name);
+    
+    @Query("""
+            SELECT t FROM EmailTemplate t
+            WHERE t.templateCode = :code
+              AND (t.companyId = :companyId OR t.companyId IS NULL)
+            ORDER BY t.companyId DESC
+        """)
+        Optional<EmailTemplate> findResolvedTemplate(
+                @Param("code") String templateCode,
+                @Param("companyId") Long companyId
+        );
+
+        List<EmailTemplate> findByCompanyId(Long companyId);
+
+        List<EmailTemplate> findByCompanyIdIsNull();
+        
+        Optional<EmailTemplate> findByTemplateCodeAndCompanyId(String templateCode, Long companyId);
+
 }

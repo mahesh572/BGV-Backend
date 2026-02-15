@@ -16,7 +16,7 @@ public interface UserRoleRepository extends JpaRepository<UserRole, Long> {
 	
     
  // Find UserRole entities by user and role IDs
-    @Query("SELECT ur FROM UserRole ur WHERE ur.user.id = :userId AND ur.role.id IN :roleIds")
+    @Query("SELECT ur FROM UserRole ur WHERE ur.user.userId = :userId AND ur.role.id IN :roleIds")
     List<UserRole> findByUserAndRoleIds(@Param("userId") Long userId, @Param("roleIds") List<Long> roleIds);
 	
 	@Query("SELECT COUNT(ur) FROM UserRole ur WHERE ur.role = :role")
@@ -31,11 +31,11 @@ public interface UserRoleRepository extends JpaRepository<UserRole, Long> {
 
 
     // Find all roles for a user
-    @Query("SELECT ur.role FROM UserRole ur WHERE ur.user.id = :userId")
+    @Query("SELECT ur.role FROM UserRole ur WHERE ur.user.userId = :userId")
     List<Role> findRolesByUserId(@Param("userId") Long userId);
 
     // Find UserRole entities with role details for a user
-    @Query("SELECT ur FROM UserRole ur JOIN FETCH ur.role WHERE ur.user.id = :userId")
+    @Query("SELECT ur FROM UserRole ur JOIN FETCH ur.role WHERE ur.user.userId = :userId")
     List<UserRole> findByUserIdWithRole(@Param("userId") Long userId);
 
     // Count users with a specific role
@@ -50,5 +50,21 @@ public interface UserRoleRepository extends JpaRepository<UserRole, Long> {
  // Use custom queries with explicit field names
     @Query("SELECT COUNT(ur) > 0 FROM UserRole ur WHERE ur.user.userId = :userId AND ur.role.id = :roleId")
     boolean existsByUserIdAndRoleId(@Param("userId") Long userId, @Param("roleId") Long roleId);
+    
+    
+    
+    @Query("""
+            SELECT COUNT(DISTINCT ur.user.userId)
+            FROM UserRole ur
+            JOIN Employee e ON e.user.userId = ur.user.userId
+            WHERE ur.role = :role
+            AND e.company.Id = :companyId
+        """)
+        Integer countByRoleAndCompany(
+            @Param("role") Role role,
+            @Param("companyId") Long companyId
+        );
+
+       
 	
 }

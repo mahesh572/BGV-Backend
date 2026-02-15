@@ -39,7 +39,9 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.time.LocalDateTime;
+import java.util.Comparator;
 import java.util.HashMap;
+import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 
@@ -198,6 +200,9 @@ public class VerificationService {
            
         });
        
+        
+       // before submitting check any pending from candidate like action required, 
+        // get all documents irrespective of category update the status to Submitted from upload , re upload && active!=false && status!=verified
 
         // -----------------------------
         // 4️⃣ Persist (cascade)
@@ -290,15 +295,16 @@ public class VerificationService {
     }
     
     private Map<String, VerificationSectionDTO> getSectionsWithStatus(Long candidateId, CandidateVerification verification) {
-        Map<String, VerificationSectionDTO> sections = new HashMap<>();
+        
+    	Map<String, VerificationSectionDTO> sections = new LinkedHashMap();
         
         try {
             Map<String, Map<String, Object>> requirementsMap = getRequirementsMap(verification);
             Map<String, Map<String, Object>> statusMap = getSectionStatusMap(verification);
             
             // Basic Details
-            addSection(sections, SectionConstants.BASIC_DETAILS.getValue(), "Basic Details", requirementsMap, statusMap, 
-                      () -> profileService.getBasicDetails(candidateId));
+          //  addSection(sections, SectionConstants.BASIC_DETAILS.getValue(), "Basic Details", requirementsMap, statusMap, 
+          //            () -> profileService.getBasicDetails(candidateId));
             // Identity
             addSection(sections, SectionConstants.IDENTITY.getValue(), "Identity", requirementsMap, statusMap, 
                       () -> identityService.getIdentityInfo(candidateId));
@@ -324,6 +330,18 @@ public class VerificationService {
                       () -> documentsService.getDocumentsByCandidate(candidateId));
               */        
             
+            sections = sections.entrySet()
+            	    .stream()
+            	    .sorted(Map.Entry.comparingByValue(
+            	        Comparator.comparingInt(VerificationSectionDTO::getOrder)
+            	    ))
+            	    .collect(
+            	        LinkedHashMap::new,
+            	        (m, e) -> m.put(e.getKey(), e.getValue()),
+            	        LinkedHashMap::putAll
+            	    );
+
+            
         } catch (Exception e) {
         	e.printStackTrace();
             log.error("Error getting sections with status: {}", e.getMessage());
@@ -348,7 +366,8 @@ public class VerificationService {
             sectionDTO.setOrder((Integer) requirements.getOrDefault("order", 0));
             
         }
-        
+        log.info("sectionId::::::::::::::::::::::{}",sectionId);
+        log.info("statusMap::::::::::::::::::::::{}",statusMap);
         Map<String, Object> statusData = statusMap.get(sectionId);
         if (statusData != null) {
            // sectionDTO.setStatus(SectionStatus.valueOf((String) statusData.getOrDefault("status", "NOT_STARTED")));
@@ -405,8 +424,11 @@ public class VerificationService {
             log.error("Error parsing section requirements: {}", e.getMessage());
             e.printStackTrace();
         }
-        return new HashMap<>();
+        return new LinkedHashMap<>();
     }
+    
+    
+    
     @SuppressWarnings("unchecked")
     private Map<String, Map<String, Object>> getSectionStatusMap(CandidateVerification verification) {
         try {
@@ -426,7 +448,7 @@ public class VerificationService {
         Map<String, Map<String, Object>> requirements = new HashMap<>();
         
         // Basic Details - Always required
-        requirements.put("basicDetails", Map.of("required", true));
+       // requirements.put("basicDetails", Map.of("required", true));
         
         // Other sections based on package
         switch (packageId.toString()) {

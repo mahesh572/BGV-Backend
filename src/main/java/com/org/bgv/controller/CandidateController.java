@@ -180,51 +180,7 @@ public class CandidateController {
     } 
     
     
-    // FIXED: Changed from @PostMapping to @PostMapping("/search")
-    @PostMapping("/search")
-    public ResponseEntity<CustomApiResponse<PaginationResponse<CandidateDTO>>> searchCandidates(
-            @Valid @RequestBody CandidateSearchRequest searchRequest) {  // Changed to @RequestBody
-        try {
-            log.info("Searching candidates with request: {}", searchRequest);
-            
-            // Set defaults for empty sorting
-            if (searchRequest.getSorting() != null) {
-                if (searchRequest.getSorting().getSortBy() == null || 
-                    searchRequest.getSorting().getSortBy().isEmpty()) {
-                    searchRequest.getSorting().setSortBy("createdAt");
-                }
-                if (searchRequest.getSorting().getSortDirection() == null || 
-                    searchRequest.getSorting().getSortDirection().isEmpty()) {
-                    searchRequest.getSorting().setSortDirection("desc");
-                }
-            } else {
-                searchRequest.setSorting(SortingRequest.builder()
-                        .sortBy("createdAt")
-                        .sortDirection("desc")
-                        .build());
-            }
-            
-            // Remove empty filters
-            if (searchRequest.getFilters() != null) {
-                searchRequest.getFilters().removeIf(filter -> 
-                    filter.getField() == null || 
-                    filter.getField().isEmpty() || 
-                    !Boolean.TRUE.equals(filter.getIsSelected())
-                );
-            }
-            
-            PaginationResponse<CandidateDTO> result = candidateService.searchCandidates(searchRequest);
-            return ResponseEntity.ok(CustomApiResponse.success("Candidates retrieved successfully", result, HttpStatus.OK));
-        } catch (RuntimeException e) {
-            log.error("Runtime error while searching candidates: {}", e.getMessage(), e);
-            return ResponseEntity.status(HttpStatus.BAD_REQUEST)
-                    .body(CustomApiResponse.failure("Failed to search candidates: " + e.getMessage(), HttpStatus.BAD_REQUEST));
-        } catch (Exception e) {
-            log.error("Unexpected error while searching candidates", e);
-            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
-                    .body(CustomApiResponse.failure("An unexpected error occurred while searching candidates", HttpStatus.INTERNAL_SERVER_ERROR));
-        }
-    }
+    
     
 
     @GetMapping("/all")

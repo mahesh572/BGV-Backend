@@ -25,6 +25,9 @@ public class EmailTemplateDTO {
 
     
     private String subject;
+    private String templateCode;
+   
+    private String displayName;
 
    
     private String bodyHtml;
@@ -36,4 +39,5 @@ public class EmailTemplateDTO {
     private LocalDateTime createdAt;
 
     private LocalDateTime updatedAt;
+    private Long companyId;
 }

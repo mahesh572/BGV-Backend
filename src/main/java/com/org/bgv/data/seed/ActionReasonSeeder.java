@@ -6,6 +6,8 @@ import java.util.*;
 import java.util.stream.Collectors;
 
 import org.springframework.boot.CommandLineRunner;
+import org.springframework.boot.context.event.ApplicationReadyEvent;
+import org.springframework.context.annotation.DependsOn;
 import org.springframework.stereotype.Component;
 
 import com.org.bgv.entity.CheckCategory;
@@ -21,16 +23,19 @@ import com.org.bgv.vendor.repository.CategoryActionReasonRepository;
 import jakarta.transaction.Transactional;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.context.event.EventListener;
 
 @Component
 @RequiredArgsConstructor
 @Slf4j
+@DependsOn("entityManagerFactory") // ensure JPA tables are ready
 public class ActionReasonSeeder implements CommandLineRunner {
 
     private final ActionReasonRepository actionReasonRepo;
     private final CategoryActionReasonRepository categoryActionReasonRepo;
     private final CheckCategoryRepository categoryRepo;
 
+   // @EventListener(ApplicationReadyEvent.class)
     @Override
     @Transactional
     public void run(String... args) {
@@ -114,7 +119,20 @@ public class ActionReasonSeeder implements CommandLineRunner {
 
             entry("OTHER",
                 build("OTHER", "Other",
-                      ActionType.REQUEST_INFO, ActionLevel.CASE, false))
+                      ActionType.REQUEST_INFO, ActionLevel.CASE, false)),
+        
+            // ---------- VERIFY ----------
+            entry("DOCUMENT_VERIFIED",
+                build("DOCUMENT_VERIFIED", "Document Verified",
+                      ActionType.VERIFY, ActionLevel.DOCUMENT, true)),
+
+            entry("SECTION_VERIFIED",
+                build("SECTION_VERIFIED", "Section Verified",
+                      ActionType.VERIFY, ActionLevel.SECTION, true)),
+
+            entry("CASE_VERIFIED",
+                build("CASE_VERIFIED", "Case Verified",
+                      ActionType.VERIFY, ActionLevel.CASE, true))
         );
 
         // ------------------------------------------------------------------

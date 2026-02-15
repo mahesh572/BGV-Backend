@@ -134,6 +134,7 @@ public class UserMapper implements BaseMapper<User, UserDto> {
         addrDto.setAddressType(address.getAddressType());
         return addrDto;
     }
+    
     public BasicDetailsDTO mapUserDTOToBasicdetails(UserDto userDto) {
     	
     	return BasicDetailsDTO.builder()

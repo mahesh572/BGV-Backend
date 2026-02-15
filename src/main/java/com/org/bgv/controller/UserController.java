@@ -1,6 +1,9 @@
 package com.org.bgv.controller;
 
 import com.org.bgv.api.response.CustomApiResponse;
+import com.org.bgv.auth.dto.ResetPasswordRequest;
+import com.org.bgv.auth.entity.PasswordResetToken;
+import com.org.bgv.auth.service.ResetTokenService;
 import com.org.bgv.common.ChangePasswordRequest;
 import com.org.bgv.common.PageRequestDto;
 import com.org.bgv.common.PaginationResponse;
@@ -33,6 +36,7 @@ import java.util.List;
 public class UserController {
     private final UserService userService;
     private final JwtUtil jwtUtil;
+    private final ResetTokenService resetTokenService;
     
     private static final Logger logger = LoggerFactory.getLogger(UserController.class);
 
@@ -123,6 +127,8 @@ public class UserController {
                     .body(CustomApiResponse.failure("Failed to assign role: " + e.getMessage(), HttpStatus.INTERNAL_SERVER_ERROR));
         }
     }
+    
+    
     @GetMapping("/user-from-token")
     public ResponseEntity<CustomApiResponse<UserDto>> getUserFromToken(
             @RequestHeader("Authorization") String authorizationHeader) {
@@ -173,5 +179,7 @@ public class UserController {
     }
     
     
+
+
     
 }

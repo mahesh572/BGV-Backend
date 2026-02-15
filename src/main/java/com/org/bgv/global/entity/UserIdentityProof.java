@@ -56,6 +56,21 @@ public class UserIdentityProof {
 
     @Column(name = "is_primary")
     private boolean primary;
+    
+    @Column(name = "pan_hash", length = 64)
+    private String panHash;
+
+    @Column(name = "aadhaar_hash", length = 64)
+    private String aadhaarHash;
+
+    @Column(name = "identity_verified")
+    private Boolean identityVerified;
+
+    @Column(name = "identity_verified_at")
+    private LocalDateTime identityVerifiedAt;
+
+    @Column(name = "identity_verified_by")
+    private String identityVerifiedBy;
 
     @CreationTimestamp
     private LocalDateTime createdAt;

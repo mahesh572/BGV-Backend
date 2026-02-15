@@ -52,7 +52,7 @@ public class CandidateDetailsMapper {
                 .id(candidate.getCandidateId())
                 .candidateId(candidate.getCandidateId()) // Using UUID as candidateId
                 .name(getFullName(profile))
-                .email(profile != null ? profile.getEmailAddress() : null)
+               // .email(profile != null ? profile.getEmailAddress() : null)
                 .phone(profile != null ? profile.getPhoneNumber() : null)
                 .dateOfBirth(formatDate(profile != null ? profile.getDateOfBirth() : null))
                 .gender(profile != null ? profile.getGender() : null)
@@ -70,7 +70,7 @@ public class CandidateDetailsMapper {
                 .lastName(profile != null ? profile.getLastName() : null)
                 .nationality(profile != null ? profile.getNationality() : null)
                 .maritalStatus(profile != null ? profile.getMaritalStatus() : null)
-                .hasWorkExperience(profile != null ? profile.getHasWorkExperience() : null)
+               // .hasWorkExperience(profile != null ? profile.getHasWorkExperience() : null)
                 .linkedinUrl(profile != null ? profile.getLinkedinUrl() : null)
              //   .company(mapCompany(candidate.getCompany()))
                 .vpackage(getMockPackage()) // Mock data - replace with actual

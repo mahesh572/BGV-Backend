@@ -5,6 +5,7 @@ import java.util.List;
 
 import org.springframework.stereotype.Service;
 
+import com.fasterxml.jackson.core.JsonProcessingException;
 import com.org.bgv.common.DocumentStatus;
 import com.org.bgv.config.SecurityUtils;
 import com.org.bgv.constants.CaseCheckStatus;
@@ -48,6 +49,8 @@ public class VerificationActionService {
 	private final VerificationCaseCheckRepository verificationCaseCheckRepository;
 	private final EmailService emailService;
 	private final DocumentRepository documentRepository;
+	private final CaseCheckStatusService caseCheckStatusService;
+	private final CheckSyncService checkSyncService;
 	
 	public List<ActionReasonDTO> getReasons(
 	        Long categoryId,
@@ -202,13 +205,13 @@ public class VerificationActionService {
 
 	    VerificationAction action = buildBaseAction(req);
 
-	    verificationActionRepository.save(action);
+	    action = verificationActionRepository.save(action);
 
 	    linkEvidences(req, action);
 	    
 	    switch (req.getActionLevel()) {
       //  case CASE -> updateCaseStatus(req, action);
-      //  case CHECK -> updateCheckStatus(req, action);
+      //  case SECTION -> updateCheckStatus(req, action);
         case DOCUMENT -> updateDocumentStatus(req, action);
       //  case OBJECT -> updateObjectStatus(req, action);
       }
@@ -218,7 +221,7 @@ public class VerificationActionService {
 	    recalculateAndUpdateCheckStatus(req.getCheckId(), action);
 
 	    
-	    emailService.sendCandidateActionRequiredEmail(req.getCaseId(), req.getCheckId(), req.getActionType(), action.getReason().getLabel(), req.getRemarks());
+	  //  emailService.sendCandidateActionRequiredEmail(req.getCaseId(), req.getCheckId(), req.getActionType(), action.getReason().getLabel(), req.getRemarks());
 	    
 	    
 	  //  applyActionSideEffects(req, action); // 👈 optional hooks
@@ -247,6 +250,8 @@ public class VerificationActionService {
 	            .status(ActionStatus.OPEN)
 	            .performedBy(SecurityUtils.getCurrentUserId())
 	            .performedAt(LocalDateTime.now())
+	            .documentId(req.getDocumentId())
+	            .objectId(req.getObjectId())
 	            .build();
 	}
 
@@ -327,7 +332,7 @@ public class VerificationActionService {
 	    return verificationCase.getCandidateId();
 	}
 	
-	
+	/*
 	private CaseCheckStatus resolveCheckStatus(ActionType actionType,CaseCheckStatus currentStatus) {
 
 	    return switch (actionType) {
@@ -350,6 +355,8 @@ public class VerificationActionService {
         case VIEW, DOWNLOAD -> currentStatus;
 	    };
 	}
+	*/
+	
 /*
 	private void updateCheckStatus(
 	        VerificationActionRequest req,
@@ -383,6 +390,8 @@ public class VerificationActionService {
 	    document.setStatus(newStatus);
 	    document.setLastAction(action);
 	    document.setUpdatedAt(LocalDateTime.now());
+	    
+	    // updateCheckStatus(req, action)
 
 	}
 
@@ -409,9 +418,9 @@ public class VerificationActionService {
 	        Long checkId,
 	        VerificationAction action
 	) {
-
-	    VerificationCaseCheck check =
+		VerificationCaseCheck check =
 	            verificationCaseCheckRepository.getReferenceById(checkId);
+		/*
 
 	    List<Document> documents =
 	            documentRepository.findByVerificationCaseCheck_CaseCheckId(checkId);
@@ -423,6 +432,29 @@ public class VerificationActionService {
 	    check.setUpdatedAt(LocalDateTime.now());
 	    
 	    verificationCaseCheckRepository.save(check);
+	    
+	    */
+		
+		CaseCheckStatus newStatus = caseCheckStatusService.recalculateCheckStatus(checkId);
+		check.setStatus(newStatus);
+	    check.setLastAction(action);
+	    check.setUpdatedAt(LocalDateTime.now());
+	    
+	    verificationCaseCheckRepository.save(check);
+	    
+	    
+	    
+	    try {
+	    	if(CaseCheckStatus.ACTION_REQUIRED.equals(newStatus)) {
+			checkSyncService.markSectionActionRequired(action.getCandidateId(),
+			        check.getVerificationCase().getCaseId(),
+			        check.getCategory().getName() // map category → section
+			);
+	    	}
+		} catch (JsonProcessingException e) {
+			// TODO Auto-generated catch block
+			e.printStackTrace();
+		}
 	}
 
 	private CaseCheckStatus resolveCheckStatusFromDocuments(List<Document> documents) {

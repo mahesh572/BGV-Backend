@@ -10,6 +10,9 @@ import com.fasterxml.jackson.databind.node.ObjectNode;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.boot.CommandLineRunner;
+import org.springframework.boot.context.event.ApplicationReadyEvent;
+import org.springframework.context.annotation.DependsOn;
+import org.springframework.context.event.EventListener;
 import org.springframework.stereotype.Component;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -20,6 +23,7 @@ import java.util.List;
 @Component
 @RequiredArgsConstructor
 @Slf4j
+@DependsOn("entityManagerFactory") // ensure JPA tables are ready
 public class CandidateVerificationDataSeeder implements CommandLineRunner {
 
     private final CandidateVerificationRepository candidateVerificationRepository;
@@ -27,6 +31,7 @@ public class CandidateVerificationDataSeeder implements CommandLineRunner {
 
     @Override
     @Transactional
+   // @EventListener(ApplicationReadyEvent.class)
     public void run(String... args) throws Exception {
         seedCandidateVerificationData();
     }

@@ -19,8 +19,8 @@ public class EmployerDTO {
 	
 	    private Long id;
 	    private String companyname;
-	    private String companyType;
-	    private String industry;
-	    private String companySize;
+	    private CompanyType companyType;
+	    private IndustryType industry;
+	    private CompanySize companySize;
 	    private String status;
 }

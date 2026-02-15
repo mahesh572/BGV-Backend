@@ -68,6 +68,7 @@ import java.time.LocalDateTime;
 import java.time.temporal.ChronoUnit;
 import java.util.*;
 import java.util.stream.Collectors;
+import java.util.stream.Stream;
 
 @Slf4j
 @Service
@@ -510,32 +511,34 @@ public class VerificationCheckService {
 	}
 
 
-	private List<VerificationFileDTO> buildVerificationFiles(List<Document> documents,VerificationCaseCheck check) {
+	private List<VerificationFileDTO> buildVerificationFiles(
+	        List<Document> documents,
+	        VerificationCaseCheck check
+	) {
 
-		return documents.stream()
-				.map(doc -> VerificationFileDTO.builder()
-						.docId(doc.getDocId())
-						.fileId(doc.getDocId())
-						.fileName(doc.getOriginalFileName())
-						.fileUrl(doc.getFileUrl())
-						.fileSize(doc.getFileSize())
-						.fileType(doc.getFileType())
-						.status(doc.getStatus())
-						.uploadedBy(doc.getUploadedBy())
-						.uploadedAt(doc.getUploadedAt())
-						.verified(doc.isVerified())
-						//.verifiedBy(doc.getVerifiedBy())
-						//.verifiedAt(doc.getVerifiedAt())
-						//.verificationNotes(doc.getVerificationNotes())
-						.comments(doc.getComments())
-						.createdAt(doc.getCreatedAt())
-						.updatedAt(doc.getUpdatedAt())
-						.fileKey(doc.getAwsDocKey())
-						.actions(resolveFileActions(doc.getStatus(),check))
-						.status(doc.getStatus())
-						.build())
-				.toList();
+	    return documents.stream()
+	            .filter(doc -> doc.getStatus() != DocumentStatus.DELETED)
+	            .filter(doc -> !Boolean.FALSE.equals(doc.getActive()))   // only active (true or null)
+	            .map(doc -> VerificationFileDTO.builder()
+	                    .docId(doc.getDocId())
+	                    .fileId(doc.getDocId())
+	                    .fileName(doc.getOriginalFileName())
+	                    .fileUrl(doc.getFileUrl())
+	                    .fileSize(doc.getFileSize())
+	                    .fileType(doc.getFileType())
+	                    .status(doc.getStatus())
+	                    .uploadedBy(doc.getUploadedBy())
+	                    .uploadedAt(doc.getUploadedAt())
+	                    .verified(doc.isVerified())
+	                    .comments(doc.getComments())
+	                    .createdAt(doc.getCreatedAt())
+	                    .updatedAt(doc.getUpdatedAt())
+	                    .fileKey(doc.getAwsDocKey())
+	                    .actions(resolveFileActions(doc.getStatus(), check))
+	                    .build())
+	            .toList();
 	}
+
 
 	private List<EvidenceTypeDTO> getAllowedEvidenceTypes(Long categoryId) {
 		return categoryEvidenceTypeRepository.findByCategoryCategoryIdAndActiveTrue(categoryId).stream()
@@ -828,12 +831,33 @@ public class VerificationCheckService {
 
 	// Common helper methods (same as before but more generic)
 	private CandidateInfoDTO mapCandidateInfo(Candidate candidate) {
-		return CandidateInfoDTO.builder()
-				.name(candidate.getProfile().getFirstName() + " " + candidate.getProfile().getLastName())
-				.email(candidate.getProfile().getEmailAddress()).phone(candidate.getProfile().getPhoneNumber())
-				.candidateId(String.valueOf(candidate.getCandidateId())).candidateRef(candidate.getCandidateRef())
-				.build();
+
+	    if (candidate == null) {
+	        return CandidateInfoDTO.builder()
+	                .name("Unknown Candidate")
+	                .build();
+	    }
+
+	    Profile profile = candidate.getProfile();
+
+	    String name = "Profile Pending";
+	    String phone = null;
+
+	    if (profile != null) {
+	        name = Stream.of(profile.getFirstName(), profile.getLastName())
+	                .filter(Objects::nonNull)
+	                .collect(Collectors.joining(" "));
+	        phone = profile.getPhoneNumber();
+	    }
+
+	    return CandidateInfoDTO.builder()
+	            .candidateId(String.valueOf(candidate.getCandidateId()))
+	            .candidateRef(candidate.getCandidateRef())
+	            .name(name.isBlank() ? "Profile Pending" : name)
+	            .phone(phone)
+	            .build();
 	}
+
 
 	private EmployerInfoDTO mapEmployerInfo(Company company) {
 		if (company == null) {
@@ -1249,6 +1273,7 @@ public class VerificationCheckService {
 		        status == DocumentStatus.REQUEST_INFO ||
 		        status == DocumentStatus.INSUFFICIENT ||
 		        status == DocumentStatus.REJECTED ||
+		        status == DocumentStatus.VERIFIED ||
 		        check.getStatus() == CaseCheckStatus.REJECTED;
 		
 		

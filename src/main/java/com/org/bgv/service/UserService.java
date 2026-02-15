@@ -1,5 +1,8 @@
 package com.org.bgv.service;
 
+import com.org.bgv.auth.dto.ResetPasswordRequest;
+import com.org.bgv.auth.entity.PasswordResetToken;
+import com.org.bgv.auth.service.ResetTokenService;
 import com.org.bgv.common.CandidateDTO;
 import com.org.bgv.common.ChangePasswordRequest;
 import com.org.bgv.common.ColumnMetadata;
@@ -16,6 +19,8 @@ import com.org.bgv.common.SortingMetadata;
 import com.org.bgv.common.SortingRequest;
 import com.org.bgv.common.UserDto;
 import com.org.bgv.common.UserSearchRequest;
+import com.org.bgv.company.entity.Employee;
+import com.org.bgv.company.repository.EmployeeRepository;
 import com.org.bgv.config.JwtUtil;
 import com.org.bgv.controller.UserController;
 import com.org.bgv.dto.UserDetailsDto;
@@ -79,6 +84,8 @@ public class UserService {
     private final ProfileRepository profileRepository;
     private final VendorRepository vendorRepository;
     private final VerificationCaseService verificationCaseService;
+    private final ResetTokenService resetTokenService;
+    private final EmployeeRepository employeeRepository;
     
     private static final Logger logger = LoggerFactory.getLogger(UserService.class);
 
@@ -113,78 +120,168 @@ public class UserService {
     }
     
     private Pageable createPageable(PaginationRequest pagination, SortingRequest sorting) {
+
+        // ✅ Defaults
+        String defaultSortBy = "userId";
+        Sort.Direction defaultDirection = Sort.Direction.ASC;
+
+        // ✅ Normalize sorting object
         if (sorting == null) {
             sorting = SortingRequest.builder()
-                    .sortBy("userId")
-                    .sortDirection("asc")
+                    .sortBy(defaultSortBy)
+                    .sortDirection(defaultDirection.name())
                     .build();
         }
-        
-        Sort sort = Sort.by(
-            sorting.getSortDirection().equalsIgnoreCase("desc") ? 
-            Sort.Direction.DESC : Sort.Direction.ASC, 
-            sorting.getSortBy()
+
+        // ✅ Defensive checks (THIS fixes your error)
+        String sortBy = sorting.getSortBy();
+        if (!StringUtils.hasText(sortBy)) {
+            sortBy = defaultSortBy;
+        }
+
+        Sort.Direction direction =
+                "desc".equalsIgnoreCase(sorting.getSortDirection())
+                        ? Sort.Direction.DESC
+                        : Sort.Direction.ASC;
+
+        Sort sort = Sort.by(direction, sortBy);
+
+        return PageRequest.of(
+                pagination.getPage(),
+                pagination.getSize(),
+                sort
         );
-        return PageRequest.of(pagination.getPage(), pagination.getSize(), sort);
     }
 
     private Specification<User> buildSearchSpecification(UserSearchRequest searchRequest) {
-        return (root, query, criteriaBuilder) -> {
+
+        return (root, query, cb) -> {
+
+            query.distinct(true); // 🔥 prevent duplicates
+
             List<Predicate> predicates = new ArrayList<>();
 
-            // For the modal (when we want to exclude users already in the company)
-            if (searchRequest.getCompanyId() != null && searchRequest.getCompanyId() != 0 && searchRequest.isExcludeCompanyUsers()) {
-                // Create a subquery to find users who are already in this company
-                Subquery<Long> companyUsersSubquery = query.subquery(Long.class);
-                Root<CompanyUser> companyUserRoot = companyUsersSubquery.from(CompanyUser.class);
-                
-                companyUsersSubquery.select(companyUserRoot.get("userId"))
-                        .where(criteriaBuilder.equal(companyUserRoot.get("companyId"), searchRequest.getCompanyId()));
-                
-                // Exclude users who are already in the company
-                predicates.add(criteriaBuilder.not(root.get("userId").in(companyUsersSubquery)));
+            /* ==========================================================
+             * COMPANY SCOPING VIA EMPLOYEE
+             * ========================================================== */
+
+            // 🔹 Modal use-case: EXCLUDE users already assigned to company
+            if (searchRequest.getCompanyId() != null
+                    && searchRequest.getCompanyId() != 0
+                    && searchRequest.isExcludeCompanyUsers()) {
+
+                Subquery<Long> employeeSubquery = query.subquery(Long.class);
+                Root<Employee> employeeRoot = employeeSubquery.from(Employee.class);
+
+                employeeSubquery
+                    .select(employeeRoot.get("user").get("userId"))
+                    .where(
+                        cb.equal(
+                            employeeRoot.get("company").get("id"),
+                            searchRequest.getCompanyId()
+                        )
+                    );
+
+                predicates.add(
+                    cb.not(root.get("userId").in(employeeSubquery))
+                );
             }
-            // For the company users list (when we want to show only users in the company)
-            else if (searchRequest.getCompanyId() != null && searchRequest.getCompanyId() != 0) {
-                Join<User, CompanyUser> companyUserJoin = root.join("companyUsers", JoinType.INNER);
-                predicates.add(criteriaBuilder.equal(companyUserJoin.get("companyId"), searchRequest.getCompanyId()));
+
+            // 🔹 Company users list: INCLUDE only users in the company
+            else if (searchRequest.getCompanyId() != null
+                    && searchRequest.getCompanyId() != 0) {
+
+                Join<User, Employee> employeeJoin =
+                    root.join("employees", JoinType.INNER);
+
+                predicates.add(
+                    cb.equal(
+                        employeeJoin.get("company").get("id"),
+                        searchRequest.getCompanyId()
+                    )
+                );
             }
-            
-            // Search term
+
+            /* ==========================================================
+             * SEARCH (Profile + User)
+             * ========================================================== */
+
             if (StringUtils.hasText(searchRequest.getSearch())) {
-                String searchTerm = "%" + searchRequest.getSearch().toLowerCase() + "%";
-                Predicate firstNamePredicate = criteriaBuilder.like(criteriaBuilder.lower(root.get("firstName")), searchTerm);
-                Predicate lastNamePredicate = criteriaBuilder.like(criteriaBuilder.lower(root.get("lastName")), searchTerm);
-                Predicate emailPredicate = criteriaBuilder.like(criteriaBuilder.lower(root.get("email")), searchTerm);
-                Predicate phonePredicate = criteriaBuilder.like(criteriaBuilder.lower(root.get("phoneNumber")), searchTerm);
-                predicates.add(criteriaBuilder.or(firstNamePredicate, lastNamePredicate, emailPredicate, phonePredicate));
+
+                String term = "%" + searchRequest.getSearch().toLowerCase() + "%";
+
+                Join<User, Profile> profileJoin =
+                    root.join("profile", JoinType.LEFT);
+
+                predicates.add(
+                    cb.or(
+                        cb.like(cb.lower(profileJoin.get("firstName")), term),
+                        cb.like(cb.lower(profileJoin.get("lastName")), term),
+                        cb.like(cb.lower(profileJoin.get("phoneNumber")), term),
+                        cb.like(cb.lower(root.get("email")), term)
+                    )
+                );
             }
-            
-            // Filters
+
+            /* ==========================================================
+             * FILTERS
+             * ========================================================== */
+
             if (searchRequest.getFilters() != null) {
+
                 for (FilterRequest filter : searchRequest.getFilters()) {
-                    if (filter.getIsSelected() != null && filter.getIsSelected() && filter.getSelectedValue() != null) {
-                        if (filter.getField().equals("isActive") || filter.getField().equals("isVerified")) {
-                            // Handle boolean fields
-                            Boolean value = Boolean.valueOf(filter.getSelectedValue().toString());
-                            predicates.add(criteriaBuilder.equal(root.get(filter.getField()), value));
-                        } else if (filter.getField().equals("userType")) {
-                            // Handle enum fields
-                            predicates.add(criteriaBuilder.equal(root.get(filter.getField()), filter.getSelectedValue()));
-                        } else if (filter.getField().equals("createdDate")) {
-                            // Handle date range - you might want to implement proper date range logic
-                            predicates.add(criteriaBuilder.equal(root.get("createdAt"), filter.getSelectedValue()));
-                        } else {
-                            // Handle other string fields
-                            predicates.add(criteriaBuilder.equal(root.get(filter.getField()), filter.getSelectedValue()));
+
+                    if (Boolean.TRUE.equals(filter.getIsSelected())
+                            && filter.getSelectedValue() != null) {
+
+                        switch (filter.getField()) {
+
+                            case "isActive":
+                            case "isVerified":
+                                predicates.add(
+                                    cb.equal(
+                                        root.get(filter.getField()),
+                                        Boolean.valueOf(
+                                            filter.getSelectedValue().toString()
+                                        )
+                                    )
+                                );
+                                break;
+
+                            case "userType":
+                                predicates.add(
+                                    cb.equal(
+                                        root.get("userType"),
+                                        filter.getSelectedValue()
+                                    )
+                                );
+                                break;
+
+                            case "createdDate":
+                                predicates.add(
+                                    cb.equal(
+                                        root.get("createdAt"),
+                                        filter.getSelectedValue()
+                                    )
+                                );
+                                break;
+
+                            default:
+                                predicates.add(
+                                    cb.equal(
+                                        root.get(filter.getField()),
+                                        filter.getSelectedValue()
+                                    )
+                                );
                         }
                     }
                 }
             }
-            
-            return criteriaBuilder.and(predicates.toArray(new Predicate[0]));
+
+            return cb.and(predicates.toArray(new Predicate[0]));
         };
     }
+
 
     public UserDto getById(Long id) {
         try {
@@ -488,6 +585,33 @@ try {
             throw new RuntimeException("Password must contain at least one uppercase letter, one lowercase letter, one number, and one special character");
         }
     }
+    
+    public void resetPassword(String token, ResetPasswordRequest request) {
+
+        validatePasswords(request);
+
+        PasswordResetToken resetToken = resetTokenService.getValidTokenOrThrow(token);
+
+        User user = userRepository.findById(resetToken.getUserId())
+                .orElseThrow(() -> new RuntimeException("User not found with id: " + resetToken.getUserId()));
+
+        String encodedPassword = passwordEncoder.encode(request.getNewPassword());
+        user.setPassword(encodedPassword);
+        user.setUpdatedAt(java.time.LocalDateTime.now());
+        user.setPasswordResetrequired(Boolean.FALSE);
+
+        userRepository.save(user);
+
+        resetTokenService.markUsed(resetToken);
+    }
+
+    private void validatePasswords(ResetPasswordRequest request) {
+        if (!request.getNewPassword().equals(request.getConfirmPassword())) {
+            throw new IllegalArgumentException("Passwords do not match");
+        }
+    }
+    
+    
 
     /**
      * Password strength validation
@@ -504,7 +628,7 @@ try {
 
         return hasUpper && hasLower && hasDigit && hasSpecial;
     }
-
+/*
     @Transactional
     public void assignUsersToCompany(List<Long> userIds, Long companyId) {
     	 // Validate company exists
@@ -535,6 +659,56 @@ try {
 		e.printStackTrace();
 	}
     }
+    
+    */
+    
+    @Transactional
+    public void assignUsersToCompany(List<Long> userIds, Long companyId) {
+
+        Company company = companyRepository.findById(companyId)
+            .orElseThrow(() -> new RuntimeException("Company not found"));
+
+        List<User> users = userRepository.findAllById(userIds);
+        if (users.size() != userIds.size()) {
+            throw new RuntimeException("One or more users not found");
+        }
+
+        for (User user : users) {
+
+            // ❌ already employee? skip
+            if (employeeRepository.existsByUserUserIdAndCompanyId(
+                    user.getUserId(), companyId)) {
+                continue;
+            }
+
+            // ✅ Fetch profile
+            Profile profile = profileRepository.findByUser_UserId(user.getUserId())
+                .orElseThrow(() -> new RuntimeException(
+                    "Profile not found for userId: " + user.getUserId()));
+
+            // ✅ Create employee from profile
+            Employee employee = Employee.builder()
+                .user(user)
+                .company(company)
+
+                // Copy from profile
+                .firstName(profile.getFirstName())
+                .lastName(profile.getLastName())
+               // .emailAddress(profile.getEmailAddress())
+                .phoneNumber(profile.getPhoneNumber())
+                .gender(profile.getGender())
+                .nationality(profile.getNationality())
+                .dateOfBirth(profile.getDateOfBirth())
+                .maritalStatus(profile.getMaritalStatus())
+
+                // Employment defaults
+                .status("ACTIVE")
+                .build();
+
+            employeeRepository.save(employee);
+        }
+    }
+
     
     
 

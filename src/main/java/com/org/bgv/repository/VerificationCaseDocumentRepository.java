@@ -1,5 +1,6 @@
 package com.org.bgv.repository;
 
+import com.org.bgv.common.DocumentStatus;
 import com.org.bgv.constants.VerificationStatus;
 import com.org.bgv.entity.CheckCategory;
 import com.org.bgv.entity.VerificationCase;
@@ -49,5 +50,14 @@ public interface VerificationCaseDocumentRepository extends JpaRepository<Verifi
     Optional<VerificationCaseDocument> findByVerificationCase_CaseIdAndVerificationCaseCheck_CaseCheckIdAndDocumentType_DocTypeId(Long caseId,Long checkId,Long documentTypeId);
     
     List<VerificationCaseDocument> findByVerificationCase_CaseIdAndVerificationCaseCheck_CaseCheckId(Long caseId,Long checkId);
+    
+    
+    long countByVerificationCaseCheckCaseCheckIdAndRequiredTrue(Long caseCheckId);
+
+    long countByVerificationCaseCheckCaseCheckIdAndRequiredTrueAndVerificationStatus(
+            Long caseCheckId,
+            DocumentStatus status
+    );
+
     
 }

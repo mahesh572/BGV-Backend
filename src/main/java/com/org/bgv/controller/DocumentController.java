@@ -63,15 +63,17 @@ public class DocumentController {
             @RequestParam(value = "categoryId", required = false) Long categoryId,
             @RequestParam(value = "objectId", required = false) Long objectId,
             @RequestParam(value = "caseId",required = false) Long caseId,
-            @RequestParam(value = "checkId",required = false) Long checkId
+            @RequestParam(value = "checkId",required = false) Long checkId,
+            @RequestParam(value = "action",required = false) String action,
+            @RequestParam(value = "oldDocId",required = false) Long oldDocId
             )
           {
     	
-    	log.info("Received upload request for profile::::DocumentTypeId::::CategoryId::caseId::::: {}{}{}{}", candidateId,documentTypeId,categoryId,caseId);
+    	log.info("Received upload request for profile::::DocumentTypeId::::CategoryId::caseId::::action: {}{}{}{}{}", candidateId,documentTypeId,categoryId,caseId,action);
     	
         try {
         	DocumentCategoryDto uploadedDocuments = documentService.createDocuments(
-                files, candidateId,categoryId,documentTypeId,objectId,caseId,checkId);
+                files, candidateId,categoryId,documentTypeId,objectId,caseId,checkId,action,oldDocId);
         	log.info("***************************uploaded successfully");
             return ResponseEntity.status(HttpStatus.CREATED)
                     .body(CustomApiResponse.success("Documents uploaded successfully", uploadedDocuments, HttpStatus.CREATED));

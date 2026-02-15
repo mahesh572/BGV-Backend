@@ -16,6 +16,7 @@ import com.org.bgv.candidate.repository.CandidateRepository;
 import com.org.bgv.common.VerificationCaseResponse;
 import com.org.bgv.common.navigation.CreateNavigationMenuDto;
 import com.org.bgv.common.navigation.NavigationResponseDto;
+import com.org.bgv.common.navigation.NavigationType;
 import com.org.bgv.common.navigation.UpdateNavigationMenuDto;
 import com.org.bgv.config.SecurityUtils;
 import com.org.bgv.entity.Company;
@@ -51,6 +52,8 @@ public class NavigationMenuService {
         try {
             List<NavigationMenu> rootMenus =
                     navigationMenuRepository.findByParentIsNullOrderByOrderAsc();
+            
+            log.info("rootMenus::::");
 
             List<NavigationMenu> resultMenus;
 
@@ -64,7 +67,7 @@ public class NavigationMenuService {
                         .filter(Objects::nonNull)
                         .collect(Collectors.toList());
 
-                applyCandidateSpecificNavigation(resultMenus);
+             //   applyCandidateSpecificNavigation(resultMenus);
             }
 
             return resultMenus.stream()
@@ -93,13 +96,13 @@ public class NavigationMenuService {
             if (!UserType.COMPANY.name().equalsIgnoreCase(candidate.getSourceType())) {
                 return;
             }
-
+/*
             Set<String> allowedMenus = new HashSet<>(Set.of(
                     "DashBoard", "Basic Details", "Documents",
                     "Education", "Work Experience", "Address",
                     "verification", "Cases"
             ));
-
+*/
             Set<String> checkTypes =
                     verificationCaseRepository.findByCandidateId(candidate.getCandidateId())
                             .stream()
@@ -110,9 +113,9 @@ public class NavigationMenuService {
                             .filter(Objects::nonNull)
                             .collect(Collectors.toSet());
 
-            allowedMenus.addAll(checkTypes);
+        //    allowedMenus.addAll(checkTypes);
 
-            resultMenus.removeIf(menu -> !allowedMenus.contains(menu.getName()));
+        //    resultMenus.removeIf(menu -> !allowedMenus.contains(menu.getName()));
             
 
         } catch (EntityNotFoundException ex) {
@@ -227,16 +230,28 @@ public class NavigationMenuService {
 
     private void mapCreateDtoToEntity(CreateNavigationMenuDto dto, NavigationMenu entity) {
         entity.setName(dto.getName());
-        entity.setHref(dto.getHref());
         entity.setIcon(dto.getIcon());
         entity.setColor(dto.getColor());
-        entity.setType(dto.getType().toUpperCase());
         entity.setLabel(dto.getLabel());
         entity.setPermissions(dto.getPermissions());
         entity.setOrder(dto.getOrder());
         entity.setIsActive(dto.getIsActive());
         entity.setCreatedBy(dto.getCreatedBy());
+
+      //  String type = dto.getType().toUpperCase();
+        entity.setType(dto.getType());
+
+        if (dto.getType()==NavigationType.SECTION) {
+            entity.setHref(null); // 🔒 enforce rule
+            entity.setBasePath(dto.getHref());
+        } else if (dto.getType()==NavigationType.LINK) {
+            if (dto.getHref() == null || dto.getHref().isBlank()) {
+                throw new IllegalArgumentException("LINK menu must have href");
+            }
+            entity.setHref(dto.getHref());
+        }
     }
+
 
     private void mapUpdateDtoToEntity(UpdateNavigationMenuDto dto, NavigationMenu entity) {
         if (dto.getName() != null) entity.setName(dto.getName());
@@ -248,34 +263,62 @@ public class NavigationMenuService {
         if (dto.getIsActive() != null) entity.setIsActive(dto.getIsActive());
     }
     
-    private NavigationMenu filterMenuByPermissions(NavigationMenu menu, List<String> authorities) {
-        // Check if this menu is allowed
-        boolean hasAccess = menu.getPermissions().isEmpty() ||
-                menu.getPermissions().stream().anyMatch(authorities::contains);
+    private NavigationMenu filterMenuByPermissions(
+            NavigationMenu menu,
+            List<String> authorities
+    ) {
+        if (!Boolean.TRUE.equals(menu.getIsActive())) {
+            return null;
+        }
+        
+        // 2️⃣ Hidden → hide
+        if (Boolean.TRUE.equals(menu.getHidden())) {
+            return null;
+        }
 
-        // Recursively filter children
+        // Filter children first
         List<NavigationMenu> filteredChildren = menu.getChildren().stream()
                 .map(child -> filterMenuByPermissions(child, authorities))
-                .filter(Objects::nonNull)
+                .filter(Objects::nonNull) 
                 .collect(Collectors.toList());
 
-        // If menu has access or has accessible children, include it
-        if (hasAccess || !filteredChildren.isEmpty()) {
-            NavigationMenu filtered = new NavigationMenu();
-            filtered.setId(menu.getId());
-            filtered.setName(menu.getName());
-            filtered.setHref(menu.getHref());
-            filtered.setIcon(menu.getIcon());
-            filtered.setColor(menu.getColor());
-            filtered.setLabel(menu.getLabel());
-            filtered.setType(menu.getType());
-            filtered.setOrder(menu.getOrder());
-            filtered.setIsActive(menu.getIsActive());
-            filtered.setPermissions(menu.getPermissions());
-            filtered.setChildren(filteredChildren);
-            return filtered;
+        boolean hasPermission =
+                menu.getPermissions() == null ||
+                menu.getPermissions().isEmpty() ||
+                menu.getPermissions().stream().anyMatch(authorities::contains);
+
+        // SECTION logic
+        if (menu.getType()==NavigationType.SECTION) {
+            if (filteredChildren.isEmpty()) {
+                return null; // ❌ hide empty sections
+            }
+            return shallowCopy(menu, filteredChildren);
+        }
+
+        // LINK logic
+        if (menu.getType() == NavigationType.LINK) {
+            if (!hasPermission) {
+                return null;
+            }
+            return shallowCopy(menu, filteredChildren);
         }
 
         return null;
     }
+    private NavigationMenu shallowCopy(NavigationMenu menu, List<NavigationMenu> children) {
+        NavigationMenu copy = new NavigationMenu();
+        copy.setId(menu.getId());
+        copy.setName(menu.getName());
+        copy.setHref(menu.getHref());
+        copy.setIcon(menu.getIcon());
+        copy.setColor(menu.getColor());
+        copy.setLabel(menu.getLabel());
+        copy.setType(menu.getType());
+        copy.setOrder(menu.getOrder());
+        copy.setIsActive(menu.getIsActive());
+        copy.setPermissions(menu.getPermissions());
+        copy.setChildren(children);
+        return copy;
+    }
+
 }
