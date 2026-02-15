@@ -15,5 +15,29 @@ public enum CaseCheckStatus {
     INFO_REQUESTED,
     VERIFIED,
     REVERIFY_REQUIRED,
+    ACTION_REQUIRED,
     ESCALATED;
+	
+//	CANDIDATE_PENDING("Candidate Pending"),  // Waiting for initial submission
+ //   ACTION_REQUIRED("Action Required"), // Vendor reviewed and asked for clarification
+	
+	
+	
+	// Candidate phase
+   // CANDIDATE_PENDING,   // Candidate filling details
+  //  SUBMITTED,           // Submitted for review
+
+    // Vendor phase
+  //  IN_PROGRESS,         // Vendor verifying
+
+    // Back to candidate
+  //  ACTION_REQUIRED,     // Open verification action exists
+
+ //   // Terminal states
+ //   VERIFIED,            // Successfully verified
+ //   FAILED,              // Rejected by vendor
+
+    // Exceptional
+ //   ON_HOLD,
+  //  ESCALATED
 }

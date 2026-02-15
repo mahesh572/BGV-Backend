@@ -84,7 +84,7 @@ public class AdminController {
 	        	// Profile creation
 	        	BasicDetailsDTO basicDetailsDTO = userMapper.mapUserDTOToBasicdetails(userDto);
 	        	logger.info("AdminController::::::profileservice:::::START:::::{}",basicDetailsDTO);
-	        	basicDetailsDTO = profileService.createProfile(basicDetailsDTO);
+	        //	basicDetailsDTO = profileService.createProfile(basicDetailsDTO);
 	        	
 	            return ResponseEntity.status(HttpStatus.CREATED)
 	                    .body(CustomApiResponse.success("User created successfully", createdUser, HttpStatus.CREATED));

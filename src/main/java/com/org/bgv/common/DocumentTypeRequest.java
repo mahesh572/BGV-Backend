@@ -19,6 +19,7 @@ public class DocumentTypeRequest {
     private String upload;
     private String code;
     private Double price;
+    private Integer maxFiles;
     
     List<DocumentAttributeRequest> attributes;
 }

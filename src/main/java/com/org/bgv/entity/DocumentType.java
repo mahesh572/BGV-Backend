@@ -55,6 +55,9 @@ public class DocumentType {
     private Double price;
     
     private Boolean active = true;
+    
+    @Column(name = "max_files")
+    private Integer maxFiles;
 
     // getters and setters
     

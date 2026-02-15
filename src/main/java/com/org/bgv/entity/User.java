@@ -54,7 +54,6 @@ public class User {
     private LocalDate dateOfBirth;
     
     @Column(name = "passwordResetrequired",
-    		nullable = false, 
             columnDefinition = "boolean default false"
     		)
     private Boolean passwordResetrequired;

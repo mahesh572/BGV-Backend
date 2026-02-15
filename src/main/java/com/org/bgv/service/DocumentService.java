@@ -1,5 +1,6 @@
 package com.org.bgv.service;
 
+import com.org.bgv.candidate.dto.CandidateActionCatalog;
 import com.org.bgv.candidate.entity.Candidate;
 import com.org.bgv.candidate.entity.EducationHistory;
 import com.org.bgv.candidate.entity.IdentityProof;
@@ -52,8 +53,13 @@ import com.org.bgv.repository.VerificationCaseDocumentLinkRepository;
 import com.org.bgv.repository.VerificationCaseDocumentRepository;
 import com.org.bgv.repository.VerificationCaseRepository;
 import com.org.bgv.s3.S3StorageService;
+import com.org.bgv.vendor.action.dto.ActionDTO;
+import com.org.bgv.vendor.dto.ActionLevel;
+import com.org.bgv.vendor.dto.ActionStatus;
+import com.org.bgv.vendor.dto.ActionType;
 import com.org.bgv.vendor.entity.CategoryEvidenceType;
 import com.org.bgv.vendor.entity.EvidenceType;
+import com.org.bgv.vendor.entity.VerificationAction;
 import com.org.bgv.vendor.repository.CategoryEvidenceTypeRepository;
 
 import jakarta.persistence.EntityNotFoundException;
@@ -119,7 +125,9 @@ public class DocumentService {
             Long typeId,
             Long objectId,
             Long caseId,
-            Long checkId) {
+            Long checkId,
+            String action,
+            Long oldDocId) {
 
         validateFiles(files);
 
@@ -134,9 +142,24 @@ public class DocumentService {
 
         SectionConstants section =
                 SectionConstants.fromNameOrValue(category.getName());
+        
+        Document oldDocument = null;
+        DocumentStatus status = DocumentStatus.UPLOADED;
+
+        if ("REUPLOAD".equalsIgnoreCase(action)) {
+            oldDocument = handleReupload(
+                    candidate,
+                    documentType,
+                    caseId,
+                    checkId,
+                    oldDocId
+            );
+            
+            status = DocumentStatus.RE_UPLOADED;
+        }
 
         for (MultipartFile file : files) {
-            uploadSingleFile(file, candidate, category, documentType, section, objectId,caseId,checkId);
+            uploadSingleFile(file, candidate, category, documentType, section, objectId,caseId,checkId,status);
         }
 
         return getDocumentsBySection(candidateId,caseId, section.getValue(),caseId,checkId);
@@ -159,7 +182,8 @@ public class DocumentService {
             SectionConstants section,
             Long objectId,
             Long caseId,
-            Long checkId
+            Long checkId,
+            DocumentStatus status
     ) {
         log.info(
             "Document upload started | candidateId={} | caseId={} | checkId={} | section={} | docType={}",
@@ -255,7 +279,7 @@ public class DocumentService {
                 .fileUrl(upload.getFirst())
                 .awsDocKey(upload.getSecond())
                 .fileSize(file.getSize())
-                .status(DocumentStatus.UPLOADED)
+                .status(status)
                 .uploadedAt(LocalDateTime.now())
                 .objectId(objectId)
                 .entityType(DocumentEntityType.PRIMARY)
@@ -522,24 +546,24 @@ public class DocumentService {
     
     
     private FileDTO convertToFileDTO(BaseDocument document) {
-    	try {
-    		logger.info("document:::::::::::::status:::::::::::::::::::::::::::::::::::::::::::::::::::::::{}",document.getStatus());
-    		return FileDTO.builder()
-    				.fileId(document.getDocId())
-    				.fileName(extractFileName(document.getFileUrl()))
-    				.fileSize(document.getFileSize())
-    				.fileUrl(document.getFileUrl())
-    				.uploadedAt(document.getUploadedAt())
-    				.status(document.getStatus())
-    				.fileType(extractFileType(document.getFileUrl()))
-    				.build();
-    		
-    	}catch (Exception e) {
-    		return null;
-		}
-		
-    	
+
+        VerificationAction action = document.getLastAction();
+
+        return FileDTO.builder()
+                .fileId(document.getDocId())
+                .fileName(extractFileName(document.getFileUrl()))
+                .fileSize(document.getFileSize())
+                .fileUrl(document.getFileUrl())
+                .uploadedAt(document.getUploadedAt())
+                .status(document.getStatus())
+                .actionRemarks(
+                        action != null ? action.getRemarks() : null
+                )
+                .fileType(extractFileType(document.getFileUrl()))
+                .actions(CandidateActionCatalog.documentActions(document.getStatus()))
+                .build();
     }
+    
 
     private String extractFileName(String fileUrl) {
         if (fileUrl == null) return null;
@@ -994,7 +1018,7 @@ public class DocumentService {
             .typeName(documentType.getName())
             .description(null)
             .isRequired(Boolean.TRUE)
-            .maxFiles(null)
+            .maxFiles(documentType.getMaxFiles())
             .customTypeName(null)
             .build();
     }
@@ -1260,9 +1284,10 @@ public class DocumentService {
     // Generic Document to FileDTO converter
     private List<FileDTO> convertDocumentsToFileDTOs(List<Document> documents) {
         return documents.stream()
-            .filter(doc -> doc.getStatus() != DocumentStatus.DELETED)
-            .map(this::convertToFileDTO)
-            .collect(Collectors.toList());
+                .filter(doc -> doc.getStatus() != DocumentStatus.DELETED)
+                .filter(doc -> !Boolean.FALSE.equals(doc.getActive()))
+                .map(this::convertToFileDTO)
+                .collect(Collectors.toList());
     }
     
     private static List<FieldDTO> createAadharFields() {
@@ -1462,6 +1487,61 @@ public class DocumentService {
 	}
 	
 	
-	
+	private Document handleReupload(
+	        Candidate candidate,
+	        DocumentType documentType,
+	        Long caseId,
+	        Long checkId,
+	        Long docId
+	) {
+
+	    // 1️⃣ Find old document by docId
+	    Document oldDocument = documentRepository.findById(docId)
+	            .orElseThrow(() ->
+	                    new RuntimeException("Document not found: " + docId));
+
+	    // 2️⃣ Validate ownership
+	    if (!oldDocument.getCandidate().getCandidateId().equals(candidate.getCandidateId())) {
+	        throw new RuntimeException("Document does not belong to candidate");
+	    }
+
+	    // 3️⃣ Validate case & check match
+	    if (caseId != null && 
+	        (oldDocument.getVerificationCase() == null ||
+	         !oldDocument.getVerificationCase().getCaseId().equals(caseId))) {
+	        throw new RuntimeException("Document does not belong to this case");
+	    }
+
+	    if (checkId != null && 
+	        (oldDocument.getVerificationCaseCheck() == null ||
+	         !oldDocument.getVerificationCaseCheck().getCaseCheckId().equals(checkId))) {
+	        throw new RuntimeException("Document does not belong to this check");
+	    }
+
+	    // 4️⃣ Validate vendor action exists
+	    if (oldDocument.getLastAction() == null) {
+	        throw new RuntimeException("No vendor action found for this document");
+	    }
+
+	    // 5️⃣ Validate allowed statuses
+	    if (!DocumentStatus.REQUEST_INFO.equals(oldDocument.getStatus())
+	            && !DocumentStatus.INSUFFICIENT.equals(oldDocument.getStatus())) {
+	        throw new RuntimeException("Document is not eligible for reupload");
+	    }
+
+	    // 6️⃣ Mark old document resolved
+	    oldDocument.setActive(false);
+	  //  oldDocument.setStatus(DocumentStatus.RESOLVED);
+	  //  oldDocument.setResolvedAt(LocalDateTime.now());
+	  //  oldDocument.setResolvedAction(oldDocument.getLastAction());
+	    oldDocument.getLastAction().setStatus(ActionStatus.RESOLVED);
+	    
+
+	    documentRepository.save(oldDocument);
+
+	    return oldDocument;
+	}
+
+
 	
 }

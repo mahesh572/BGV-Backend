@@ -31,7 +31,7 @@ public class VerificationAction {
     // Action Scope
     // -------------------------
     @Enumerated(EnumType.STRING)
-    @Column(nullable = false, length = 20)
+    @Column
     private ActionLevel actionLevel; 
     // CASE, CHECK, OBJECT, DOCUMENT
 
@@ -87,6 +87,10 @@ public class VerificationAction {
     @Column(nullable = false, length = 20)
     private ActionStatus status;
     // OPEN, RESOLVED
+    
+    @Column(name = "notification_sent")
+    private Boolean notificationSent = false;
+
 
     // -------------------------
     // Audit

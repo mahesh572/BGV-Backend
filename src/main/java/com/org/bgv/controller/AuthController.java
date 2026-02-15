@@ -15,6 +15,7 @@ import org.springframework.security.core.Authentication;
 import org.springframework.security.core.AuthenticationException;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.web.bind.annotation.CookieValue;
+import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
@@ -24,6 +25,8 @@ import org.springframework.web.bind.annotation.RestController;
 
 import com.org.bgv.api.response.CustomApiResponse;
 import com.org.bgv.auth.dto.ResetPasswordRequest;
+import com.org.bgv.auth.dto.TokenValidationResult;
+import com.org.bgv.auth.service.ResetTokenService;
 import com.org.bgv.common.ChangePasswordRequest;
 import com.org.bgv.common.navigation.PortalType;
 import com.org.bgv.company.repository.EmployeeRepository;
@@ -64,6 +67,11 @@ public class AuthController {
     
     @Autowired
     private EmployeeRepository employeeRepository;
+    
+    @Autowired
+    private ResetTokenService resetTokenService;
+   
+    
 
     @PostMapping("/login")
     public ResponseEntity<CustomApiResponse<AuthResponse>> login(
@@ -241,6 +249,36 @@ public class AuthController {
                 )
         );
     }
+    
+    
+    @GetMapping("/password-reset/validate")
+    public ResponseEntity<CustomApiResponse<Void>> validateResetToken(
+            @RequestParam String token
+    ) {
+        TokenValidationResult result = resetTokenService.validateToken(token);
+
+        if (!result.valid()) {
+            return ResponseEntity
+                    .status(HttpStatus.BAD_REQUEST)
+                    .body(
+                            CustomApiResponse.failure(
+                                    result.message(),
+                                    HttpStatus.BAD_REQUEST
+                            )
+                    );
+        }
+
+        return ResponseEntity.ok(
+                CustomApiResponse.success(
+                        result.message(),
+                        null,
+                        HttpStatus.OK
+                )
+        );
+    }
+
+
+    
     
     
     private void validatePortalAccess(String portal, CustomUserDetails userDetails) {

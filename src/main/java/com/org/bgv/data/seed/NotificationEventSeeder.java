@@ -4,6 +4,9 @@ import java.util.List;
 
 import org.springframework.boot.ApplicationArguments;
 import org.springframework.boot.ApplicationRunner;
+import org.springframework.boot.context.event.ApplicationReadyEvent;
+import org.springframework.context.annotation.DependsOn;
+import org.springframework.context.event.EventListener;
 import org.springframework.stereotype.Component;
 
 import com.org.bgv.notifications.NotificationEvent;
@@ -15,15 +18,18 @@ import lombok.RequiredArgsConstructor;
 
 @Component
 @RequiredArgsConstructor
+@DependsOn("entityManagerFactory") // ensure JPA tables are ready
 public class NotificationEventSeeder implements ApplicationRunner {
 
     private final NotificationEventMasterRepository repository;
 
     @Override
+   // @EventListener(ApplicationReadyEvent.class)
     public void run(ApplicationArguments args) {
         seed();
     }
 
+  //  @EventListener(ApplicationReadyEvent.class)
     private void seed() {
 
         // ================= ACCOUNT =================

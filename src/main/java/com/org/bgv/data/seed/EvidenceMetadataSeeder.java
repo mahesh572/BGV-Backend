@@ -1,7 +1,10 @@
 package com.org.bgv.data.seed;
 
+import com.org.bgv.common.CheckCategoryRequest;
+import com.org.bgv.common.CheckCategoryResponse;
 import com.org.bgv.entity.CheckCategory;
 import com.org.bgv.repository.*;
+import com.org.bgv.service.CheckCategoryService;
 import com.org.bgv.vendor.entity.CategoryEvidenceType;
 import com.org.bgv.vendor.entity.EvidenceType;
 import com.org.bgv.vendor.repository.CategoryEvidenceTypeRepository;
@@ -9,22 +12,106 @@ import com.org.bgv.vendor.repository.EvidenceTypeRepository;
 
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+
+import java.util.List;
+
 import org.springframework.boot.CommandLineRunner;
+import org.springframework.boot.context.event.ApplicationReadyEvent;
 import org.springframework.context.annotation.Configuration;
+import org.springframework.context.annotation.DependsOn;
+import org.springframework.context.event.EventListener;
 
 @Configuration
 @RequiredArgsConstructor
 @Slf4j
+@DependsOn("entityManagerFactory") // ensure JPA tables are ready
 public class EvidenceMetadataSeeder implements CommandLineRunner {
 
     private final EvidenceTypeRepository evidenceTypeRepository;
     private final CategoryEvidenceTypeRepository categoryEvidenceTypeRepository;
     private final CheckCategoryRepository checkCategoryRepository;
+    private final CheckCategoryService checkCategoryService;
 
     @Override
+   // @EventListener(ApplicationReadyEvent.class)
     public void run(String... args) {
 
         log.info("🌱 Seeding Evidence Metadata...");
+        
+        
+     // 1️⃣ Define categories
+        List<CheckCategoryRequest> defaultCategories = List.of(
+                CheckCategoryRequest.builder()
+                        .name("Identity")
+                        .label("Identity")
+                        .description("Identity")
+                        .code("IDENTITY")
+                        .hasDocuments(true)
+                        .isActive(true)
+                        .price(0.0)
+                        .build(),
+                CheckCategoryRequest.builder()
+                        .name("Education")
+                        .label("Education")
+                        .description("Education")
+                        .code("EDUCATION")
+                        .hasDocuments(true)
+                        .isActive(true)
+                        .price(0.0)
+                        .build(),
+                CheckCategoryRequest.builder()
+                        .name("Work Experience")
+                        .label("Professional/Work Experience")
+                        .description("Professional/Work Experience")
+                        .code("WORK")
+                        .hasDocuments(true)
+                        .isActive(true)
+                        .price(0.0)
+                        .build(),
+                CheckCategoryRequest.builder()
+                        .name("Other")
+                        .label("Other")
+                        .description("Other")
+                        .code("OTHER")
+                        .hasDocuments(false)
+                        .isActive(true)
+                        .price(0.0)
+                        .build(),
+                CheckCategoryRequest.builder()
+                        .name("Address")
+                        .label("Address")
+                        .description("Address")
+                        .code("ADDRESS")
+                        .hasDocuments(true)
+                        .isActive(true)
+                        .price(0.0)
+                        .build(),
+                CheckCategoryRequest.builder()
+                        .name("Court")
+                        .label("Court")
+                        .description("Court")
+                        .code("COURT")
+                        .hasDocuments(false)
+                        .isActive(true)
+                        .price(0.0)
+                        .build()
+        );
+
+        // 2️⃣ Create categories if they do not exist
+        for (CheckCategoryRequest req : defaultCategories) {
+            if (!checkCategoryRepository.existsByCode(req.getCode())) {
+                try {
+                    CheckCategoryResponse resp = checkCategoryService.createCheckCategory(req);
+                    log.info("Created category: {}", resp.getCode());
+                } catch (Exception e) {
+                    log.warn("Skipping category {}: {}", req.getCode(), e.getMessage());
+                }
+            } else {
+                log.info("Category {} already exists, skipping", req.getCode());
+            }
+        }
+
+        log.info("✅ Check categories seeding completed");
 
         // 1️⃣ Create Evidence Types
         EvidenceType manualVerification = createEvidenceType(
@@ -64,6 +151,7 @@ public class EvidenceMetadataSeeder implements CommandLineRunner {
         log.info("✅ Evidence Metadata Seeding Completed");
     }
 
+   // @EventListener(ApplicationReadyEvent.class)
     private EvidenceType createEvidenceType(
             String code,
             String label,

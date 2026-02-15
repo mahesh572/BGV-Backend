@@ -127,6 +127,8 @@ public class UserController {
                     .body(CustomApiResponse.failure("Failed to assign role: " + e.getMessage(), HttpStatus.INTERNAL_SERVER_ERROR));
         }
     }
+    
+    
     @GetMapping("/user-from-token")
     public ResponseEntity<CustomApiResponse<UserDto>> getUserFromToken(
             @RequestHeader("Authorization") String authorizationHeader) {

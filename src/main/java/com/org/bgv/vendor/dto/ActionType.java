@@ -10,5 +10,7 @@ public enum ActionType {
     DOWNLOAD,
     APPROVE,
     REVERIFY,
-    ESCALATE
+    ESCALATE,
+    RE_UPLOAD
+    
 }

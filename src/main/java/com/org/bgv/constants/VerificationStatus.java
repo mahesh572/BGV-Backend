@@ -15,7 +15,10 @@ public enum VerificationStatus {
 	VERIFIED("Verified"),
 	ACTIVE("ACTIVE"),
     DELETED("DELETED"),
+    CANDIDATE_PENDING("Candidate Pending"),  // Waiting for initial submission
+    ACTION_REQUIRED("Action Required"), // Vendor reviewed and asked for clarification
 	NOT_UPLOADED("Not Uploaded");
+	
 	
 private final String displayName;
     

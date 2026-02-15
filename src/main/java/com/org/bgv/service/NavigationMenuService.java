@@ -270,11 +270,16 @@ public class NavigationMenuService {
         if (!Boolean.TRUE.equals(menu.getIsActive())) {
             return null;
         }
+        
+        // 2️⃣ Hidden → hide
+        if (Boolean.TRUE.equals(menu.getHidden())) {
+            return null;
+        }
 
         // Filter children first
         List<NavigationMenu> filteredChildren = menu.getChildren().stream()
                 .map(child -> filterMenuByPermissions(child, authorities))
-                .filter(Objects::nonNull)
+                .filter(Objects::nonNull) 
                 .collect(Collectors.toList());
 
         boolean hasPermission =

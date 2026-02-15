@@ -3,6 +3,7 @@ package com.org.bgv.entity;
 import java.time.LocalDateTime;
 
 import com.org.bgv.common.DocumentStatus;
+import com.org.bgv.vendor.entity.VerificationAction;
 
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
@@ -69,4 +70,10 @@ public class IdentityDocuments implements BaseDocument{
 
     @Column(name = "object_id")
     private Long objectId;
+
+	@Override
+	public VerificationAction getLastAction() {
+		// TODO Auto-generated method stub
+		return null;
+	}
 }

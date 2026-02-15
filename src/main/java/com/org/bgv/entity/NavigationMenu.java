@@ -83,6 +83,9 @@ public class NavigationMenu {
 
     @Column(nullable = false)
     private Boolean isActive = true;
+    
+    @Column
+    private Boolean hidden = false;
 
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "parent_id")

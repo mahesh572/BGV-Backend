@@ -3,6 +3,7 @@ package com.org.bgv.entity;
 import java.time.LocalDateTime;
 
 import com.org.bgv.common.DocumentStatus;
+import com.org.bgv.vendor.entity.VerificationAction;
 
 public interface BaseDocument {
 	Long getDocId();
@@ -15,5 +16,5 @@ public interface BaseDocument {
     LocalDateTime getVerifiedAt();
     String getComments();
     String getAwsDocKey();
-    
+    VerificationAction getLastAction();   
 }

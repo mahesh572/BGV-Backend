@@ -15,6 +15,8 @@ public interface RoleRepository extends JpaRepository<Role, Long> {
     List<Role> findByType(Long type);
     boolean existsByName(String name);
     
+    List<Role> findByNameIn(List<String> names);
+    
  // Using native SQL query
     @Query(value = "SELECT r.* FROM roles r " +
                    "INNER JOIN user_roles ur ON r.id = ur.role_id " +

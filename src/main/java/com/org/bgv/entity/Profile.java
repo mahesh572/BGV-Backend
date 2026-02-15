@@ -8,12 +8,8 @@ import java.time.LocalDateTime;
 
 @Entity
 @Table(
-    name = "profiles",
-    indexes = {
-        @Index(name = "idx_profile_user", columnList = "user_id"),
-        @Index(name = "idx_profile_pan_hash", columnList = "pan_hash"),
-        @Index(name = "idx_profile_aadhaar_hash", columnList = "aadhaar_hash")
-    }
+    name = "profile"
+    
 )
 @Getter
 @Setter
@@ -37,12 +33,23 @@ public class Profile {
     /* =========================
        BASIC PERSONAL DETAILS
        ========================= */
+    
+    @Column(name = "name_prefix", length = 10)
+    private String namePrefix;
+    
 
     @Column(name = "first_name")
     private String firstName;
 
     @Column(name = "last_name")
     private String lastName;
+    
+    @Column(name = "parent_name")
+    private String parentName;
+
+    @Column(name = "parent_relationship")
+    private String parentRelationship;
+    // FATHER, MOTHER, GUARDIAN
 
     @Column(name = "nationality")
     private String nationality;
@@ -69,34 +76,6 @@ public class Profile {
     @Column(name = "phone_verified_at")
     private LocalDateTime phoneVerifiedAt;
 
-    /* =========================
-       IDENTITY (HASHED)
-       ========================= */
-
-    @Column(name = "pan_hash", length = 64)
-    private String panHash;
-
-    @Column(name = "aadhaar_hash", length = 64)
-    private String aadhaarHash;
-
-    @Column(name = "identity_verified")
-    private Boolean identityVerified;
-
-    @Column(name = "identity_verified_at")
-    private LocalDateTime identityVerifiedAt;
-
-    @Column(name = "identity_verified_by")
-    private String identityVerifiedBy;
-
-    /* =========================
-       DOCUMENT INFO
-       ========================= */
-
-    @Column(name = "passport_number")
-    private String passportNumber;
-
-    @Column(name = "passport_expiry")
-    private LocalDate passportExpiry;
 
     @Column(name = "linkedin_url")
     private String linkedinUrl;
@@ -113,6 +92,13 @@ public class Profile {
 
     @Column(name = "consent_source")
     private String consentSource;
+    
+    @Column(name = "profile_pic_url")
+    private String profilepicurl;
+
+    @Column(name = "profile_pic_key") 
+    private String profilepicKey; // storage reference (important)
+    
     // SELF, EMPLOYER, UNIVERSITY, SYSTEM
 
     /* =========================
@@ -158,9 +144,7 @@ public class Profile {
         if (this.phoneVerified == null) {
             this.phoneVerified = false;
         }
-        if (this.identityVerified == null) {
-            this.identityVerified = false;
-        }
+        
         if (this.consentProvided == null) {
             this.consentProvided = false;
         }

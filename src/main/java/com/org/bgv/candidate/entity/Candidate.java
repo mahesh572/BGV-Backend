@@ -49,6 +49,7 @@ public class Candidate {
     @Column(name = "candidate_ref", nullable = false, unique = true)
     private String candidateRef;
     
+    /*
     @Column(name = "first_name")
     private String firstName;
     
@@ -74,7 +75,7 @@ public class Candidate {
     @Column(name = "email_address")
     private String emailAddress;
 
-    
+    */
     
     private String sourceType;
     
@@ -82,9 +83,11 @@ public class Candidate {
     @JoinColumn(name = "user_id")
     private User user;
     
+    
     @OneToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "profile_id")
     private Profile profile;
+    
     
     @Column(name = "uuid", unique = true, nullable = false)
     private String uuid;

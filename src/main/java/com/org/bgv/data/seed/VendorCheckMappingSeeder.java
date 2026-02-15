@@ -3,7 +3,9 @@ package com.org.bgv.data.seed;
 import java.util.List;
 
 import org.springframework.boot.CommandLineRunner;
+import org.springframework.boot.context.event.ApplicationReadyEvent;
 import org.springframework.context.annotation.Configuration;
+import org.springframework.context.event.EventListener;
 
 import com.org.bgv.entity.CheckCategory;
 import com.org.bgv.entity.Vendor;
@@ -27,6 +29,7 @@ public class VendorCheckMappingSeeder implements CommandLineRunner {
 
     @Override
     @Transactional
+   // @EventListener(ApplicationReadyEvent.class)
     public void run(String... args) {
         log.info("🌱 VendorCheckMapping seeding started...");
 

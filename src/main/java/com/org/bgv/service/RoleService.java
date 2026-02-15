@@ -395,4 +395,25 @@ public class RoleService {
             log.debug("No roles to remove for user ID: {}", userId);
         }
     }
+    
+    public void assignRolesToUserByName(Long userId, List<String> roleNames) {
+
+        User user = userRepository.findById(userId)
+                .orElseThrow(() -> new RuntimeException("User not found"));
+
+        List<Role> roles = roleRepository.findByNameIn(roleNames);
+
+        if (roles.size() != roleNames.size()) {
+            throw new RuntimeException("One or more roles not found");
+        }
+
+        roles.forEach(role -> {
+            if (!userRoleRepository.existsByUserIdAndRoleId(userId, role.getId())) {
+                userRoleRepository.save(
+                    UserRole.builder().user(user).role(role).build()
+                );
+            }
+        });
+    }
+
 }

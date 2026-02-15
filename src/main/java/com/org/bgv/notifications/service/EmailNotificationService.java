@@ -11,9 +11,11 @@ import com.org.bgv.repository.EmailTemplateRepository;
 import com.org.bgv.service.EmailService;
 
 import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 
 @RequiredArgsConstructor
 @Service
+@Slf4j
 public class EmailNotificationService {
 
     private final EmailTemplateRepository templateRepository;
@@ -28,18 +30,34 @@ public class EmailNotificationService {
             NotificationContext context
     ) {
 
+        log.info(
+                "📧 Email notification started | event={} | companyId={} | templateCode={}",
+                context.getEvent(),
+                context.getCompanyId(),
+                channel.getTemplateCode()
+        );
+
         String to = recipientResolver.resolve(recipient, context);
         if (to == null) {
+            log.warn(
+                    "❌ Email recipient unresolved | recipientId={} | event={}",
+                    recipient.getId(),
+                    context.getEvent()
+            );
+
             logRepository.save(
-                NotificationLogFactory.email(
-                    context, recipient, channel, false,
-                    "Recipient email not resolved"
-                )
+                    NotificationLogFactory.email(
+                            context, recipient, channel, false,
+                            "Recipient email not resolved"
+                    )
             );
             return;
         }
 
+        log.debug("📨 Resolved recipient email: {}", to);
+
         String from = senderResolver.resolveFrom(context);
+        log.debug("✉️ Resolved sender email: {}", from);
 
         EmailTemplate template =
                 templateRepository
@@ -49,17 +67,40 @@ public class EmailNotificationService {
                         )
                         .orElse(null);
 
-        if (template == null || !Boolean.TRUE.equals(template.getIsActive())) {
+        if (template == null) {
+            log.warn(
+                    "❌ Email template not found | templateCode={} | companyId={}",
+                    channel.getTemplateCode(),
+                    context.getCompanyId()
+            );
+
             logRepository.save(
-                NotificationLogFactory.email(
-                    context, recipient, channel, false,
-                    "Template missing or inactive"
-                )
+                    NotificationLogFactory.email(
+                            context, recipient, channel, false,
+                            "Template not found"
+                    )
+            );
+            return;
+        }
+
+        if (!Boolean.TRUE.equals(template.getIsActive())) {
+            log.warn(
+                    "⛔ Email template inactive | templateCode={}",
+                    channel.getTemplateCode()
+            );
+
+            logRepository.save(
+                    NotificationLogFactory.email(
+                            context, recipient, channel, false,
+                            "Template inactive"
+                    )
             );
             return;
         }
 
         try {
+            log.debug("🧩 Rendering email subject and body");
+
             String subject = TemplateEngine.render(
                     template.getSubject(),
                     context.getVariables()
@@ -70,21 +111,44 @@ public class EmailNotificationService {
                     context.getVariables()
             );
 
+            log.info(
+                    "🚀 Sending email | from={} | to={} | body={} | subject='{}'",
+                    from,
+                    to,
+                    body,
+                    subject
+            );
+
             emailService.sendEmail(from, to, subject, body);
 
+            log.info(
+                    "✅ Email sent successfully | to={} | templateCode={}",
+                    to,
+                    channel.getTemplateCode()
+            );
+
             logRepository.save(
-                NotificationLogFactory.email(
-                    context, recipient, channel, true, null
-                )
+                    NotificationLogFactory.email(
+                            context, recipient, channel, true, null
+                    )
             );
 
         } catch (Exception ex) {
+        	ex.printStackTrace();
+
+            log.error(
+                    "❌ Email send failed | to={} | templateCode={} | error={}",
+                    to,
+                    channel.getTemplateCode(),
+                    ex.getMessage(),
+                    ex
+            );
+
             logRepository.save(
-                NotificationLogFactory.email(
-                    context, recipient, channel, false, ex.getMessage()
-                )
+                    NotificationLogFactory.email(
+                            context, recipient, channel, false, ex.getMessage()
+                    )
             );
         }
     }
 }
-

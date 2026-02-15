@@ -40,11 +40,11 @@ public class Company {
     
     
     @Enumerated(EnumType.STRING)
-    @Column(nullable = false)
+    @Column
     private CompanyType companyType;
     
     @Enumerated(EnumType.STRING)
-    @Column(nullable = false)
+    @Column
     private CompanyLegalType legalType;
     
     @Column(name = "registration_number", unique = true)
@@ -58,7 +58,7 @@ public class Company {
     
     
     @Enumerated(EnumType.STRING)
-    @Column(nullable = false)
+    @Column
     private IndustryType industry;
     
     @Enumerated(EnumType.STRING)

@@ -590,7 +590,7 @@ try {
 
         validatePasswords(request);
 
-        PasswordResetToken resetToken = resetTokenService.validateToken(token);
+        PasswordResetToken resetToken = resetTokenService.getValidTokenOrThrow(token);
 
         User user = userRepository.findById(resetToken.getUserId())
                 .orElseThrow(() -> new RuntimeException("User not found with id: " + resetToken.getUserId()));

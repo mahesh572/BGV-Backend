@@ -1,6 +1,8 @@
 package com.org.bgv.notifications.dto;
 
 public enum NotificationPlaceholder {
+	
+	USER_FULL_NAME("userFullName","User Full Name"),
 
     // 🔹 Employer / Organization
     EMPLOYER_BRAND_NAME("employerBrandName", "Employer Brand Name"),
@@ -16,10 +18,11 @@ public enum NotificationPlaceholder {
     // 🔹 Employee / Employer Account
     EMPLOYEE_NAME("employeeName", "Employee Name"),
     EMPLOYEE_EMAIL("employeeEmail", "Employee Email"),
+    EMPLOYEE_LINK_EXPIRY_DURATION("",""),
 
     TEMPORARY_PASSWORD("temporaryPassword", "Temporary Password"),
     RESET_PASSWORD_LINK("resetPasswordLink", "Reset Password Link"),
-    LINK_EXPIRY_DURATION("linkExpiryDuration", "Reset Link Expiry Duration"),
+    PASSWORD_LINK_EXPIRY_DURATION("linkExpiryDuration", "Reset Link Expiry Duration"),
 
     // 🔹 Candidate
     CANDIDATE_NAME("candidateName", "Candidate Name"),
@@ -35,7 +38,13 @@ public enum NotificationPlaceholder {
 
     // 🔹 SLA / Internal
     SLA_DEADLINE("slaDeadline", "SLA Deadline"),
-    INTERNAL_REMARKS("internalRemarks", "Internal Remarks");
+    INTERNAL_REMARKS("internalRemarks", "Internal Remarks"),
+	
+    VERIFICATION_LINK("verificationLink","Verification Link"),
+    VERIFICATION_LINK_EXPIRY_DATE("verificationExpiryLink","Verification Expiry Link"),
+	CURRENT_YEAR("currentYear","Current Year");
+	
+	
 
     private final String key;
     private final String label;

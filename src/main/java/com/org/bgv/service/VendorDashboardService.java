@@ -189,9 +189,10 @@ public class VendorDashboardService {
             
             Map<String, Object> caseData = Map.of(
                 "id", verificationCase.getCaseId(),
-                "candidate", candidate != null ? 
-                    candidate.getProfile().getFirstName() + " " + candidate.getProfile().getLastName() : 
-                    "Unknown Candidate",
+                "candidate",
+                (candidate != null && candidate.getProfile() != null)
+                    ? candidate.getProfile().getFirstName() + " " + candidate.getProfile().getLastName()
+                    : "Profile Pending",
                 "employer", company != null ? company.getCompanyName() : "Unknown Company",
                 "checks", checks,
                 "slaStatus", slaStatus,

@@ -20,6 +20,8 @@ public class RoleConstants {
 	
 	public static final String ROLE_COMAPNY_ADMINISTRATOR = "Company Administrator";
 	
+	public static final String ROLE_USER = "User";
+	
 	
 
 	

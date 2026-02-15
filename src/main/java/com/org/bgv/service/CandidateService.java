@@ -96,6 +96,8 @@ public class CandidateService {
     private final CandidateDetailsMapper candidateDetailsMapper;
     private final IdentityHashUtil identityHashUtil;
     private final ReferenceNumberGenerator referenceNumberGenerator;
+  //  private final UserService userService;
+    private final RoleService roleService;
     
     private static final Logger log = LoggerFactory.getLogger(CandidateService.class);
     
@@ -131,6 +133,31 @@ public class CandidateService {
 
                     return newUser;
                 });
+            
+         // 1️⃣ Ensure Profile exists
+            if (!profileRepository.existsByUserUserId(user.getUserId())) {
+
+                log.info("Profile not found. Creating profile for userId={}", user.getUserId());
+
+                Profile profile = Profile.builder()
+                        .user(user)
+                        .firstName(dto.getFirstName())
+                        .lastName(dto.getLastName())
+                        .phoneNumber(dto.getMobileNo())
+                      //  .profileSource(Constants.PROFILE_SOURCE_EMPLOYER)
+                      //  .lastUpdatedSource(Constants.UPDATE_SOURCE_SYSTEM)
+                      //  .status(Constants.PROFILE_STATUS_DRAFT)
+                        .consentProvided(false)
+                        .build();
+
+                profileRepository.save(profile);
+
+                log.info("Profile created successfully for userId={}", user.getUserId());
+
+            } else {
+                log.debug("Profile already exists for userId={}", user.getUserId());
+            }
+
 
             log.debug("Using userId={} for candidate creation", user.getUserId());
 
@@ -191,6 +218,14 @@ public class CandidateService {
 
             log.info("Candidate creation completed successfully. Email={}, CompanyId={}",
                     dto.getEmail(), dto.getCompanyId());
+            
+            // assigning roles User,Candidate
+            
+            List<String> rolenames = new ArrayList<>();
+            rolenames.add(RoleConstants.ROLE_CANDIDATE);
+            rolenames.add(RoleConstants.ROLE_USER);
+            
+            roleService.assignRolesToUserByName(user.getUserId(), rolenames);
 
             return Boolean.TRUE;
 
@@ -210,7 +245,7 @@ public class CandidateService {
 
 	
     
-	@Transactional
+    @Transactional
 	public ConsentResponse saveConsent(ConsentRequest consentRequest) {
 
 	    Candidate candidate = candidateRepository.findById(consentRequest.getCandidateId())
@@ -275,7 +310,7 @@ public class CandidateService {
 	}
 
 	
-	public static MultipartFile base64ToMultipartFile(String base64Data, String mimeType, String fileName) {
+    public static MultipartFile base64ToMultipartFile(String base64Data, String mimeType, String fileName) {
         try {
             // Remove data URL prefix if present
             if (base64Data.contains(",")) {

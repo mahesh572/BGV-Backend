@@ -70,5 +70,17 @@ public interface VerificationActionRepository
     );
 
   //  List<VerificationAction> findByCreatedBy(Long userId);
+    
+    boolean existsByVerificationCaseCheckCaseCheckIdAndStatus(
+            Long caseCheckId,
+            ActionStatus status
+    );
+
+    boolean existsByVerificationCaseCheckCaseCheckIdAndActionTypeAndStatus(
+            Long caseCheckId,
+            ActionType actionType,
+            ActionStatus status
+    );
+
 }
 
