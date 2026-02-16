@@ -1,5 +1,8 @@
 package com.org.bgv.service;
 
+import com.org.bgv.bgvpackage.dto.PackageRuleTypeRequest;
+import com.org.bgv.bgvpackage.entity.PackageCheckCategoryAllowedRuleType;
+import com.org.bgv.bgvpackage.repository.PackageCheckCategoryAllowedRuleTypeRepository;
 import com.org.bgv.common.PackageCategoryDTO;
 import com.org.bgv.common.PackageCategoryRequest;
 import com.org.bgv.common.PackageDTO;
@@ -39,6 +42,7 @@ public class PackageService  {
     private final RuleTypesRepository ruleTypesRepository;
     private final DocumentTypeRepository documentTypeRepository;
     private final EmployerPackageRepository employerPackageRepository;
+    private final PackageCheckCategoryAllowedRuleTypeRepository packageCheckCategoryAllowedRuleTypeRepository;
 
     
     @Transactional
@@ -232,11 +236,52 @@ public class PackageService  {
             }
             */
             // Process allowed documents
+           /*
             if (categoryRequest.getAllowedDocuments() != null && !categoryRequest.getAllowedDocuments().isEmpty()) {
                 processAllowedDocuments(bgvPackage, category, categoryRequest.getAllowedDocuments());
             }
+            */
+            if (categoryRequest.getAllowedRules() != null && !categoryRequest.getAllowedRules().isEmpty()) {
+            	processAllowedRuleTypes(bgvPackage, category, categoryRequest.getAllowedRules());
+            }
         }
     }
+    
+    @Transactional
+    private void processAllowedRuleTypes(
+            BgvPackage bgvPackage,
+            CheckCategory category,
+            List<PackageRuleTypeRequest> ruleRequests) {
+
+        Long packageId = bgvPackage.getPackageId();
+        Long categoryId = category.getCategoryId();
+
+        // 🔥 Remove existing first (clean update)
+        packageCheckCategoryAllowedRuleTypeRepository
+                .deleteByBgvPackage_PackageIdAndCheckCategory_CategoryId(
+                        packageId, categoryId
+                );
+
+        for (PackageRuleTypeRequest ruleRequest : ruleRequests) {
+
+            RuleTypes ruleType = ruleTypesRepository.findById(ruleRequest.getRuleTypeId())
+                    .orElseThrow(() -> new RuntimeException(
+                            "RuleType not found with id: " + ruleRequest.getRuleTypeId()));
+
+            PackageCheckCategoryAllowedRuleType allowedRule =
+                    PackageCheckCategoryAllowedRuleType.builder()
+                            .bgvPackage(bgvPackage)
+                            .checkCategory(category)
+                            .ruleType(ruleType)
+                          //  .required(ruleRequest.getRequired())
+                         //   .priorityOrder(ruleRequest.getPriorityOrder())
+                            .build();
+
+            packageCheckCategoryAllowedRuleTypeRepository.save(allowedRule);
+        }
+    }
+
+
 
     private void processRuleTypes1(BgvPackage bgvPackage, Long categoryId, List<Long> ruleTypeIds) {
         for (Long ruleTypeId : ruleTypeIds) {
@@ -292,7 +337,7 @@ public class PackageService  {
             }
         }
     }
-
+/*
     private void processAllowedDocuments(BgvPackage bgvPackage, CheckCategory category, List<PackageDocumentRequest> documentRequests) {
         for (PackageDocumentRequest docRequest : documentRequests) {
             // Validate document type exists
@@ -310,7 +355,7 @@ public class PackageService  {
             packageAllowedDocumentRepository.save(allowedDoc);
         }
     }
-
+*/
     private void processPackageUpdate(BgvPackage bgvPackage, List<PackageCategoryRequest> categories) {
         // Delete existing relationships
         packageAllowedDocumentRepository.deleteByPackageId(bgvPackage.getPackageId());
@@ -369,6 +414,18 @@ public class PackageService  {
                 .map(this::convertToDocumentDTO)
                 .collect(Collectors.toList());
         
+        // Fetch allowed rule types for this package-category combination
+        List<PackageCheckCategoryAllowedRuleType> allowedRuleTypes =
+                packageCheckCategoryAllowedRuleTypeRepository
+                        .findByBgvPackage_PackageIdAndCheckCategory_CategoryId(
+                        		packageCategory.getBgvPackage().getPackageId(),
+                        		category.getCategoryId()
+                        );
+        
+        List<PackageRuleTypeDTO> allowedRuleDTOs = allowedRuleTypes.stream()
+                .map(this::convertToAllowedRuleTypeDTO)
+                .collect(Collectors.toList());
+        
         return PackageCategoryDTO.builder()
                 .id(packageCategory.getId())
                 .categoryId(category.getCategoryId())
@@ -377,8 +434,29 @@ public class PackageService  {
                 .rulesData(packageCategory.getRulesData())
                 .ruleTypes(ruleTypeDTOs)
                 .allowedDocuments(documentDTOs)
+                .allowedRules(allowedRuleDTOs) 
                 .build();
     }
+    
+    
+    private PackageRuleTypeDTO convertToAllowedRuleTypeDTO(
+            PackageCheckCategoryAllowedRuleType allowedRule) {
+
+        RuleTypes ruleType = allowedRule.getRuleType();
+
+        return PackageRuleTypeDTO.builder()
+                .id(allowedRule.getId())
+                .ruleTypeId(ruleType.getRuleTypeId())
+                .ruleName(ruleType.getName())
+                .ruleCode(ruleType.getCode())
+                .minCount(ruleType.getMinCount() != null ? ruleType.getMinCount() : 0)
+                .maxCount(ruleType.getMaxCount() != null ? ruleType.getMaxCount() : 0)
+                .required(Boolean.TRUE.equals(allowedRule.getRequired()))
+                .priorityOrder(allowedRule.getPriorityOrder())
+                .selected(true) // since this is allowed in package
+                .build();
+    }
+
 
     private PackageRuleTypeDTO convertToRuleTypeDTO(PackageCheckCategoryRuleType packageRuleType) {
         // You might want to fetch the actual rule type entity for more details

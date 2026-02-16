@@ -5,11 +5,13 @@ import com.org.bgv.entity.BGVCategory;
 import com.org.bgv.entity.CheckCategory;
 import com.org.bgv.entity.CheckType;
 import com.org.bgv.entity.DocumentType;
+import com.org.bgv.entity.RuleTypes;
 import com.org.bgv.mapper.CheckCategoryMapper;
 import com.org.bgv.repository.BGVCategoryRepository;
 import com.org.bgv.repository.CheckCategoryRepository;
 import com.org.bgv.repository.CheckTypeRepository;
 import com.org.bgv.repository.DocumentTypeRepository;
+import com.org.bgv.repository.RuleTypesRepository;
 
 import lombok.AllArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -24,6 +26,7 @@ import java.util.HashMap;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Optional;
 import java.util.stream.Collectors;
 
 @Service
@@ -40,6 +43,7 @@ public class BGVServices {
     private final CheckCategoryRepository checkCategoryRepository;
     private final CheckCategoryMapper checkCategoryMapper;
     private final DocumentTypeRepository documentTypeRepository;
+    private final RuleTypesRepository ruleTypesRepository;
     
 
     /**
@@ -214,6 +218,36 @@ public class BGVServices {
         return result;
     }
     
+    
+    
+    public Map<Long, List<Map<String, Object>>> getRuleTypesByCategoryMap() {
+        log.debug("Fetching document types grouped by category");
+        
+        // Fetch all categories
+        List<CheckCategory> categories = checkCategoryRepository.findAll();
+        
+        Map<Long, List<Map<String, Object>>> result = new LinkedHashMap();
+        
+        for (CheckCategory category : categories) {
+            // Fetch document types for this category
+          //  List<DocumentType> documentTypes = documentTypeRepository.findByCategoryCategoryId(category.getCategoryId());
+        	
+        	  List<RuleTypes> ruleTypes = ruleTypesRepository.findByCategory(category);
+        	  
+        	  
+            
+            // Convert to the desired JSON format
+            List<Map<String, Object>> documentTypeMaps = ruleTypes.stream()
+                .map(this::convertToMap)
+                .collect(Collectors.toList());
+            
+            result.put(category.getCategoryId(), documentTypeMaps);
+        }
+        
+        return result;
+    }
+    
+    
     /**
      * Convert DocumentType entity to Map for JSON response
      */
@@ -228,5 +262,24 @@ public class BGVServices {
         
         return map;
     }
+    
+    
+    private Map<String, Object> convertToMap(RuleTypes ruleTypes) {
+        Map<String, Object> map = new HashMap<>();
+
+        map.put("id", ruleTypes != null ? ruleTypes.getRuleTypeId() : null);
+        map.put("ruleTypeId", ruleTypes != null ? ruleTypes.getRuleTypeId() : null);
+        map.put("ruleName", ruleTypes != null ? ruleTypes.getName() : "Unknown Rule");
+        map.put("ruleCode", ruleTypes != null ? ruleTypes.getCode() : "UNKNOWN");
+        map.put("minCount", Optional.ofNullable(ruleTypes)
+                .map(RuleTypes::getMinCount)
+                .orElse(0));
+map.put("maxCount", Optional.ofNullable(ruleTypes)
+                .map(RuleTypes::getMaxCount)
+                .orElse(0));
+
+        return map;
+    }
+
     
 }

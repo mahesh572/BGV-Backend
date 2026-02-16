@@ -259,29 +259,6 @@ public class ProfileController {
         }
     }
     
-    @GetMapping("/degreetypes/all")
-    public ResponseEntity<CustomApiResponse<List<DegreeTypeResponse>>> getAllDegreeTypes() {
-        try {
-            List<DegreeTypeResponse> response = educationHistoryService.getAllDegreeTypes();
-            return ResponseEntity.ok(CustomApiResponse.success("Degree types retrieved successfully", response, HttpStatus.OK));
-            
-        } catch (Exception e) {
-            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
-                    .body(CustomApiResponse.failure("Failed to retrieve degree types: " + e.getMessage(), HttpStatus.INTERNAL_SERVER_ERROR));
-        }
-    }
-    
-    @GetMapping("/fieldofstudy/all")
-    public ResponseEntity<CustomApiResponse<List<FieldOfStudyResponse>>> getAllFieldsOfStudy() {
-        try {
-            List<FieldOfStudyResponse> response = educationHistoryService.getAllFieldsOfStudy();
-            return ResponseEntity.ok(CustomApiResponse.success("Fields of study retrieved successfully", response, HttpStatus.OK));
-            
-        } catch (Exception e) {
-            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
-                    .body(CustomApiResponse.failure("Failed to retrieve fields of study: " + e.getMessage(), HttpStatus.INTERNAL_SERVER_ERROR));
-        }
-    }
     
     @PutMapping("/{profileId}/status")
     public ResponseEntity<CustomApiResponse<String>> updateProfileStatus(

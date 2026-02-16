@@ -16,4 +16,7 @@ public class PackageRuleTypeDTO {
     private String ruleCode;
     private Integer minCount;
     private Integer maxCount;
+    private Boolean required;
+    private Integer priorityOrder;
+    private Boolean selected;
 }

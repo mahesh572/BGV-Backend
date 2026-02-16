@@ -88,34 +88,51 @@ public class RuleTypesService {
     @Transactional
     public RuleTypesDTO updateRule(Long ruleTypeId, RuleTypesRequest request) {
         log.info("Updating rule with ID: {}", ruleTypeId);
-        
-        // Find existing rule
+
         RuleTypes existingRule = ruleTypesRepository.findById(ruleTypeId)
                 .orElseThrow(() -> new RuntimeException("Rule not found with id: " + ruleTypeId));
-        
-        // Check if code is being changed and if new code already exists
-        if (!existingRule.getCode().equals(request.getCode()) && 
-            ruleTypesRepository.existsByCode(request.getCode())) {
-            throw new RuntimeException("Rule with code " + request.getCode() + " already exists");
+
+        // Only check duplicate if code or category is changed
+        if (!existingRule.getCode().equals(request.getCode()) ||
+            !existingRule.getCategory().getCategoryId().equals(request.getCategoryId())) {
+
+            boolean exists = ruleTypesRepository
+                    .existsByCodeAndCategoryCategoryId(
+                            request.getCode(),
+                            request.getCategoryId()
+                    );
+
+            if (exists) {
+                throw new RuntimeException(
+                        "Rule with code " + request.getCode() + " already exists"
+                );
+            }
         }
-        
+
         // Fetch category if changed
-        if (!existingRule.getCategory().getCategoryId().equals(request.getCategoryId())) {
-            CheckCategory category = checkCategoryRepository.findById(request.getCategoryId())
-                    .orElseThrow(() -> new RuntimeException("Category not found with id: " + request.getCategoryId()));
+        if (!existingRule.getCategory().getCategoryId()
+                .equals(request.getCategoryId())) {
+
+            CheckCategory category = checkCategoryRepository
+                    .findById(request.getCategoryId())
+                    .orElseThrow(() ->
+                            new RuntimeException("Category not found with id: "
+                                    + request.getCategoryId()));
+
             existingRule.setCategory(category);
         }
-        
+
         // Update fields
         existingRule.setName(request.getName());
         existingRule.setCode(request.getCode());
         existingRule.setLabel(request.getLabel());
         existingRule.setMinCount(request.getMinCount());
         existingRule.setMaxCount(request.getMaxCount());
-        
+
         RuleTypes updatedRule = ruleTypesRepository.save(existingRule);
+
         log.info("Rule updated successfully with ID: {}", updatedRule.getRuleTypeId());
-        
+
         return convertToDTO(updatedRule);
     }
 

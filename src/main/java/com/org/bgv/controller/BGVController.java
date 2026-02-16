@@ -140,7 +140,24 @@ public class BGVController {
         }
     }
     
-    
+    @GetMapping("/rule-types/by-category")
+    public ResponseEntity<CustomApiResponse<Map<Long, List<Map<String, Object>>>>> getRuleTypesByCategoryMap() {
+        try {
+            Map<Long, List<Map<String, Object>>> documentTypes = bgvServices.getRuleTypesByCategoryMap();
+            log.info("getRuleTypesByCategory:::::::{}",documentTypes);
+            return ResponseEntity.ok(CustomApiResponse.success(
+                "Rule types retrieved successfully", 
+                documentTypes, 
+                HttpStatus.OK
+            ));
+        } catch (Exception e) {
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
+                .body(CustomApiResponse.failure(
+                    "Failed to retrieve rule types: " + e.getMessage(), 
+                    HttpStatus.INTERNAL_SERVER_ERROR
+                ));
+        }
+    }
     
     
 /*
