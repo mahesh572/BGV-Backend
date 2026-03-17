@@ -7,10 +7,14 @@ import lombok.NoArgsConstructor;
 
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.NotNull;
+
+import java.util.List;
+
 import com.fasterxml.jackson.annotation.JsonAlias;
 import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
 import com.fasterxml.jackson.annotation.JsonInclude;
 import com.fasterxml.jackson.annotation.JsonProperty;
+import com.org.bgv.enums.RuleGroup;
 
 @Data
 @Builder
@@ -50,4 +54,8 @@ public class RuleTypesDTO {
     
     private Integer minCount;
     private Integer maxCount;
+    
+    private List<RuleGroup> ruleGroup;
+    
+    private RuleGroup selectedRulegroup;
 }

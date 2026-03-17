@@ -5,6 +5,8 @@ import lombok.Builder;
 import lombok.Data;
 import lombok.NoArgsConstructor;
 
+import com.org.bgv.enums.RuleGroup;
+
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.NotNull;
 
@@ -28,4 +30,7 @@ public class RuleTypesRequest {
     private Integer minCount;
     
     private Integer maxCount;
+    
+    private RuleGroup selectedRulegroup;
+
 }

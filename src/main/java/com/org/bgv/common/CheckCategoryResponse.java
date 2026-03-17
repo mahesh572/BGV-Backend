@@ -2,6 +2,9 @@ package com.org.bgv.common;
 
 import java.util.List;
 
+import com.org.bgv.enums.PricingLevel;
+import com.org.bgv.pricing.dto.DocumentPricingDTO;
+
 import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Data;
@@ -19,6 +22,8 @@ public class CheckCategoryResponse {
     private String code;
     private Boolean isActive;
     private Boolean hasDocuments;
+    private PricingLevel pricingLevel; //  "DOCUMENT",   // RULE or DOCUMENT
     private List<RuleTypeResponse> ruleTypes;
+    private List<DocumentPricingDTO> documents;
     private Double price;
 }

@@ -51,6 +51,11 @@ public interface EmployerCheckPricingRepository
             Long categoryId
     );
     
-   
+    Optional<EmployerCheckPricing>
+    findByCompany_IdAndCheckCategory_CategoryIdAndRuleType_RuleTypeId(
+            Long companyId,
+            Long categoryId,
+            Long ruleTypeId
+    );
     
 }

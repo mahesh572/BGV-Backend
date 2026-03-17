@@ -6,6 +6,9 @@ import com.org.bgv.common.EmployerPackageRequest;
 import com.org.bgv.common.EmployerPackageResponse;
 import com.org.bgv.common.PackageDTO;
 import com.org.bgv.common.PackageRequest;
+import com.org.bgv.company.dto.AssignCasePreviewResponseDTO;
+import com.org.bgv.company.service.AssignCaseService;
+import com.org.bgv.config.SecurityUtils;
 import com.org.bgv.constants.EmployerPackageStatus;
 import com.org.bgv.service.EmployerPackageService;
 import jakarta.validation.Valid;
@@ -27,6 +30,7 @@ import java.util.List;
 public class EmployerPackageController {
     
     private final EmployerPackageService employerPackageService;
+    private final AssignCaseService assignCaseService;
     
     @PostMapping
     public ResponseEntity<CustomApiResponse<EmployerPackageResponse>> createEmployerPackage(
@@ -201,6 +205,9 @@ public class EmployerPackageController {
         }
     }
     
+    
+    // below code is going to be decommissioned for case creation
+    /*
     @GetMapping("/{employerpackageId}/documents")
     public ResponseEntity<CustomApiResponse<List<CategoryDocumentsDto>>> getPackageDocuments(
             @PathVariable Long employerpackageId) {
@@ -227,4 +234,42 @@ public class EmployerPackageController {
                     ));
         }
     }
+    */
+    
+    @GetMapping("/{employerpackageId}/preview")
+    public ResponseEntity<CustomApiResponse<AssignCasePreviewResponseDTO>> getPackageDocuments(
+            @PathVariable Long employerpackageId) {
+        
+        try {
+            log.info("Getting documents for employerpackageId: {}", employerpackageId);
+            
+            
+            Long companyId = SecurityUtils.getCurrentUserCompanyId();
+            
+            AssignCasePreviewResponseDTO result = assignCaseService
+                    .buildPreview(employerpackageId,companyId);
+            
+            return ResponseEntity.ok(
+                    CustomApiResponse.<AssignCasePreviewResponseDTO>success(
+                            "Package documents retrieved successfully",
+                            result,
+                            HttpStatus.OK
+                    )
+            );
+        } catch (Exception e) {
+            log.error("Failed to get documents for packageId: {}", employerpackageId, e);
+            
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
+                    .body(CustomApiResponse.<AssignCasePreviewResponseDTO>failure(
+                            "Failed to retrieve package documents: " + e.getMessage(),
+                            HttpStatus.INTERNAL_SERVER_ERROR
+                    ));
+        }
+    }
+    
+    
+    
+    
+    
+    
 }

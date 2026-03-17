@@ -1,9 +1,7 @@
-package com.org.bgv.bgvpackage.entity;
+package com.org.bgv.entity;
 
 import java.math.BigDecimal;
 
-import com.org.bgv.entity.CheckCategory;
-import com.org.bgv.entity.RuleTypes;
 import com.org.bgv.enums.PricingType;
 
 import jakarta.persistence.Entity;
@@ -14,12 +12,18 @@ import jakarta.persistence.GenerationType;
 import jakarta.persistence.Id;
 import jakarta.persistence.ManyToOne;
 import jakarta.persistence.Table;
+import lombok.AllArgsConstructor;
+import lombok.Builder;
 import lombok.Data;
+import lombok.NoArgsConstructor;
 
+@AllArgsConstructor
+@NoArgsConstructor
 @Data
+@Builder
 @Entity
-@Table(name = "platform_check_pricing")
-public class PlatformCheckPricing {
+@Table(name = "platform_document_pricing")
+public class PlatformDocumentPricing {
 
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
@@ -29,13 +33,15 @@ public class PlatformCheckPricing {
     private CheckCategory checkCategory;
 
     @ManyToOne
-    private RuleTypes ruleType;
+    private DocumentType documentType;
 
     @Enumerated(EnumType.STRING)
-    private PricingType pricingType; // FLAT / PER_RECORD
+    private PricingType pricingType;  // FLAT / PER_RECORD
 
     private BigDecimal  unitPrice;
 
+    private Double minCharge;
+    private Double maxCharge;
+
     private Boolean active = true;
 }
-

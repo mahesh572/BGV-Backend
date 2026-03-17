@@ -256,30 +256,46 @@ public class PackageService  {
         Long packageId = bgvPackage.getPackageId();
         Long categoryId = category.getCategoryId();
 
-        // 🔥 Remove existing first (clean update)
+        // 1️⃣ Delete existing
         packageCheckCategoryAllowedRuleTypeRepository
                 .deleteByBgvPackage_PackageIdAndCheckCategory_CategoryId(
                         packageId, categoryId
                 );
 
-        for (PackageRuleTypeRequest ruleRequest : ruleRequests) {
+        packageCheckCategoryAllowedRuleTypeRepository.flush();
 
-            RuleTypes ruleType = ruleTypesRepository.findById(ruleRequest.getRuleTypeId())
-                    .orElseThrow(() -> new RuntimeException(
-                            "RuleType not found with id: " + ruleRequest.getRuleTypeId()));
+        if (ruleRequests == null || ruleRequests.isEmpty()) {
+            return;
+        }
+
+        // 2️⃣ Keep only enabled rules
+        Set<Long> uniqueRuleTypeIds = ruleRequests.stream()
+               // .filter(r -> Boolean.TRUE.equals(r.getEnabled()))
+                .map(PackageRuleTypeRequest::getRuleTypeId)
+                .collect(Collectors.toSet());
+
+        if (uniqueRuleTypeIds.isEmpty()) {
+            return;
+        }
+
+        // 3️⃣ Fetch all RuleTypes in one query (avoid N+1)
+        List<RuleTypes> ruleTypes =
+                ruleTypesRepository.findAllById(uniqueRuleTypeIds);
+
+        for (RuleTypes ruleType : ruleTypes) {
 
             PackageCheckCategoryAllowedRuleType allowedRule =
                     PackageCheckCategoryAllowedRuleType.builder()
                             .bgvPackage(bgvPackage)
                             .checkCategory(category)
                             .ruleType(ruleType)
-                          //  .required(ruleRequest.getRequired())
-                         //   .priorityOrder(ruleRequest.getPriorityOrder())
+                            .required(false)
                             .build();
 
             packageCheckCategoryAllowedRuleTypeRepository.save(allowedRule);
         }
     }
+
 
 
 

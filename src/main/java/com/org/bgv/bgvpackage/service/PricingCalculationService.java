@@ -2,6 +2,7 @@ package com.org.bgv.bgvpackage.service;
 
 
 
+import java.math.BigDecimal;
 import java.util.Optional;
 
 import org.springframework.stereotype.Service;
@@ -23,7 +24,7 @@ public class PricingCalculationService {
 
     private final EmployerCheckPricingRepository employerPricingRepo;
     private final PlatformCheckPricingRepository platformPricingRepo;
-
+/*
     public Double calculateCheckPrice(
             Company company,
             CheckCategory category,
@@ -59,8 +60,8 @@ public class PricingCalculationService {
         );
     }
 
-    private Double computePrice(PricingType pricingType,
-                                Double unitPrice,
+    private BigDecimal  computePrice(PricingType pricingType,
+    		BigDecimal  unitPrice,
                                 int recordCount) {
 
         if (pricingType == PricingType.FLAT) {
@@ -73,4 +74,6 @@ public class PricingCalculationService {
 
         throw new RuntimeException("Invalid pricing type");
     }
+    
+    */
 }

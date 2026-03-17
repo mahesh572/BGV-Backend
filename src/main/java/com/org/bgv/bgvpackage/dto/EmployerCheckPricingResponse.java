@@ -1,5 +1,7 @@
 package com.org.bgv.bgvpackage.dto;
 
+import java.math.BigDecimal;
+
 import com.org.bgv.enums.PricingType;
 
 import lombok.Builder;
@@ -24,7 +26,7 @@ public class EmployerCheckPricingResponse {
 
     private PricingType pricingType;
 
-    private Double unitPrice;
+    private BigDecimal  unitPrice;
     private Double minCharge;
     private Double maxCharge;
 

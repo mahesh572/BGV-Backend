@@ -4,10 +4,13 @@ import com.org.bgv.candidate.entity.Candidate;
 import com.org.bgv.candidate.entity.EducationHistory;
 import com.org.bgv.candidate.repository.CandidateRepository;
 import com.org.bgv.candidate.repository.EducationHistoryRepository;
+import com.org.bgv.constants.CaseCheckStatus;
 import com.org.bgv.dto.DegreeTypeResponse;
 import com.org.bgv.dto.DocumentResponse;
 import com.org.bgv.dto.EducationHistoryDTO;
+import com.org.bgv.dto.EducationResponse;
 import com.org.bgv.dto.FieldOfStudyResponse;
+import com.org.bgv.dto.document.DocumentTypeDto;
 import com.org.bgv.entity.Profile;
 import com.org.bgv.entity.VerificationCase;
 import com.org.bgv.entity.VerificationCaseCheck;
@@ -41,6 +44,7 @@ import java.util.ArrayList;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
+import java.util.Optional;
 import java.util.Set;
 import java.util.function.Function;
 import java.util.stream.Collectors;
@@ -59,6 +63,7 @@ public class EducationService {
     private final VerificationCaseRepository verificationCaseRepository;
     private final CheckCategoryRepository checkCategoryRepository;
     private final VerificationCaseCheckRepository verificationCaseCheckRepository;
+    private final DocumentService documentService;
 
     private static final Logger logger = LoggerFactory.getLogger(EducationService.class);
     
@@ -84,16 +89,18 @@ public class EducationService {
                 .collect(Collectors.toList());
     }
 
-    public List<EducationHistoryDTO> getEducationByProfile(Long candidateId, Long caseId) {
+    public EducationResponse getEducationByProfile(
+            Long candidateId,
+            Long caseId) {
 
         List<EducationHistory> educationHistories;
 
-        // SELF-REGISTERED / PROFILE MODE
+        // 1️⃣ SELF MODE
         if (caseId == null || caseId == 0) {
             educationHistories =
                     educationHistoryRepository.findByCandidateId(candidateId);
         }
-        // CASE-BASED VERIFICATION MODE
+        // 2️⃣ CASE MODE
         else {
             educationHistories =
                     educationHistoryRepository
@@ -102,14 +109,59 @@ public class EducationService {
                                     caseId
                             );
         }
-       
 
-        // Fetch case
-        
-        return educationHistories.stream()
-                .map(this::convertEducationDetails)
-                .collect(Collectors.toList());
+        final String CATEGORY_NAME = "Education";
+
+        CheckCategory category = checkCategoryRepository
+                .findByNameIgnoreCase(CATEGORY_NAME)
+                .orElseThrow(() ->
+                        new RuntimeException("Category not found: " + CATEGORY_NAME));
+
+        Long checkId = null;
+
+        // Resolve Case Check only in CASE MODE
+        if (caseId != null && caseId > 0) {
+            Optional<VerificationCaseCheck> caseCheckOpt =
+                    verificationCaseCheckRepository
+                            .findByVerificationCase_CaseIdAndCategory_CategoryId(
+                                    caseId,
+                                    category.getCategoryId());
+
+            if (caseCheckOpt.isPresent()) {
+                checkId = caseCheckOpt.get().getCaseCheckId();
+            }
+        }
+
+        // 3️⃣ Map each education → DTO + attach documentTypes
+        List<EducationHistoryDTO> educationDTOList =
+                educationHistories.stream()
+                        .map(education -> {
+
+                            EducationHistoryDTO dto =
+                                    convertEducationDetails(education);
+
+                            List<DocumentTypeDto> documentTypes =
+                                    documentService.buildEducationDocumentTypes(
+                                            candidateId,
+                                            category,
+                                            education
+                                    );
+
+                            dto.setDocumentTypes(documentTypes);
+
+                            return dto;
+                        })
+                        .collect(Collectors.toList());
+
+        // 4️⃣ Build final response
+        return EducationResponse.builder()
+                .caseId(caseId)
+                .categoryId(category.getCategoryId())
+                .checkId(checkId)
+                .educationhistory(educationDTOList)
+                .build();
     }
+
 
 
     private EducationHistory mapToEntity(EducationHistoryDTO dto, Candidate candidate,Long caseId) {
@@ -401,6 +453,7 @@ public class EducationService {
        */
         return EducationHistoryDTO.builder()
                 .id(educationHistory.getId())
+                .candidateId(educationHistory.getCandidateId())
                 .qualificationType(educationHistory.getDegree() != null ? educationHistory.getDegree().getDegreeId() : null)
                 .degreeName(educationHistory.getDegree() != null ? educationHistory.getDegree().getName() : null)
                 .fieldOfStudy(educationHistory.getField() != null ? educationHistory.getField().getFieldId() : null)

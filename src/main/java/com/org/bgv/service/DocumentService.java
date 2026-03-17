@@ -32,6 +32,7 @@ import com.org.bgv.dto.document.EducationDTO;
 import com.org.bgv.dto.document.FileDTO;
 import com.org.bgv.entity.BaseDocument;
 import com.org.bgv.entity.CheckCategory;
+import com.org.bgv.entity.DegreeDocumentType;
 import com.org.bgv.entity.Document;
 import com.org.bgv.entity.DocumentType;
 //import com.org.bgv.entity.EducationDocuments;
@@ -43,6 +44,7 @@ import com.org.bgv.entity.VerificationCaseCheck;
 import com.org.bgv.entity.VerificationCaseDocument;
 import com.org.bgv.entity.VerificationCaseDocumentLink;
 import com.org.bgv.repository.CheckCategoryRepository;
+import com.org.bgv.repository.DegreeDocumentTypeRepository;
 import com.org.bgv.repository.DocumentRepository;
 import com.org.bgv.repository.DocumentTypeRepository;
 import com.org.bgv.repository.IdentityDocumentsRepository;
@@ -115,6 +117,7 @@ public class DocumentService {
     private final VerificationCaseCheckRepository verificationCaseCheckRepository;
     private final CategoryEvidenceTypeRepository categoryEvidenceTypeRepository;
    // private final VerificationEvidenceRepository verificationEvidenceRepository;
+    private final DegreeDocumentTypeRepository degreeDocumentTypeRepository;
     
     private static final Logger logger = LoggerFactory.getLogger(DocumentService.class);
 
@@ -970,7 +973,7 @@ public class DocumentService {
 
             case "Education" ->
                     categoryDto.setEducation(
-                            buildEducationDocuments(candidateId, category, documentTypes)
+                            buildEducationDocuments(candidateId, category)
                     );
 
             case "Work Experience" ->
@@ -1148,46 +1151,83 @@ public class DocumentService {
 
     
     // Education Documents
-    private List<EducationDTO> buildEducationDocuments(Long candidateId, 
-    		CheckCategory category, 
-                                                      List<DocumentType> documentTypes) {
-        List<EducationHistory> educationHistories = educationHistoryRepository.findByCandidateId(candidateId);
-        
-        logger.info("buildEducationDocuments::::::::::::::::::{}",educationHistories.size());
-        
+    private List<EducationDTO> buildEducationDocuments(
+            Long candidateId,
+            CheckCategory category) {
+
+        List<EducationHistory> educationHistories =
+                educationHistoryRepository.findByCandidateId(candidateId);
+
         return educationHistories.stream()
-            .map(education -> {
-                EducationDTO educationDTO = EducationDTO.builder()
-                    .eduId(education.getId())
-                    .degreeLabel(education.getDegree().getLabel())
-                    .degreeType(education.getTypeOfEducation())
-                    .fieldOfStudy(education.getField().getName())
-                    .institionName(education.getInstitute_name())
-                    .build();
-                
-                List<DocumentTypeDto> eduDocumentTypes = buildEducationDocumentTypes(candidateId, category, documentTypes, education.getId());
-                educationDTO.setDocumentTypes(eduDocumentTypes);
-                
-                return educationDTO;
-            })
-            .collect(Collectors.toList());
+                .map(education -> {
+
+
+                    EducationDTO educationDTO = EducationDTO.builder()
+                            .eduId(education.getId())
+                            .degreeLabel(education.getDegree().getLabel())
+                            .degreeType(education.getTypeOfEducation())
+                            .fieldOfStudy(education.getField().getName())
+                            .institionName(education.getInstitute_name())
+                            .build();
+
+
+                    List<DocumentTypeDto> eduDocumentTypes =
+                            buildEducationDocumentTypes(
+                                    candidateId,
+                                    category,
+                                    education
+                                    
+                            );
+
+                    educationDTO.setDocumentTypes(eduDocumentTypes);
+
+                    return educationDTO;
+                })
+                .collect(Collectors.toList());
     }
     
     // Education Document Types
-    private List<DocumentTypeDto> buildEducationDocumentTypes(Long candidateId, 
-    		                                                 CheckCategory category, 
-                                                             List<DocumentType> documentTypes, 
-                                                             Long educationId) {
-    	logger.info("educationId::::::::::::::::::::::::::::::::{}",educationId);
-        return documentTypes.stream()
-            .map(documentType -> {
-                DocumentTypeDto dto = buildDocumentTypeDto(documentType);
-                List<Document> documents = documentRepository.findByCandidate_CandidateIdAndCategory_CategoryIdAndDocTypeId_DocTypeIdAndObjectId(
-                    candidateId, category.getCategoryId(), documentType.getDocTypeId(), educationId);
-                dto.setFiles(convertDocumentsToFileDTOs(documents));
-                return dto;
-            })
-            .collect(Collectors.toList());
+    public List<DocumentTypeDto> buildEducationDocumentTypes(
+            Long candidateId,
+            CheckCategory category,
+            EducationHistory educationHistory
+            ) {
+    	
+    	 Long degreeId = educationHistory.getDegree().getDegreeId();
+    	 List<DegreeDocumentType> degreeDocs =
+                 degreeDocumentTypeRepository
+                         .findByDegreeType_DegreeIdAndActiveTrueOrderByDisplayOrderAsc(degreeId);
+
+        return degreeDocs.stream()
+                .map(degreeDoc -> {
+
+                    DocumentType documentType = degreeDoc.getDocumentType();
+
+                    // 🔹 Fetch uploaded documents for this education + docType
+                    List<Document> documents =
+                            documentRepository
+                                    .findByCandidate_CandidateIdAndCategory_CategoryIdAndDocTypeId_DocTypeIdAndObjectId(
+                                            candidateId,
+                                            category.getCategoryId(),
+                                            documentType.getDocTypeId(),
+                                            educationHistory.getId()
+                                    );
+
+                    List<FileDTO> files = convertDocumentsToFileDTOs(documents);
+
+                    return DocumentTypeDto.builder()
+                            .typeId(documentType.getDocTypeId())
+                            .typeLabel(documentType.getLabel())
+                            .typeName(documentType.getName())
+                            .description(null)
+                            .isRequired(Boolean.TRUE.equals(degreeDoc.getRequired()))
+                            .maxFiles(documentType.getMaxFiles())
+                           // .customTypeName(null)
+                         //   .displayOrder(degreeDoc.getDisplayOrder())
+                            .files(files)   // 🔥 attach uploaded files
+                            .build();
+                })
+                .collect(Collectors.toList());
     }
     
     // Work Experience Documents

@@ -1,5 +1,7 @@
 package com.org.bgv.bgvpackage.entity;
 
+import java.math.BigDecimal;
+
 import com.org.bgv.entity.CheckCategory;
 import com.org.bgv.entity.Company;
 import com.org.bgv.entity.RuleTypes;
@@ -51,7 +53,7 @@ public class EmployerCheckPricing {
     private PricingType pricingType;   // FLAT / PER_RECORD
 
     @Column(nullable = false)
-    private Double unitPrice;
+    private BigDecimal  unitPrice;
 
     private Double minCharge;
     private Double maxCharge;

@@ -30,6 +30,7 @@ public interface PackageCheckCategoryAllowedRuleTypeRepository
 	        Long categoryId
 	);
 	
+	List<PackageCheckCategoryAllowedRuleType> findByBgvPackage_PackageId(Long packageId);
 	
 }
 

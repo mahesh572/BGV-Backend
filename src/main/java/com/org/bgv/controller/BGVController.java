@@ -116,8 +116,17 @@ public class BGVController {
     
     @GetMapping("/check/categories/with-ruletypes")
     public ResponseEntity<CustomApiResponse<List<CheckCategoryResponse>>> getCategoryWithRuleTypes(
+    	
            ) throws Exception {
     	List<CheckCategoryResponse> categoryResponse =  bgvServices.getAllCategoriesWithRuleTypes();
+        return ResponseEntity.ok(CustomApiResponse.success(null, categoryResponse, HttpStatus.OK));
+    }
+    
+    @GetMapping("/check/categories/with-ruletypes-pricing")
+    public ResponseEntity<CustomApiResponse<List<CheckCategoryResponse>>> getCategoryWithRuleTypesWithPricing(
+    	
+           ) throws Exception {
+    	List<CheckCategoryResponse> categoryResponse =  bgvServices.getAllCategoriesWithRuleTypesWithPricing();
         return ResponseEntity.ok(CustomApiResponse.success(null, categoryResponse, HttpStatus.OK));
     }
     

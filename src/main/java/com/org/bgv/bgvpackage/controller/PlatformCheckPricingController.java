@@ -5,9 +5,12 @@ import com.org.bgv.bgvpackage.dto.PlatformCheckPricingRequest;
 import com.org.bgv.bgvpackage.dto.PlatformCheckPricingResponse;
 import com.org.bgv.bgvpackage.entity.PlatformCheckPricing;
 import com.org.bgv.bgvpackage.service.PlatformCheckPricingService;
+import com.org.bgv.dto.document.CompanyDto;
 import com.org.bgv.entity.CheckCategory;
 import com.org.bgv.entity.RuleTypes;
 import com.org.bgv.enums.PricingType;
+import com.org.bgv.service.CompanyService;
+
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
@@ -21,40 +24,41 @@ import java.util.List;
 public class PlatformCheckPricingController {
 
     private final PlatformCheckPricingService pricingService;
+    private final CompanyService companyService;
 
     // =========================
     // CREATE
     // =========================
     @PostMapping
-    public ResponseEntity<CustomApiResponse<PlatformCheckPricing>> createPricing(
+    public ResponseEntity<CustomApiResponse<?>> createPricing(
             @RequestBody PlatformCheckPricingRequest platformCheckPricingRequest
             
     ) {
 
-        PlatformCheckPricing pricing =
+        
                 pricingService.createPricing(platformCheckPricingRequest);
 
         return ResponseEntity.status(HttpStatus.CREATED)
                 .body(CustomApiResponse.success("Pricing created successfully",
-                        pricing, HttpStatus.CREATED));
+                        null, HttpStatus.CREATED));
     }
 
     // =========================
     // 	
     // =========================
     @PutMapping("/{id}")
-    public ResponseEntity<CustomApiResponse<PlatformCheckPricingResponse>> updatePricing(
+    public ResponseEntity<CustomApiResponse<?>> updatePricing(
             @PathVariable Long id,
             @RequestBody PlatformCheckPricingRequest platformCheckPricingRequest
             
     ) {
 
-    	PlatformCheckPricingResponse updated =
+    	
                 pricingService.updatePricing(id,platformCheckPricingRequest);
 
         return ResponseEntity.ok(
                 CustomApiResponse.success("Pricing updated successfully",
-                        updated, HttpStatus.OK));
+                        "", HttpStatus.OK));
     }
 
     // =========================
@@ -88,5 +92,21 @@ public class PlatformCheckPricingController {
         );
     }
 
+    @GetMapping("/companies")
+    public ResponseEntity<CustomApiResponse<List<CompanyDto>>> 
+    getAllCompanies() {
 
+        List<CompanyDto> companies = companyService.getAllCompanies();
+
+        return ResponseEntity.ok(
+                CustomApiResponse.success(
+                        "Companies fetched successfully",
+                        companies,
+                        HttpStatus.OK
+                )
+        );
+    }
+    
+    
+    
 }

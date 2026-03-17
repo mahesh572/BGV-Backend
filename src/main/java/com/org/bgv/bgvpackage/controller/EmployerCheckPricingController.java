@@ -1,5 +1,6 @@
 package com.org.bgv.bgvpackage.controller;
 
+import java.math.BigDecimal;
 import java.util.List;
 
 import jakarta.validation.Valid;
@@ -48,7 +49,7 @@ public class EmployerCheckPricingController {
             @RequestParam Long categoryId) {
 
         List<EmployerCheckPricingResponse> list =
-                service.getByCompanyAndCategory(companyId, categoryId);
+                service.getEmployerPricingByCompanyAndCategory(companyId, categoryId);
 
         return ResponseEntity.ok(
                 CustomApiResponse.success(
@@ -63,12 +64,12 @@ public class EmployerCheckPricingController {
     // RESOLVE FINAL PRICE (EMPLOYER → FALLBACK PLATFORM)
     // ======================================================
     @GetMapping("/resolve")
-    public ResponseEntity<CustomApiResponse<Double>> resolvePrice(
+    public ResponseEntity<CustomApiResponse<?>> resolvePrice(
             @RequestParam Long companyId,
             @RequestParam Long categoryId,
             @RequestParam Long ruleTypeId) {
 
-        Double price =
+    	BigDecimal  price =
                 service.resolveFinalPrice(companyId, categoryId, ruleTypeId);
 
         return ResponseEntity.ok(

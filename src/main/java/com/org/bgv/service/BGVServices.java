@@ -179,6 +179,19 @@ public class BGVServices {
     }
     
     @Transactional(readOnly = true)
+    public List<CheckCategoryResponse> getAllCategoriesWithRuleTypesWithPricing() {
+        log.info("Fetching all categories with their rule types");
+        
+        // Method 1: Using JOIN FETCH (if you have the relationship)
+        List<CheckCategory> categories = checkCategoryRepository.findAll();
+        
+        // Method 2: If no relationship in entity, use separate calls
+        // List<CheckCategory> categories = checkCategoryRepository.findAll();
+        
+        return checkCategoryMapper.toDetailedResponseListWithPricing(categories);
+    }
+    
+    @Transactional(readOnly = true)
     public List<CheckCategoryResponse> getAllCategoriesWithRuleTypes() {
         log.info("Fetching all categories with their rule types");
         

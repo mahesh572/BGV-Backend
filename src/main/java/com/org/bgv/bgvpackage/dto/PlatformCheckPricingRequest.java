@@ -1,5 +1,8 @@
 package com.org.bgv.bgvpackage.dto;
 
+import java.math.BigDecimal;
+
+import com.org.bgv.enums.PricingLevel;
 import com.org.bgv.enums.PricingType;
 
 import jakarta.validation.constraints.NotNull;
@@ -9,16 +12,23 @@ import lombok.Data;
 @Data
 public class PlatformCheckPricingRequest {
 
-    @NotNull(message = "Check Category ID is required")
+   // @NotNull(message = "Check Category ID is required")
     private Long checkCategoryId;
 
-    @NotNull(message = "Rule Type ID is required")
+   // @NotNull(message = "Rule Type ID is required")
     private Long ruleTypeId;
 
-    @NotNull(message = "Pricing type is required")
+   // @NotNull(message = "Pricing type is required")
     private PricingType pricingType;   // FLAT / PER_RECORD
 
-    @NotNull(message = "Unit price is required")
-    @Positive(message = "Unit price must be greater than 0")
-    private Double unitPrice;
+   // @NotNull(message = "Unit price is required")
+   // @Positive(message = "Unit price must be greater than 0")
+    private BigDecimal  unitPrice;
+    
+    private PricingLevel level;
+    
+    private Long documentTypeId;
+    
+    private Long pricingId;
+
 }

@@ -34,6 +34,8 @@ public interface DocumentTypeRepository extends JpaRepository<DocumentType, Long
    
     List<DocumentType> findByIsRequired(boolean isRequired);
     
+    List<DocumentType> findByCategoryCategoryIdAndDocTypeId(Long categoryId,Long docTypeId);
+    
     
     
     boolean existsByName(String name);

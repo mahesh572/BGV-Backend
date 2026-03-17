@@ -8,8 +8,10 @@ import org.springframework.transaction.annotation.Transactional;
 
 import com.org.bgv.common.RuleTypesDTO;
 import com.org.bgv.common.RuleTypesRequest;
+import com.org.bgv.dto.CheckCategoryEnum;
 import com.org.bgv.entity.CheckCategory;
 import com.org.bgv.entity.RuleTypes;
+import com.org.bgv.enums.RuleGroup;
 import com.org.bgv.repository.CheckCategoryRepository;
 import com.org.bgv.repository.RuleTypesRepository;
 
@@ -46,6 +48,7 @@ public class RuleTypesService {
                 .label(request.getLabel())
                 .minCount(request.getMinCount())
                 .maxCount(request.getMaxCount())
+                .ruleGroup(request.getSelectedRulegroup())
                 .build();
         
         RuleTypes savedRule = ruleTypesRepository.save(rule);
@@ -128,6 +131,7 @@ public class RuleTypesService {
         existingRule.setLabel(request.getLabel());
         existingRule.setMinCount(request.getMinCount());
         existingRule.setMaxCount(request.getMaxCount());
+        existingRule.setRuleGroup(request.getSelectedRulegroup());
 
         RuleTypes updatedRule = ruleTypesRepository.save(existingRule);
 
@@ -162,6 +166,10 @@ public class RuleTypesService {
 
     // Helper method to convert Entity to DTO
     private RuleTypesDTO convertToDTO(RuleTypes rule) {
+    	log.info("rule:::::::::::::::::::::::::::{}",rule.getCategory().getName());  // Identity
+    	
+    	log.info("CheckCategoryEnum.IDENTITY.name()::::::::::::::::::::{}",CheckCategoryEnum.IDENTITY.name());
+    	
         return RuleTypesDTO.builder()
                 .ruleTypeId(rule.getRuleTypeId())
                 .categoryId(rule.getCategory().getCategoryId())
@@ -171,6 +179,12 @@ public class RuleTypesService {
                 .label(rule.getLabel())
                 .minCount(rule.getMinCount())
                 .maxCount(rule.getMaxCount())
+                .ruleGroup(RuleGroup.getByCategory(rule.getCategory().getName()))
+                .selectedRulegroup(
+                	    rule.getRuleGroup() != null 
+                	        ? rule.getRuleGroup() 
+                	        : RuleGroup.NONE
+                	)
                 .build();
     }
 }

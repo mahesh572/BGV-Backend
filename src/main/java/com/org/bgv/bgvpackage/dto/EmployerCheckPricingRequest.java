@@ -1,5 +1,7 @@
 package com.org.bgv.bgvpackage.dto;
 
+import java.math.BigDecimal;
+
 import com.org.bgv.enums.PricingType;
 
 import jakarta.validation.constraints.NotNull;
@@ -23,7 +25,7 @@ public class EmployerCheckPricingRequest {
 
     @NotNull(message = "Unit price is required")
     @Positive(message = "Unit price must be greater than 0")
-    private Double unitPrice;
+    private BigDecimal  unitPrice;
 
     private Double minCharge;
     private Double maxCharge;
