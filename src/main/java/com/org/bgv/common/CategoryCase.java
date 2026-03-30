@@ -16,6 +16,7 @@ public class CategoryCase {
 	@NotNull
     private Long categoryId;
     
-    @NotNull
+	private List<Long> selectedRuleIds;
+   
     private List<CaseDocumentSelection> documents;
 }

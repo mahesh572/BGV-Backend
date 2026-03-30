@@ -111,19 +111,12 @@ public class VerificationCaseService {
         
         // Calculate pricing
         PricingResult pricing = calculateCandidatePricing(employerDocuments, selectedDocumentIds);
+      
         
-       /*
-        // Validate total price matches request
-        if (request.getTotalPrice() != null && 
-            request.getTotalPrice().compareTo(pricing.getTotalPrice()) != 0) {
-            log.warn("Price mismatch: requested={}, calculated={}", 
-                    request.getTotalPrice(), pricing.getTotalPrice());
-            throw new RuntimeException("Total price does not match calculated price");
-        }
-        */
+        
         
         // Create verification case
-        VerificationCase verificationCase = VerificationCase.builder()
+        VerificationCase verificationCase = VerificationCase.builder() 
                 .candidateId(request.getCandidateId())
                 .companyId(request.getCompanyId())
                 .employerPackage(employerPackage)

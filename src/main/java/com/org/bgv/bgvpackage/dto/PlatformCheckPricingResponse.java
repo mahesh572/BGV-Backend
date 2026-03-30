@@ -22,6 +22,7 @@ public class PlatformCheckPricingResponse {
     private String ruleTypeName;
     private String ruleTypeCode;
     private String documentLabel;
+    private Long documentTypeId;
 
     private PricingType pricingType;   // FLAT / PER_RECORD
 

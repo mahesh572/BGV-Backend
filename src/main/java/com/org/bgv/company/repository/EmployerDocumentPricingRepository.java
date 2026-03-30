@@ -69,4 +69,7 @@ public interface EmployerDocumentPricingRepository
             Long companyId,
             Long categoryId
     );
+    
+    
+    
 }

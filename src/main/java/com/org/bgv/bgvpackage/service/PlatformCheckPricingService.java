@@ -23,7 +23,10 @@ import lombok.extern.slf4j.Slf4j;
 
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Map;
 import java.util.Optional;
+import java.util.function.Function;
+import java.util.stream.Collectors;
 
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -184,23 +187,77 @@ public class PlatformCheckPricingService {
 
         CheckCategory checkCategory = checkCategoryRepository.findById(categoryId)
                 .orElseThrow(() -> new RuntimeException("Category not found"));
+        
+        List<RuleTypes> ruleTypes =
+                ruleTypesRepository.findByCategory(checkCategory);
+        
+        List<PlatformCheckPricing> pricingList =
+                pricingRepository.findByCheckCategory_CategoryIdAndActiveTrue(categoryId);
+        
+        Map<Long, PlatformCheckPricing> pricingMap =
+                pricingList.stream()
+                        .collect(Collectors.toMap(
+                                p -> p.getRuleType().getRuleTypeId(),
+                                Function.identity()
+                        ));
 
         // 🔹 If Identity → DOCUMENT pricing
         if (CheckCategoryEnum.IDENTITY.name()
                 .equalsIgnoreCase(checkCategory.getName())) {
+        	
+        	List<DocumentType> documents =
+        	        documentTypeRepository.findByCategory(checkCategory);
+        	
+        	List<PlatformDocumentPricing> documentpricingList =
+        	        platformDocumentPricingRepository
+        	                .findByCheckCategory_CategoryIdAndActiveTrue(categoryId);
+        	
+        	Map<Long, PlatformDocumentPricing> documentpricingMap =
+        			documentpricingList.stream()
+        	                .collect(Collectors.toMap(
+        	                        p -> p.getDocumentType().getDocTypeId(),
+        	                        Function.identity()
+        	                ));
 
-            return platformDocumentPricingRepository
-                    .findByCheckCategory_CategoryIdAndActiveTrue(categoryId)
-                    .stream()
-                    .map(this::mapDocumentPricingToResponse)
-                    .toList();
+        	return documents.stream()
+        	        .map(doc -> {
+
+        	            PlatformDocumentPricing pricing =
+        	            		documentpricingMap.get(doc.getDocTypeId());
+
+        	            return PlatformCheckPricingResponse.builder()
+        	                    .pricingId(pricing != null ? pricing.getId() : null)
+        	                    .ruleTypeId(doc.getDocTypeId())
+        	                    .ruleTypeName(doc.getName())
+        	                    .documentLabel(doc.getLabel())
+        	                    .documentTypeId(doc.getDocTypeId())
+        	                    .checkCategoryId(checkCategory.getCategoryId())
+        	                    .checkCategoryName(checkCategory.getName())
+        	                    .pricingType(pricing != null ? pricing.getPricingType() : null)
+        	                    .unitPrice(pricing != null ? pricing.getUnitPrice() : null)
+        	                    .level("DOCUMENT")
+        	                    .build();
+        	        })
+        	        .toList();
         }
 
         // 🔹 Other categories → RULE pricing
-        return pricingRepository
-                .findByCheckCategory_CategoryIdAndActiveTrue(categoryId)
-                .stream()
-                .map(this::mapToResponse)
+        return ruleTypes.stream()
+                .map(rule -> {
+
+                    PlatformCheckPricing pricing =
+                            pricingMap.get(rule.getRuleTypeId());
+
+                    return PlatformCheckPricingResponse.builder()
+                            .pricingId(pricing != null ? pricing.getId() : null)
+                            .ruleTypeId(rule.getRuleTypeId())
+                            .ruleTypeName(rule.getName())
+                            .checkCategoryId(checkCategory.getCategoryId())
+                            .checkCategoryName(checkCategory.getName())
+                            .pricingType(pricing != null ? pricing.getPricingType() : null)
+                            .unitPrice(pricing != null ? pricing.getUnitPrice() : null)
+                            .build();
+                })
                 .toList();
     }
     
@@ -240,48 +297,5 @@ public class PlatformCheckPricingService {
                 .build();
     }
     
-    /*
-    private PlatformCheckPricingResponse mapDocumentToResponse(DocumentType doc) {
-    	
-    	List<PlatformDocumentPricing>  platOptional = platformDocumentPricingRepository.findByCheckCategory_CategoryIdAndActiveTrue(doc.getCategory().getCategoryId());
-    	
-    	// PlatformDocumentPricing pricing = platOptional.orElse(null);
-    	
-    	if(platOptional==null || platOptional.size()==0) {
-    		return null;
-    	}
-
-        return PlatformCheckPricingResponse.builder()
-                .id(doc.getDocTypeId())
-                .checkCategoryId(doc.getCategory().getCategoryId())
-                .checkCategoryName(doc.getCategory().getName())
-                .ruleTypeId(doc.getDocTypeId()) // Not applicable
-                .ruleTypeName(doc.getName())
-                .level("DOCUMENT")
-                .pricingType(PricingType.FLAT)
-                .unitPrice(pricing != null ? pricing.getUnitPrice() : null)
-                .documentLabel(doc.getName())
-                .build();
-    }
-    */
-    /*
-    private PlatformCheckPricingResponse mapDocumentToResponse(
-            PlatformCheckPricing pricing) {
-
-        return PlatformCheckPricingResponse.builder()
-                .id(pricing.getId())
-                .checkCategoryId(pricing.getCheckCategory().getCategoryId())
-                .checkCategoryName(pricing.getCheckCategory().getName())
-                .ruleTypeId(pricing.getRuleType().getRuleTypeId())
-                .ruleTypeName(pricing.getRuleType().getName())
-                .ruleTypeCode(pricing.getRuleType().getCode())
-                .level("DOCUMENT")
-                .pricingType(pricing.getPricingType())
-                .unitPrice(pricing.getUnitPrice())
-               // .minCharge(pricing.getMinCharge())
-               // .maxCharge(pricing.getMaxCharge())
-                .active(pricing.getActive())
-                .build();
-    }
-*/
+    
 }
