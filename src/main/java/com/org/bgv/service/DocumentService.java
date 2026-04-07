@@ -1231,9 +1231,7 @@ public class DocumentService {
     }
     
     // Work Experience Documents
-    private List<CompanyDto> buildWorkExperienceDocuments(Long candidateId, 
-    		CheckCategory category, 
-                                                         List<DocumentType> documentTypes) {
+    private List<CompanyDto> buildWorkExperienceDocuments(Long candidateId,	CheckCategory category,List<DocumentType> documentTypes) {
         List<WorkExperience> workExperiences = workExperienceRepository.findByCandidateId(candidateId);
         
         return workExperiences.stream()
@@ -1252,15 +1250,12 @@ public class DocumentService {
     }
     
     // Company Document Types
-    private List<DocumentTypeDto> buildCompanyDocumentTypes(Long candidateId, 
-    		CheckCategory category, 
-                                                           List<DocumentType> documentTypes, 
-                                                           Long companyId) {
+    public List<DocumentTypeDto> buildCompanyDocumentTypes(Long candidateId,CheckCategory category,List<DocumentType> documentTypes,Long expId) {
         return documentTypes.stream()
             .map(documentType -> {
                 DocumentTypeDto dto = buildDocumentTypeDto(documentType);
                 List<Document> documents = documentRepository.findByCandidate_CandidateIdAndCategory_CategoryIdAndDocTypeId_DocTypeIdAndObjectId(
-                		candidateId, category.getCategoryId(), documentType.getDocTypeId(), companyId);
+                		candidateId, category.getCategoryId(), documentType.getDocTypeId(), expId);
                 dto.setFiles(convertDocumentsToFileDTOs(documents));
                 return dto;
             })

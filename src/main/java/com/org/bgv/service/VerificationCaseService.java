@@ -10,7 +10,9 @@ import com.org.bgv.candidate.dto.VerificationCaseDTO;
 import com.org.bgv.candidate.dto.VerificationCaseFilterDTO;
 import com.org.bgv.candidate.dto.VerificationCaseResponseDTO;
 import com.org.bgv.candidate.entity.Candidate;
+import com.org.bgv.candidate.entity.CandidatePackageRule;
 import com.org.bgv.candidate.entity.CandidateVerification;
+import com.org.bgv.candidate.repository.CandidatePackageRuleRepository;
 import com.org.bgv.candidate.repository.CandidateRepository;
 import com.org.bgv.candidate.repository.CandidateVerificationRepository;
 import com.org.bgv.common.CandidateCaseStatisticsResponse;
@@ -80,6 +82,7 @@ public class VerificationCaseService {
     private final NotificationDispatcher notificationDispatcher;
     private final CandidateRepository candidateRepository;
     private final UserRepository userRepository;
+    private final CandidatePackageRuleRepository candidatePackageRuleRepository;
     
     
     @Transactional
@@ -102,6 +105,9 @@ public class VerificationCaseService {
             throw new RuntimeException("Candidate already has a case with this package");
         }
         
+        
+        /*
+        
         // Extract all selected document IDs from categories
         List<Long> selectedDocumentIds = extractSelectedDocumentIds(request.getCategories());
         
@@ -112,7 +118,7 @@ public class VerificationCaseService {
         // Calculate pricing
         PricingResult pricing = calculateCandidatePricing(employerDocuments, selectedDocumentIds);
       
-        
+        */
         
         
         // Create verification case
@@ -120,9 +126,9 @@ public class VerificationCaseService {
                 .candidateId(request.getCandidateId())
                 .companyId(request.getCompanyId())
                 .employerPackage(employerPackage)
-                .basePrice(pricing.getBasePrice())
-                .addonPrice(pricing.getAddonPrice())
-                .totalPrice(pricing.getTotalPrice())
+              //  .basePrice(pricing.getBasePrice())
+              //  .addonPrice(pricing.getAddonPrice())
+              //  .totalPrice(pricing.getTotalPrice())
                 .status(CaseStatus.INITIATED)
                 .build();
         
@@ -132,12 +138,14 @@ public class VerificationCaseService {
         
         VerificationCase savedCase = verificationCaseRepository.saveAndFlush(verificationCase);
         
-        // Create verification case checks based on categories with selected documents
-         createVerificationCaseChecks(
-                savedCase, request.getCategories());
+        saveCandidatePackageRules(request,savedCase);
+       
         
-        List<VerificationCaseCheck> caseChecks =
-                verificationCaseCheckRepository.findByVerificationCase_CaseId(savedCase.getCaseId());
+        // Create verification case checks based on categories - 
+       
+        createVerificationCaseChecks(savedCase, request.getCategories());
+        
+        List<VerificationCaseCheck> caseChecks = verificationCaseCheckRepository.findByVerificationCase_CaseId(savedCase.getCaseId());
 
         savedCase.setCaseChecks(caseChecks);
        
@@ -147,26 +155,34 @@ public class VerificationCaseService {
         
         
         // Create candidate case documents based on selected documents
+        /*
         List<VerificationCaseDocument> caseDocuments = createCandidateCaseDocuments(
                 savedCase, employerDocuments, selectedDocumentIds, request.getCategories());
         savedCase.setCaseDocuments(caseDocuments);
-       
+       */
         savedCase = verificationCaseRepository.save(savedCase);
-        // asssign vendor to Category Check
+        
+        
+        // Asssigning vendor to Category Check START
         
         vendorAssignmentService.assignVendorsToCaseChecks(caseChecks);
         
-        createCandidateVerification(request.getCandidateId(), verificationCase, caseChecks, caseDocuments);
+     // Asssigning vendor to Category Check  END
         
-        //request.getCompanyId()
+        
+        // to Track Candidate Upload checks START
+        createCandidateVerification(request.getCandidateId(), verificationCase, caseChecks);
+        
+     // to Track Candidate Upload checks END
+        
         
         Company company = companyRepository.findById(request.getCompanyId()).orElseThrow(null);
         Candidate candidate = candidateRepository.findByCompanyIdAndCandidateId(request.getCompanyId(), request.getCandidateId()).orElseThrow(null);
         
         notificationDispatcher.dispatchCandidateBgvInvitation(company, candidate, candidate.getUser());
         
-        log.info("Created candidate case with id: {} and {} documents, {} checks", 
-                savedCase.getCaseId(), caseDocuments.size(), caseChecks.size());
+        log.info("Created candidate case with id: {} and {} checks", 
+                savedCase.getCaseId(), caseChecks.size());
         return mapToVerificationCaseResponse(savedCase);
     }
  
@@ -189,12 +205,15 @@ public class VerificationCaseService {
                             "Check category not found: " + categoryData.getCategoryId()));
             
             // Count selected documents in this category
+            
+            /*
+            
             long selectedCount = categoryData.getDocuments().stream()
                     .filter(doc -> doc.getSelected() != null && doc.getSelected())
                     .count();
-            
+            */
             // Only create check if there are selected documents in this category
-            if (selectedCount > 0) {
+            
                 VerificationCaseCheck caseCheck = VerificationCaseCheck.builder()
                         .verificationCase(verificationCase)
                         .category(checkCategory)
@@ -204,7 +223,7 @@ public class VerificationCaseService {
                 String checkRef = referenceNumberGenerator.generateCheckCaseNumber();
                 caseCheck.setCheckRef(checkRef);
                 caseChecks.add(caseCheck);
-            }
+            
         }
         
         // Save all case checks
@@ -323,7 +342,7 @@ public class VerificationCaseService {
                 .count();
     }
     
- // Create candidate case documents with enhanced logic for categories
+ // Create candidate case documents with enhanced logic for categories when candidate uploads the documents then its calculated...
     private List<VerificationCaseDocument> createCandidateCaseDocuments(
             VerificationCase verificationCase,
             List<EmployerPackageDocument> employerDocuments,
@@ -786,8 +805,8 @@ public class VerificationCaseService {
     public CandidateVerification createCandidateVerification(
             Long candidateId,
             VerificationCase verificationCase,
-            List<VerificationCaseCheck> caseChecks,
-            List<VerificationCaseDocument> caseDocuments) {
+            List<VerificationCaseCheck> caseChecks
+            ) {
 
         log.info("Creating CandidateVerification for candidateId={}", candidateId);
 
@@ -1075,7 +1094,47 @@ public class VerificationCaseService {
         return PageRequest.of(page, size, sort);
     }
     
-    
+    @Transactional
+    public void saveCandidatePackageRules(VerificationCaseRequest request,VerificationCase savedCase) {
+
+        EmployerPackage employerPackage =
+                employerPackageRepository.findById(request.getEmployerPackageId())
+                        .orElseThrow(() -> new RuntimeException("Package not found"));
+
+       
+
+        List<CandidatePackageRule> rules = new ArrayList<>();
+
+        for (CategoryCase category : request.getCategories()) {
+
+            for (Long ruleTypeId : category.getSelectedRuleIds()) {
+
+                CandidatePackageRule rule = CandidatePackageRule.builder()
+                        .employerPackageId(employerPackage)
+                        .companyId(request.getCompanyId())
+                        .candidateId(request.getCandidateId())
+                        .verificationCase(savedCase)
+                        .checkCategoryId(category.getCategoryId())
+                        .ruleTypeId(ruleTypeId)
+
+                        // defaults (you can enhance later)
+                        .required(false)
+                        .includedInPackage(true)
+                        .addon(false)
+
+                        // pricing (set later if needed)
+                        .unitPrice(0.0)
+                        .selectedCount(1)
+                        .totalPrice(0.0)
+                        .build();
+
+                rules.add(rule);
+            }
+        }
+
+        candidatePackageRuleRepository.saveAll(rules);
+    }
+
     
     
    

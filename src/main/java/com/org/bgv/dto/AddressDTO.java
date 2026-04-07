@@ -2,6 +2,7 @@ package com.org.bgv.dto;
 
 
 import java.time.LocalDate;
+import java.time.LocalDateTime;
 
 import com.fasterxml.jackson.annotation.JsonFormat;
 import com.fasterxml.jackson.annotation.JsonInclude;
@@ -44,6 +45,26 @@ public class AddressDTO {
     
     private Boolean currentlyResidingAtThisAddress;
 
-	
+    /* =========================
+    GEO / VALIDATION
+    ========================= */
+ private Boolean isValidated;
+ private String validationSource;
+ private LocalDate validationDate;
+
+ private Double latitude;
+ private Double longitude;
+ private String formattedAddress;
+ private String placeId;
+ private String nearestLandmark;
+
+ private String ownershipType;
+ 
+ /* =========================
+ STATUS & AUDIT
+ ========================= */
+private String status;
+private LocalDateTime createdAt;
+private LocalDateTime updatedAt;
 }
 

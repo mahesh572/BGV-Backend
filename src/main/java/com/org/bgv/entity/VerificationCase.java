@@ -35,14 +35,14 @@ public class VerificationCase {
     @JoinColumn(name = "employer_package_id", nullable = false)
     private EmployerPackage employerPackage;
 
-    @Column(name = "base_price", nullable = false)
+    @Column(name = "base_price")
     private Double basePrice;
     
     @Column(name = "addon_price")
     @Builder.Default
     private Double addonPrice = 0.0;
     
-    @Column(name = "total_price", nullable = false)
+    @Column(name = "total_price")
     private Double totalPrice;
     
     @Enumerated(EnumType.STRING)

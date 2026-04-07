@@ -11,6 +11,7 @@ import java.util.List;
 
 import com.fasterxml.jackson.annotation.JsonFormat;
 import com.fasterxml.jackson.annotation.JsonInclude;
+import com.org.bgv.dto.document.DocumentTypeDto;
 
 import jakarta.validation.constraints.Email;
 import jakarta.validation.constraints.NotNull;
@@ -72,6 +73,6 @@ public class WorkExperienceDTO {
     private Double durationInYears;
    
    
-    private List<DocumentResponse> documents;
+    private List<DocumentTypeDto> documentTypes;
   //  private DocumentStats documentStats;
 }

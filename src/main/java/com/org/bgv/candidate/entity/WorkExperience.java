@@ -2,10 +2,12 @@ package com.org.bgv.candidate.entity;
 
 import java.time.LocalDate;
 import java.time.LocalDateTime;
+import java.util.List;
 
 import org.hibernate.annotations.CreationTimestamp;
 import org.hibernate.annotations.UpdateTimestamp;
 
+import com.org.bgv.dto.document.DocumentTypeDto;
 import com.org.bgv.entity.Profile;
 import com.org.bgv.entity.VerificationCase;
 import com.org.bgv.entity.VerificationCaseCheck;
@@ -92,7 +94,7 @@ public class WorkExperience {
     @UpdateTimestamp
     @Column(name = "updated_at")
     private LocalDateTime updatedAt;
-    // getters and setters
+    
     
  // Helper methods
     public int getDurationInMonths() {

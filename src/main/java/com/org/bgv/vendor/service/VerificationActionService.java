@@ -230,6 +230,10 @@ public class VerificationActionService {
 	}
 
 	private VerificationAction buildBaseAction(VerificationActionRequest req) {
+		
+		ActionStatus status = req.getActionType() == ActionType.VERIFY
+		        ? ActionStatus.RESOLVED
+		        : ActionStatus.OPEN;
 
 	    return VerificationAction.builder()
 	            .actionType(req.getActionType())
@@ -247,7 +251,7 @@ public class VerificationActionService {
 	            )
 	            .remarks(req.getRemarks())
 	            .candidateId(getCandidateId(req))
-	            .status(ActionStatus.OPEN)
+	            .status(status)
 	            .performedBy(SecurityUtils.getCurrentUserId())
 	            .performedAt(LocalDateTime.now())
 	            .documentId(req.getDocumentId())

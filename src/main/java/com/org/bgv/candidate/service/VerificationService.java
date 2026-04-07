@@ -320,11 +320,11 @@ public class VerificationService {
             addSection(sections, SectionConstants.DOCUMENTS.getValue(), "Documents", requirementsMap, statusMap, 
                       null);
            
-           /* 
+          
             // Addresses
-            addSection(sections, "addresses", "Address History", requirementsMap, statusMap, 
-                      () -> addressService.getAddresses(candidateId));
-            
+            addSection(sections, SectionConstants.ADDRESS.getValue(), "Address History", requirementsMap, statusMap, 
+                      () -> null);
+            /* 
             // Documents
             addSection(sections, "documents", "Documents", requirementsMap, statusMap, 
                       () -> documentsService.getDocumentsByCandidate(candidateId));

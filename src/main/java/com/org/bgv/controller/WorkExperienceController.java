@@ -17,6 +17,7 @@ import org.springframework.web.bind.annotation.RestController;
 import com.org.bgv.api.response.CustomApiResponse;
 import com.org.bgv.candidate.controller.EducationController;
 import com.org.bgv.dto.WorkExperienceDTO;
+import com.org.bgv.dto.WorkExperienceResponse;
 import com.org.bgv.service.EducationService;
 import com.org.bgv.service.WorkExperienceService;
 
@@ -51,9 +52,10 @@ public class WorkExperienceController {
     }
 
     @GetMapping
-    public ResponseEntity<CustomApiResponse<List<WorkExperienceDTO>>> getWorkExperiences(@PathVariable Long candidateId,@RequestParam(required = false) Long caseId) {
+    public ResponseEntity<CustomApiResponse<WorkExperienceResponse>> getWorkExperiences(@PathVariable Long candidateId,@RequestParam(required = false) Long caseId) {
         try {
-            List<WorkExperienceDTO> experiences = workExperienceService.getWorkExperiencesByProfile(candidateId,caseId);
+        	WorkExperienceResponse experiences = workExperienceService.getWorkExperiencesByProfile(candidateId,caseId);
+            
             return ResponseEntity.ok(CustomApiResponse.success("Work experiences retrieved successfully", experiences, HttpStatus.OK));
         } catch (RuntimeException e) {
             return ResponseEntity.status(HttpStatus.NOT_FOUND)

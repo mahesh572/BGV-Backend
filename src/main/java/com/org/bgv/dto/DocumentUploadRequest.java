@@ -4,6 +4,8 @@ import java.util.List;
 
 import org.springframework.web.multipart.MultipartFile;
 
+import com.org.bgv.dto.document.FileDTO;
+
 import lombok.Builder;
 import lombok.Data;
 
@@ -16,6 +18,9 @@ public class DocumentUploadRequest {
         private String label; // display name
         private Long typeId;
 	    private List<FieldDTO> fields;
+	    private List<FileDTO> files;
+	    private Integer maxfiles;
+	    private String typeLabel;
 
 	   // private UploadRuleDTO upload;
 
