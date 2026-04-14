@@ -149,7 +149,7 @@ public class DocumentService {
         Document oldDocument = null;
         DocumentStatus status = DocumentStatus.UPLOADED;
 
-        if ("REUPLOAD".equalsIgnoreCase(action)) {
+        if ("RE_UPLOAD".equalsIgnoreCase(action)) {
             oldDocument = handleReupload(
                     candidate,
                     documentType,

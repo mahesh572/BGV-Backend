@@ -36,6 +36,7 @@ public enum NotificationEvent {
     VERIFICATION_IN_PROGRESS,
     VERIFICATION_FAILED,
     VERIFICATION_COMPLETED,
+    VERIFICATION_CHECK_ACTION_REQUIRED,
 
     // ======================
     // CASE

@@ -14,6 +14,7 @@ import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 
 import com.org.bgv.api.response.CustomApiResponse;
+import com.org.bgv.candidate.dto.IdentityResponse;
 import com.org.bgv.dto.DocumentUploadRequest;
 import com.org.bgv.dto.IdentitySectionRequest;
 import com.org.bgv.service.CompanyService;
@@ -44,9 +45,9 @@ public class IdentityController {
 	
 
 	@GetMapping("/candidate/{candidateId}/case/{caseId}")
-	public ResponseEntity<CustomApiResponse<IdentitySectionRequest>> getIdentitySection( @PathVariable Long candidateId,@PathVariable Long caseId) {
+	public ResponseEntity<CustomApiResponse<?>> getIdentitySection( @PathVariable Long candidateId,@PathVariable Long caseId) {
 	    try {
-	        IdentitySectionRequest identitySectionRequest = identityProofService.createIdentitySectionResponse(candidateId,caseId);
+	    	IdentityResponse identitySectionRequest = identityProofService.createIdentitySectionResponse(candidateId,caseId);
 	        return ResponseEntity.ok(CustomApiResponse.success(
 	            "Identity section retrieved successfully", 
 	            identitySectionRequest, 

@@ -6,13 +6,20 @@ import java.util.List;
 import org.springframework.stereotype.Service;
 
 import com.fasterxml.jackson.core.JsonProcessingException;
+import com.org.bgv.candidate.entity.Candidate;
+import com.org.bgv.candidate.repository.CandidateRepository;
 import com.org.bgv.common.DocumentStatus;
 import com.org.bgv.config.SecurityUtils;
 import com.org.bgv.constants.CaseCheckStatus;
+import com.org.bgv.entity.Company;
 import com.org.bgv.entity.Document;
+import com.org.bgv.entity.User;
 import com.org.bgv.entity.VerificationCase;
 import com.org.bgv.entity.VerificationCaseCheck;
+import com.org.bgv.notifications.service.NotificationDispatcher;
+import com.org.bgv.repository.CompanyRepository;
 import com.org.bgv.repository.DocumentRepository;
+import com.org.bgv.repository.UserRepository;
 import com.org.bgv.repository.VerificationCaseCheckRepository;
 import com.org.bgv.repository.VerificationCaseRepository;
 import com.org.bgv.service.EmailService;
@@ -51,6 +58,10 @@ public class VerificationActionService {
 	private final DocumentRepository documentRepository;
 	private final CaseCheckStatusService caseCheckStatusService;
 	private final CheckSyncService checkSyncService;
+	private final CandidateRepository candidateRepository;
+	 private final UserRepository userRepository;
+	 private final NotificationDispatcher notificationDispatcher;
+	 private final CompanyRepository companyRepository;
 	
 	public List<ActionReasonDTO> getReasons(
 	        Long categoryId,
@@ -211,7 +222,7 @@ public class VerificationActionService {
 	    
 	    switch (req.getActionLevel()) {
       //  case CASE -> updateCaseStatus(req, action);
-      //  case SECTION -> updateCheckStatus(req, action);
+        case SECTION -> updateCheckStatus(req, action);
         case DOCUMENT -> updateDocumentStatus(req, action);
       //  case OBJECT -> updateObjectStatus(req, action);
       }
@@ -227,6 +238,57 @@ public class VerificationActionService {
 	  //  applyActionSideEffects(req, action); // 👈 optional hooks
 
 	    return action.getId();
+	}
+	
+	private void updateCheckStatus(VerificationActionRequest req,
+	        VerificationAction action) {
+		
+		if (req.getActionLevel() == ActionLevel.SECTION
+		        && (req.getActionType() == ActionType.REQUEST_INFO
+		        || req.getActionType() == ActionType.INSUFFICIENT)) {
+
+			// 🔔 SEND NOTIFICATION (ONLY ONCE PER CHECK)
+		    try {
+		        Candidate candidate = candidateRepository
+		                .findById(action.getCandidateId())
+		                .orElseThrow();
+
+		        User user = userRepository
+		                .findById(candidate.getUser().getUserId())
+		                .orElseThrow();
+		        
+		        VerificationCaseCheck check =
+			            verificationCaseCheckRepository.getReferenceById(req.getCheckId());
+		        
+		        Long companyId = check.getVerificationCase().getCompanyId();
+		        
+		        Company company = companyRepository.findById(companyId)
+		                .orElseThrow(() -> new IllegalArgumentException("Company not found"));
+
+
+		        // 🔹 Count insufficient documents
+		        int insufficientCount = (int) documentRepository
+		                .findByVerificationCaseCheck_CaseCheckId(check.getCaseCheckId())
+		                .stream()
+		                .filter(doc -> doc.getStatus() == DocumentStatus.INSUFFICIENT
+		                        || doc.getStatus() == DocumentStatus.REQUEST_INFO)
+		                .count();
+
+		        notificationDispatcher.dispatchVerificationCheckActionRequired(
+		                company,
+		                candidate,
+		                user,
+		                check.getCategory().getName(), // check name
+		                check.getVerificationCase().getCaseId(),
+		                check.getCaseCheckId(),
+		                insufficientCount,
+		                action.getRemarks()
+		        );
+		    }catch (Exception e) {
+				e.printStackTrace();
+			}
+		}
+		
 	}
 
 	private VerificationAction buildBaseAction(VerificationActionRequest req) {
@@ -424,20 +486,7 @@ public class VerificationActionService {
 	) {
 		VerificationCaseCheck check =
 	            verificationCaseCheckRepository.getReferenceById(checkId);
-		/*
-
-	    List<Document> documents =
-	            documentRepository.findByVerificationCaseCheck_CaseCheckId(checkId);
-
-	    CaseCheckStatus newStatus = resolveCheckStatusFromDocuments(documents);
-
-	    check.setStatus(newStatus);
-	    check.setLastAction(action);
-	    check.setUpdatedAt(LocalDateTime.now());
-	    
-	    verificationCaseCheckRepository.save(check);
-	    
-	    */
+		
 		
 		CaseCheckStatus newStatus = caseCheckStatusService.recalculateCheckStatus(checkId);
 		check.setStatus(newStatus);

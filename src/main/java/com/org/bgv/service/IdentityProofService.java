@@ -1,11 +1,17 @@
 package com.org.bgv.service;
 
 import com.org.bgv.candidate.dto.CandidateActionCatalog;
+import com.org.bgv.candidate.dto.IdentityObjectResponse;
+import com.org.bgv.candidate.dto.IdentityResponse;
+import com.org.bgv.candidate.dto.VerificationSectionDTO;
 import com.org.bgv.candidate.entity.Candidate;
 import com.org.bgv.candidate.entity.IdentityProof;
 import com.org.bgv.candidate.repository.CandidateRepository;
 import com.org.bgv.candidate.repository.IdentityProofRepository;
+import com.org.bgv.candidate.service.VerificationHelperService;
+import com.org.bgv.candidate.service.VerificationService;
 import com.org.bgv.common.DocumentStatus;
+import com.org.bgv.dto.CheckCategoryEnum;
 import com.org.bgv.dto.DocumentResponse;
 import com.org.bgv.dto.DocumentStats;
 import com.org.bgv.dto.DocumentUploadRequest;
@@ -14,6 +20,7 @@ import com.org.bgv.dto.IdentityProofDTO;
 import com.org.bgv.dto.IdentityProofResponse;
 import com.org.bgv.dto.IdentitySectionRequest;
 import com.org.bgv.dto.UploadRuleDTO;
+import com.org.bgv.dto.document.DocumentTypeDto;
 import com.org.bgv.dto.document.FileDTO;
 import com.org.bgv.entity.BaseDocument;
 import com.org.bgv.entity.CheckCategory;
@@ -68,6 +75,7 @@ public class IdentityProofService {
     private final VerificationCaseRepository verificationCaseRepository;
     private final VerificationCaseCheckRepository verificationCaseCheckRepository;
     private final DocumentRepository documentRepository ;
+    private final VerificationHelperService verificationHelperService;
     /**
      * Fetch all identity proofs with their related documents for a given profile.
      */
@@ -196,9 +204,9 @@ public class IdentityProofService {
     
     
     
-    public IdentitySectionRequest createIdentitySectionResponse(Long candidateId, Long caseId) {
+    public IdentityResponse createIdentitySectionResponse(Long candidateId, Long caseId) {
 
-        final String CATEGORY_NAME = "Identity";
+        final String CATEGORY_NAME = CheckCategoryEnum.IDENTITY.getName();
 
         // Fetch category
         CheckCategory category = checkCategoryRepository
@@ -213,7 +221,15 @@ public class IdentityProofService {
         VerificationCaseCheck identityCheck = verificationCaseCheckRepository
                 .findByVerificationCaseAndCategory(verificationCase, category)
                 .orElseThrow(() -> new RuntimeException("Identity check not created"));
+        
+        VerificationSectionDTO verificationSectionDTO = verificationHelperService.getSectionStatusByCaseAndCandidate(candidateId,caseId,CATEGORY_NAME);
+        IdentityResponse identityResponse = buildIdentityResponse(candidateId, caseId);
+        identityResponse.setStatus(verificationSectionDTO.getStatus().name());
+        
+        
+        return identityResponse;
 
+        /*
         return IdentitySectionRequest.builder()
                 .section(category.getName())
                 .label(category.getName())
@@ -223,6 +239,7 @@ public class IdentityProofService {
                 .caseId(caseId)
                 .documents(createIdentityDocuments(candidateId, verificationCase, identityCheck))
                 .build();
+                */
     }
     
     private List<DocumentUploadRequest> createIdentityDocuments(
@@ -578,5 +595,79 @@ public class IdentityProofService {
     }
     
    
+    public IdentityResponse buildIdentityResponse(Long candidateId, Long caseId) {
+
+        final String CATEGORY_NAME = "Identity";
+
+        // Fetch category
+        CheckCategory category = checkCategoryRepository
+                .findByNameIgnoreCase(CATEGORY_NAME)
+                .orElseThrow(() -> new RuntimeException("Category not found"));
+
+        // Fetch case
+        VerificationCase verificationCase = verificationCaseRepository.findById(caseId)
+                .orElseThrow(() -> new RuntimeException("Verification case not found"));
+
+        // Fetch case check
+        VerificationCaseCheck identityCheck = verificationCaseCheckRepository
+                .findByVerificationCaseAndCategory(verificationCase, category)
+                .orElseThrow(() -> new RuntimeException("Identity check not found"));
+
+        // Get documents (existing logic)
+        List<DocumentUploadRequest> documents =
+                createIdentityDocuments(candidateId, verificationCase, identityCheck);
+
+        // Convert to IdentityObjectResponse
+        List<IdentityObjectResponse> identityObjects = documents.stream()
+                .map(this::mapToIdentityObjectResponse)
+                .collect(Collectors.toList());
+
+        return IdentityResponse.builder()
+                .caseId(caseId)
+                .categoryId(category.getCategoryId())
+                .checkId(identityCheck.getCaseCheckId())
+                .identityhistory(identityObjects)
+                .build();
+    }
     
+    private IdentityObjectResponse mapToIdentityObjectResponse(DocumentUploadRequest request) {
+
+        return IdentityObjectResponse.builder()
+                .id(request.getId())
+                .type(request.getType())
+                .label(request.getLabel())
+                .typeId(request.getTypeId())
+
+                // ✅ KEEP fields as it is
+                .fields(request.getFields())
+
+                // Convert files → DocumentTypeDto
+                .documentTypes(
+                        List.of(mapToDocumentTypeDto(request))
+                )
+                .build();
+    }
+    
+    private DocumentTypeDto mapToDocumentTypeDto(DocumentUploadRequest request) {
+
+        return DocumentTypeDto.builder()
+                .id(request.getId())
+                .typeId(request.getTypeId())
+                .typeName(request.getType())
+                .typeLabel(request.getTypeLabel())
+                .description(request.getLabel())
+                .isRequired(true) // you can adjust if needed
+                .enabled(true)
+                .maxFiles(request.getMaxfiles())
+
+                // ✅ files mapping
+                .files(request.getFiles() != null ? request.getFiles() : new ArrayList<>())
+
+                // ✅ KEEP fields same (important requirement)
+                .fields(request.getFields())
+
+                .error(false)
+                .errorMessage(null)
+                .build();
+    }
 }

@@ -61,6 +61,7 @@ public class VerificationService {
     private final VerificationCaseRepository verificationCaseRepository;
     private final VerificationCaseCheckRepository verificationCaseCheckRepository;
     private final VerificationCaseDocumentRepository verificationCaseDocumentRepository;
+    private final VerificationHelperService verificationHelperService;
    
     
     @Cacheable(value = "verification", key = "#candidateId")
@@ -93,7 +94,7 @@ public class VerificationService {
             .orElseThrow(() -> new EntityNotFoundException("Verification not found"));
         
         // Update section status in JSON field
-        Map<String, Map<String, Object>> sectionStatusMap = getSectionStatusMap(verification);
+        Map<String, Map<String, Object>> sectionStatusMap = verificationHelperService.getSectionStatusMap(verification);
         Map<String, Object> sectionData = sectionStatusMap.getOrDefault(section, new HashMap<>());
         
         sectionData.put("status", status.toString());
@@ -252,7 +253,7 @@ public class VerificationService {
     
     private int calculateProgress(CandidateVerification verification) {
         try {
-            Map<String, Map<String, Object>> sectionStatusMap = getSectionStatusMap(verification);
+            Map<String, Map<String, Object>> sectionStatusMap = verificationHelperService.getSectionStatusMap(verification);
             Map<String, Map<String, Object>> requirementsMap = getRequirementsMap(verification);
             
             int totalRequired = 0;
@@ -300,7 +301,7 @@ public class VerificationService {
         
         try {
             Map<String, Map<String, Object>> requirementsMap = getRequirementsMap(verification);
-            Map<String, Map<String, Object>> statusMap = getSectionStatusMap(verification);
+            Map<String, Map<String, Object>> statusMap = verificationHelperService.getSectionStatusMap(verification);
             
             // Basic Details
           //  addSection(sections, SectionConstants.BASIC_DETAILS.getValue(), "Basic Details", requirementsMap, statusMap, 
@@ -429,19 +430,7 @@ public class VerificationService {
     
     
     
-    @SuppressWarnings("unchecked")
-    private Map<String, Map<String, Object>> getSectionStatusMap(CandidateVerification verification) {
-        try {
-        	log.info("getSectionStatusMap::::::verification.getSectionStatus():::::::::::::{}",verification.getSectionStatus());
-            if (verification.getSectionStatus() != null) {
-                return objectMapper.readValue(verification.getSectionStatus(), 
-                    new TypeReference<Map<String, Map<String, Object>>>() {});
-            }
-        } catch (Exception e) {
-            log.error("Error parsing section status: {}", e.getMessage());
-        }
-        return new HashMap<>();
-    }
+    
     
     private void setSectionRequirements(CandidateVerification verification, Long packageId) {
         // This would typically fetch from a package configuration service
@@ -511,6 +500,7 @@ public class VerificationService {
         return dto;
     }
     
+   
     
     
 }

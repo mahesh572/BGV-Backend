@@ -205,5 +205,107 @@ public class NotificationDispatcher {
             throw e; // optional: rethrow so caller can react
         }
     }
+    
+    /* =====================================================
+    VERIFICATION CHECK ACTION REQUIRED (CANDIDATE)
+    ===================================================== */
+ public void dispatchVerificationCheckActionRequired(
+         Company company,
+         Candidate candidate,
+         User user,
+         String checkName,
+         Long caseId,
+         Long checkId,
+         Integer insufficientCount,
+         String remarks
+ ) {
+     log.info(
+             "📨 Dispatching VERIFICATION_CHECK_ACTION_REQUIRED | companyId={} | candidateEmail={} | checkId={}",
+             company.getId(), user.getEmail(), checkId
+     );
+
+     try {
+         var companyEmailSettings = companyEmailSettingsRepository
+                 .findByCompanyId(company.getId())
+                 .orElse(null);
+
+         var platformConfig = platformConfigRepository.findById(1L)
+                 .orElseThrow(() ->
+                         new IllegalStateException("PlatformConfig not initialized"));
+
+         var platformEmailSettings = platformEmailSettingsRepository
+                 .findActive()
+                 .orElse(null);
+
+         // 🔹 Placeholders to resolve
+         Set<NotificationPlaceholder> placeholders = EnumSet.of(
+                 NotificationPlaceholder.CANDIDATE_NAME,
+                 NotificationPlaceholder.CANDIDATE_EMAIL,
+
+                 NotificationPlaceholder.EMPLOYER_BRAND_NAME,
+                 NotificationPlaceholder.EMPLOYER_SUPPORT_EMAIL,
+
+                 NotificationPlaceholder.PLATFORM_BRAND_NAME,
+                 NotificationPlaceholder.PLATFORM_SUPPORT_EMAIL,
+
+                 NotificationPlaceholder.CURRENT_YEAR
+         );
+
+         // 🔹 Build action URL (VERY IMPORTANT)
+         String actionUrl = platformConfig.getWebsiteUrl() +
+                 "/candidate/case/" + caseId + "/check/" + checkId;
+
+         // 🔹 Runtime placeholders (dynamic values)
+         Map<String, Object> runtimePlaceholders = new HashMap<>();
+         runtimePlaceholders.put("checkName", checkName);
+         runtimePlaceholders.put("insufficientCount", insufficientCount);
+         runtimePlaceholders.put("remarks", remarks);
+         runtimePlaceholders.put("actionUrl", actionUrl);
+
+         log.debug("🧩 Runtime placeholders: {}", runtimePlaceholders);
+
+         // 🔹 Resolve all placeholders
+         Map<String, Object> vars = placeholderEngine.resolveAll(
+                 placeholders,
+                 ResolutionContext.builder()
+                         .company(company)
+                         .candidate(candidate)
+                         .companyEmailSettings(companyEmailSettings)
+                         .platformConfig(platformConfig)
+                         .platformEmailSettings(platformEmailSettings)
+                         .runtimeValues(runtimePlaceholders)
+                         .build()
+         );
+
+         // 🔹 Add runtime values (important if template uses them directly)
+         vars.putAll(runtimePlaceholders);
+
+         NotificationContext context = NotificationContext.builder()
+                 .event(NotificationEvent.VERIFICATION_CHECK_ACTION_REQUIRED)
+                 .companyId(company.getId())
+                 .userEmailAddress(user.getEmail())
+                 .variables(vars)
+                 .build();
+
+         dispatcher.dispatch(
+                 NotificationEvent.VERIFICATION_CHECK_ACTION_REQUIRED,
+                 context
+         );
+
+         log.info(
+                 "✅ VERIFICATION_CHECK_ACTION_REQUIRED dispatched | candidateEmail={} | checkId={}",
+                 user.getEmail(), checkId
+         );
+
+     } catch (Exception e) {
+         log.error(
+                 "❌ Failed to dispatch VERIFICATION_CHECK_ACTION_REQUIRED | companyId={} | candidateEmail={}",
+                 company.getId(),
+                 user.getEmail(),
+                 e
+         );
+         throw e;
+     }
+ }
 }
 

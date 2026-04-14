@@ -63,7 +63,7 @@ try {
 
         policy.getRecipients().forEach(recipient -> {
 
-            log.debug(
+            log.info(
                     "👤 Processing recipient | recipientId={}",
                     recipient.getId()
             );

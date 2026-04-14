@@ -2,7 +2,7 @@ package com.org.bgv.notifications.dto;
 
 public enum NotificationPlaceholder {
 	
-	USER_FULL_NAME("userFullName","User Full Name"),
+	// USER_FULL_NAME("userFullName","User Full Name"),
 
     // 🔹 Employer / Organization
     EMPLOYER_BRAND_NAME("employerBrandName", "Employer Brand Name"),
@@ -18,7 +18,7 @@ public enum NotificationPlaceholder {
     // 🔹 Employee / Employer Account
     EMPLOYEE_NAME("employeeName", "Employee Name"),
     EMPLOYEE_EMAIL("employeeEmail", "Employee Email"),
-    EMPLOYEE_LINK_EXPIRY_DURATION("",""),
+   // EMPLOYEE_LINK_EXPIRY_DURATION("",""),
 
     TEMPORARY_PASSWORD("temporaryPassword", "Temporary Password"),
     RESET_PASSWORD_LINK("resetPasswordLink", "Reset Password Link"),
@@ -42,7 +42,11 @@ public enum NotificationPlaceholder {
 	
     VERIFICATION_LINK("verificationLink","Verification Link"),
     VERIFICATION_LINK_EXPIRY_DATE("verificationExpiryLink","Verification Expiry Link"),
-	CURRENT_YEAR("currentYear","Current Year");
+	CURRENT_YEAR("currentYear","Current Year"),
+	
+	// CHECK
+	CHECK_NAME("checkName","Check Name"),
+	INSUFFICIENT_COUNT("insufficientCount","Insufficient Count");
 	
 	
 
