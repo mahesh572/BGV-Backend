@@ -14,6 +14,7 @@ import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 
 import com.org.bgv.api.response.CustomApiResponse;
+import com.org.bgv.candidate.dto.AddressResponse;
 import com.org.bgv.candidate.service.AddressService;
 import com.org.bgv.dto.AddressDTO;
 import com.org.bgv.dto.ProfileAddressDTO;
@@ -25,7 +26,7 @@ import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 
 @RestController
-@RequestMapping("/api/candidate/{candidateId}/address")
+@RequestMapping("/api/candidate/{candidateId}/case/{caseId}/address")
 @RequiredArgsConstructor
 @Slf4j
 public class AddressController {
@@ -34,12 +35,13 @@ public class AddressController {
 	 private final AddressService addressService;
 
 	    @PostMapping
-	    public ResponseEntity<CustomApiResponse<List<AddressDTO>>> saveProfileAddresses(
+	    public ResponseEntity<CustomApiResponse<List<AddressDTO>>> saveCandidateAddresses(
 	            @PathVariable Long candidateId,
+	            @PathVariable Long caseId,
 	            @RequestBody List<AddressDTO> profileAddressDTOs) {
 		    log.info("AddressController::::::::::::::::::::::::::::{}",profileAddressDTOs);
 	        try {
-	            List<AddressDTO> savedAddresses = addressService.saveAddresses(profileAddressDTOs, candidateId);
+	            List<AddressDTO> savedAddresses = addressService.saveAddresses(profileAddressDTOs, candidateId,caseId);
 	            return ResponseEntity.status(HttpStatus.CREATED)
 	                    .body(CustomApiResponse.success("Addresses saved successfully", savedAddresses, HttpStatus.CREATED));
 	        } catch (RuntimeException e) {
@@ -52,9 +54,9 @@ public class AddressController {
 	    }
 
 	    @GetMapping
-	    public ResponseEntity<CustomApiResponse<List<AddressDTO>>> getProfileAddresses(@PathVariable Long candidateId) {
+	    public ResponseEntity<CustomApiResponse<?>> getCandidateAddresses(@PathVariable Long candidateId,@PathVariable Long caseId) {
 	        try {
-	            List<AddressDTO> addresses = addressService.getAddressesByCandidate(candidateId);
+	        	AddressResponse addresses = addressService.getAddressesByCandidate(candidateId,caseId);
 	            return ResponseEntity.ok(CustomApiResponse.success("Addresses retrieved successfully", addresses, HttpStatus.OK));
 	        } catch (RuntimeException e) {
 	            return ResponseEntity.status(HttpStatus.NOT_FOUND)
@@ -67,12 +69,13 @@ public class AddressController {
 
 	    
 	    @PutMapping
-	    public ResponseEntity<CustomApiResponse<List<AddressDTO>>> updateProfileAddresses(
+	    public ResponseEntity<CustomApiResponse<List<AddressDTO>>> updateCandidateAddresses(
 	            @PathVariable Long candidateId,
+	            @PathVariable Long caseId,
 	            @RequestBody List<AddressDTO> profileAddressDTOs) {
 	    	 log.info("AddressController::::::updateProfileAddresses::::::::::::::::::::::{}",profileAddressDTOs);
 	        try {
-	            List<AddressDTO> updatedAddresses = addressService.updateAddresses(profileAddressDTOs, candidateId);
+	            List<AddressDTO> updatedAddresses = addressService.updateAddresses(profileAddressDTOs, candidateId,caseId);
 	            return ResponseEntity.ok()
 	                    .body(CustomApiResponse.success("Addresses updated successfully", updatedAddresses, HttpStatus.OK));
 	        } catch (EntityNotFoundException e) {

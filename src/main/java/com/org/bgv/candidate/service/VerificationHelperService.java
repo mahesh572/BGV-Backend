@@ -2,12 +2,15 @@ package com.org.bgv.candidate.service;
 
 import java.time.LocalDateTime;
 import java.util.HashMap;
+import java.util.List;
 import java.util.Map;
+import java.util.Set;
 
 import org.springframework.stereotype.Service;
 
 import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.org.bgv.candidate.dto.CandidateActionCatalog;
 import com.org.bgv.candidate.dto.VerificationSectionDTO;
 import com.org.bgv.candidate.entity.CandidateVerification;
 import com.org.bgv.candidate.repository.CandidateVerificationRepository;
@@ -21,6 +24,8 @@ import com.org.bgv.service.IdentityProofService;
 import com.org.bgv.service.ProfileAddressService;
 import com.org.bgv.service.ProfileService;
 import com.org.bgv.service.WorkExperienceService;
+import com.org.bgv.vendor.action.dto.ActionDTO;
+import com.org.bgv.vendor.dto.ActionType;
 
 import jakarta.persistence.EntityNotFoundException;
 import lombok.RequiredArgsConstructor;
@@ -91,6 +96,22 @@ public class VerificationHelperService {
 	            log.error("Error parsing section status: {}", e.getMessage());
 	        }
 	        return new HashMap<>();
+	    }
+	  
+	  public static List<ActionDTO> resolveSectionActions(SectionStatus status) {
+
+	        Set<ActionType> allowedActions =
+	        		CandidateActionCatalog.STATUS_ACTION_MAP.getOrDefault(status, Set.of(ActionType.VIEW));
+
+	        return CandidateActionCatalog.getBaseActions().stream()
+	                .map(action -> ActionDTO.builder()
+	                        .code(action.getCode())
+	                        .label(action.getLabel())
+	                        .level(action.getLevel())
+	                        .enabled(allowedActions.contains(action.getCode()))
+	                        .build()
+	                )
+	                .toList();
 	    }
 
 }

@@ -1,5 +1,6 @@
 package com.org.bgv.common;
 
+import java.math.BigDecimal;
 import java.time.LocalDateTime;
 import java.util.List;
 
@@ -20,7 +21,7 @@ public class VerificationCaseResponse {
     private EmployerPackageInfo employerPackage;
     private Double basePrice;
     private Double addonPrice;
-    private Double totalPrice;
+    private BigDecimal totalPrice;
     private String status;
     private LocalDateTime createdAt;
     private List<VerificationCaseDocumentResponse> documents;

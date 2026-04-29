@@ -36,7 +36,7 @@ public class S3StorageService {
     private final S3Presigner s3Presigner;
     private final DocumentRepository documentRepository;
 
-    private static final String BUCKET_NAME = "bgv-doc-mahesh";
+    private static final String BUCKET_NAME = "bgv-doc-mahesh1";
 
     // -------------------- UPLOAD --------------------
     public Pair<String, String> uploadFile(MultipartFile file, String folder) {

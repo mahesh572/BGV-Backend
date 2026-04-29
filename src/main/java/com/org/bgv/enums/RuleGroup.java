@@ -21,7 +21,7 @@ public enum RuleGroup {
     EDUCATION_ADD_ON(Set.of( CheckCategoryEnum.EDUCATION.getName())),
 	
 	 // 🔹 Address History Duration
-    ADDRESS_DURATION_SELECTION(Set.of( CheckCategoryEnum.ADDRESS.getName())),
+    ADDRESS_DURATION_SELECTION(Set.of( CheckCategoryEnum.ADDRESS.getName())),  // 5 years address
  // 🔹 Address Type Selection
     ADDRESS_TYPE_SELECTION(Set.of( CheckCategoryEnum.ADDRESS.getName())),
     

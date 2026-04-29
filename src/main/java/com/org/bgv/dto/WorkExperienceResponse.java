@@ -15,6 +15,7 @@ public class WorkExperienceResponse {
 	private Long checkId;
 	private Long caseId;
 	private Long categoryId;
+	private String status;
     private List<WorkExperienceDTO> workExperiences;
    
 }

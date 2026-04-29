@@ -28,31 +28,31 @@ public class CheckSyncService {
     @Transactional
     public void markSectionActionRequired(Long candidateId,Long caseId, String sectionKey) throws JsonMappingException, JsonProcessingException {
 
-       CandidateVerification verification =
+       CandidateVerification candidateVerification =
                 candidateVerificationRepository
                         .findByCandidateIdAndVerificationCaseCaseId(candidateId,caseId)
                         .orElseGet(null);
 
         Map<String, Map<String, Object>> sectionStatusMap =
                 objectMapper.readValue(
-                        verification.getSectionStatus(),
+                		candidateVerification.getSectionStatus(),
                         new TypeReference<>() {}
                 );
 
         Map<String, Object> section =
                 sectionStatusMap.getOrDefault(sectionKey, new HashMap<>());
 
-        section.put("status", CaseCheckStatus.ACTION_REQUIRED);
+        section.put("status", VerificationStatus.ACTION_REQUIRED);
         section.put("lastUpdated", LocalDateTime.now().toString());
 
         sectionStatusMap.put(sectionKey, section);
 
-        verification.setSectionStatus(
+        candidateVerification.setSectionStatus(
                 objectMapper.writeValueAsString(sectionStatusMap)
         );
 
-        verification.setStatus(VerificationStatus.IN_PROGRESS);
+        candidateVerification.setStatus(VerificationStatus.ACTION_REQUIRED);
 
-        candidateVerificationRepository.save(verification);
+        candidateVerificationRepository.save(candidateVerification);
     }
 }

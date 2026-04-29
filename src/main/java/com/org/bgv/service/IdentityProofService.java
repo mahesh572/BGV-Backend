@@ -11,6 +11,7 @@ import com.org.bgv.candidate.repository.IdentityProofRepository;
 import com.org.bgv.candidate.service.VerificationHelperService;
 import com.org.bgv.candidate.service.VerificationService;
 import com.org.bgv.common.DocumentStatus;
+import com.org.bgv.constants.SectionStatus;
 import com.org.bgv.dto.CheckCategoryEnum;
 import com.org.bgv.dto.DocumentResponse;
 import com.org.bgv.dto.DocumentStats;
@@ -225,21 +226,12 @@ public class IdentityProofService {
         VerificationSectionDTO verificationSectionDTO = verificationHelperService.getSectionStatusByCaseAndCandidate(candidateId,caseId,CATEGORY_NAME);
         IdentityResponse identityResponse = buildIdentityResponse(candidateId, caseId);
         identityResponse.setStatus(verificationSectionDTO.getStatus().name());
-        
+        SectionStatus sectionStatus = SectionStatus.fromString(verificationSectionDTO.getStatus().name());
+        identityResponse.setActions(VerificationHelperService.resolveSectionActions(sectionStatus));
         
         return identityResponse;
 
-        /*
-        return IdentitySectionRequest.builder()
-                .section(category.getName())
-                .label(category.getName())
-                .checkId(identityCheck.getCaseCheckId())   // ✅ FIXED
-                .checkRef(identityCheck.getCheckRef())     // ✅ FIXED
-                .categoryId(category.getCategoryId())
-                .caseId(caseId)
-                .documents(createIdentityDocuments(candidateId, verificationCase, identityCheck))
-                .build();
-                */
+       
     }
     
     private List<DocumentUploadRequest> createIdentityDocuments(
@@ -334,7 +326,7 @@ public class IdentityProofService {
     
     private DocumentUploadRequest createPanCardDocument(DocumentType documentType, IdentityProof identityProof) {
         return DocumentUploadRequest.builder()
-        		.id(identityProof.getId())
+        		.id(identityProof!=null?identityProof.getId():null)
                 .type("PAN")
                 .label("PAN Card")
                 .typeLabel("PAN Card")
@@ -366,7 +358,7 @@ public class IdentityProofService {
     
     private DocumentUploadRequest createPassportDocument(DocumentType documentType, IdentityProof identityProof) {
         return DocumentUploadRequest.builder()
-        		.id(identityProof.getId())
+        		.id(identityProof!=null?identityProof.getId():null)
                 .type("PASSPORT")
                 .label("Passport")
                 .typeId(documentType.getDocTypeId())
@@ -410,6 +402,10 @@ public class IdentityProofService {
     
     
     private List<FileDTO> createIdentityDocuments(DocumentType documentType, IdentityProof identityProof) {
+    	
+    	if (identityProof == null) {
+            return Collections.emptyList(); // ✅ safe fallback
+        }
     	
     	List<Document> documents = documentRepository.findByCandidate_CandidateIdAndCategory_CategoryIdAndDocTypeId_DocTypeIdAndObjectId(
     			identityProof.getCandidate().getCandidateId(), documentType.getCategory().getCategoryId(), documentType.getDocTypeId(), identityProof.getId());

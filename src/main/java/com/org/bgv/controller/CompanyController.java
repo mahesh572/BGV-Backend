@@ -25,6 +25,7 @@ import com.org.bgv.api.response.CustomApiResponse;
 import com.org.bgv.candidate.CandidateSearchRequest;
 import com.org.bgv.candidate.dto.CreateCandidateRequest;
 import com.org.bgv.candidate.entity.Candidate;
+import com.org.bgv.candidate.service.VerificationService;
 import com.org.bgv.common.CandidateDTO;
 import com.org.bgv.common.CandidateDetailsDTO;
 import com.org.bgv.common.PaginationResponse;
@@ -32,10 +33,13 @@ import com.org.bgv.common.RemoveUsersRequest;
 import com.org.bgv.common.RoleConstants;
 import com.org.bgv.common.SortingRequest;
 import com.org.bgv.common.Status;
+import com.org.bgv.company.dto.CaseSearchRequest;
 import com.org.bgv.company.dto.CompanyRegistrationRequestDTO;
 import com.org.bgv.company.dto.CompanyRegistrationResponse;
+import com.org.bgv.company.dto.CompanyVerificationCaseDTO;
 import com.org.bgv.company.dto.EmployeeDTO;
 import com.org.bgv.company.dto.PersonDTO;
+import com.org.bgv.company.dto.VerificationCaseDetailsDTO;
 import com.org.bgv.config.SecurityUtils;
 import com.org.bgv.constants.Constants;
 import com.org.bgv.entity.Company;
@@ -43,6 +47,7 @@ import com.org.bgv.entity.User;
 import com.org.bgv.role.dto.RoleResponse;
 import com.org.bgv.service.CandidateService;
 import com.org.bgv.service.CompanyService;
+import com.org.bgv.service.VerificationCaseService;
 
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.responses.ApiResponse;
@@ -61,8 +66,8 @@ public class CompanyController {
 	
 	private final CompanyService companyService;
 	private final CandidateService candidateService;
+	private final VerificationCaseService verificationCaseService;
 
-    
 
     @GetMapping("/check-admin-email")
     public ResponseEntity<CustomApiResponse<Map<String, Boolean>>> checkAdminEmail(
@@ -102,44 +107,7 @@ public class CompanyController {
         }
     }
     
- // Get all companies with pagination and filtering
-    /*
-    @GetMapping
-    public ResponseEntity<CustomApiResponse<Map<String, Object>>> getAllCompanies(
-            @RequestParam(defaultValue = "0") int page,
-            @RequestParam(defaultValue = "10") int size,
-            @RequestParam(defaultValue = "companyName") String sortBy,
-            @RequestParam(defaultValue = "asc") String sortDirection,
-            @RequestParam(required = false) String search,
-            @RequestParam(required = false) String industry,
-            @RequestParam(required = false) String status) {
-
-        log.info("Fetching all companies - page: {}, size: {}, sort: {}, direction: {}, search: {}, industry: {}, status: {}",
-                page, size, sortBy, sortDirection, search, industry, status);
-
-        try {
-            Pageable pageable = PageRequest.of(page, size, 
-                Sort.by(Sort.Direction.fromString(sortDirection), sortBy));
-            
-            Map<String, Object> response = companyService.getAllCompanies(pageable, search, industry, status);
-            
-            return ResponseEntity.ok(CustomApiResponse.success(
-                "Companies retrieved successfully", 
-                response, 
-                HttpStatus.OK
-            ));
-            
-        } catch (Exception e) {
-            log.error("Error fetching companies: {}", e.getMessage(), e);
-            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
-                    .body(CustomApiResponse.failure(
-                        "Failed to fetch companies: " + e.getMessage(), 
-                        HttpStatus.INTERNAL_SERVER_ERROR
-                    ));
-        }
-    }
-*/
-    // Get company by ID
+ 
     
 
     // Get companies count for dashboard
@@ -193,45 +161,6 @@ public class CompanyController {
         }
     }
     
-    // Employee related 
-    /*
-    @PostMapping("/{companyId}/employee")
-    public ResponseEntity<CustomApiResponse<Boolean>> addEmployee(
-    		@PathVariable Long companyId,
-            @RequestBody EmployeeDTO employeeDTO,
-            @RequestParam(defaultValue = "ACTIVE") String status) {
-        
-        log.info("Received employee addition request for company ID: {}, employee: {}", 
-                 companyId, employeeDTO.getEmail());
-        
-        try {
-            Boolean response = companyService.addEmployee(companyId, employeeDTO,Status.USER_TYPE_COMPANY);
-            return ResponseEntity.ok(CustomApiResponse.success(
-                "Employee added successfully", 
-                response, 
-                HttpStatus.CREATED
-            ));
-            
-        } catch (IllegalArgumentException e) {
-            log.warn("Validation error in employee addition: {}", e.getMessage());
-            return ResponseEntity.status(HttpStatus.BAD_REQUEST)
-                    .body(CustomApiResponse.failure(e.getMessage(), HttpStatus.BAD_REQUEST));
-                    
-        } catch (RuntimeException e) {
-            log.error("Business logic error during employee addition: {}", e.getMessage());
-            return ResponseEntity.status(HttpStatus.CONFLICT)
-                    .body(CustomApiResponse.failure(e.getMessage(), HttpStatus.CONFLICT));
-                    
-        } catch (Exception e) {
-            log.error("Unexpected error during employee addition: {}", e.getMessage(), e);
-            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
-                    .body(CustomApiResponse.failure(
-                        "Internal server error while adding employee", 
-                        HttpStatus.INTERNAL_SERVER_ERROR
-                    ));
-        }
-    }
-*/
     
    
     
@@ -481,5 +410,74 @@ public class CompanyController {
         );
     }
     
+    
+    @PostMapping("/{companyId}/cases/search")
+    public ResponseEntity<CustomApiResponse<PaginationResponse<CompanyVerificationCaseDTO>>> searchCases(
+            @PathVariable Long companyId,
+            @RequestBody CaseSearchRequest searchRequest) {
+
+        log.info("Verification case search request received");
+
+        try {
+
+            // 🔹 Apply company scope
+            searchRequest.setCompanyId(companyId);
+
+            // 🔹 Default sorting
+            if (searchRequest.getSorting() == null) {
+                searchRequest.setSorting(SortingRequest.builder()
+                        .sortBy("createdAt")
+                        .sortDirection("desc")
+                        .build());
+            }
+
+            // 🔹 Clean filters
+            if (searchRequest.getFilters() != null) {
+                searchRequest.getFilters().removeIf(filter ->
+                        filter.getField() == null ||
+                        filter.getField().isEmpty() ||
+                        !Boolean.TRUE.equals(filter.getIsSelected())
+                );
+            }
+
+            PaginationResponse<CompanyVerificationCaseDTO> result =
+                    verificationCaseService.searchCases(searchRequest);
+
+            return ResponseEntity.ok(
+                    CustomApiResponse.success(
+                            "Cases retrieved successfully",
+                            result,
+                            HttpStatus.OK
+                    )
+            );
+
+        } catch (Exception e) {
+            log.error("Error searching cases", e);
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
+                    .body(CustomApiResponse.failure(
+                            "Error searching cases",
+                            HttpStatus.INTERNAL_SERVER_ERROR
+                    ));
+        }
+    }
+    
+    
+    @GetMapping("/{companyId}/cases/{caseId}/details")
+    public ResponseEntity<CustomApiResponse<VerificationCaseDetailsDTO>> getCaseDetails(
+            @PathVariable Long caseId,
+            @PathVariable Long companyId) {
+
+        VerificationCaseDetailsDTO details = verificationCaseService.getVerificationCaseDetails(caseId);
+        
+        return ResponseEntity.ok(
+                CustomApiResponse.success(
+                        "Case Details fetched successfully",
+                        details,
+                        HttpStatus.OK
+                )
+        );
+        
+        
+    }
     
 }

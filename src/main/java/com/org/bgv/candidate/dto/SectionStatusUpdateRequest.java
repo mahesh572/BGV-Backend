@@ -22,5 +22,9 @@ public class SectionStatusUpdateRequest {
     // Optional data field for additional section data
     private Object data;
     
+    private Long caseId;
+    
+    private Long checkId;
+    
     
 }

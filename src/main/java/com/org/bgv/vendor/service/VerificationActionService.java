@@ -143,73 +143,7 @@ public class VerificationActionService {
         
         log.info("Evidence {} linked to action {}", evidenceId, actionId);
     }
-	/*
-	@Transactional
-	public Long createRequestInfoAction(VerificationActionRequest req) {
-
-	    VerificationAction action = verificationActionRepository.save(
-	        VerificationAction.builder()
-	            .actionType(req.getActionType())
-	            .actionLevel(req.getActionLevel())
-	            .verificationCase(
-	                verificationCaseRepository.getReferenceById(req.getCaseId())
-	            )
-	            .verificationCaseCheck(
-	                verificationCaseCheckRepository.getReferenceById(req.getCheckId())
-	            )
-	            .reason(
-	                actionReasonRepository.getReferenceById(req.getReasonId())
-	            )
-	            .remarks(req.getRemarks())
-	            .candidateId(getCandidateId(req))
-	            .status(ActionStatus.OPEN)
-	            .performedBy(SecurityUtils.getCurrentUserId())
-	            .performedAt(LocalDateTime.now())
-	            .build()
-	    );
-
-	    // 🔗 HANDLE EVIDENCE
-	    if (req.getEvidences() != null && !req.getEvidences().isEmpty()) {
-
-	        for (EvidenceLinkRequest evReq : req.getEvidences()) {
-
-	            // -------------------------------
-	            // 1️⃣ VENDOR UPLOAD (already exists)
-	            // -------------------------------
-	            if (evReq.getSource() == EvidenceSource.VENDOR_UPLOAD) {
-
-	                VerificationActionEvidence evidence =
-	                        evidenceRepository.findById(evReq.getEvidenceId())
-	                            .orElseThrow(() ->
-	                                new IllegalArgumentException(
-	                                    "Evidence not found: " + evReq.getEvidenceId()
-	                                )
-	                            );
-
-	                evidence.setAction(action);
-	            }
-
-	            // --------------------------------
-	            // 2️⃣ CANDIDATE DOCUMENT (create new)
-	            // --------------------------------
-	            else if (evReq.getSource() == EvidenceSource.CANDIDATE_DOCUMENT) {
-
-	                VerificationActionEvidence evidence =
-	                        VerificationActionEvidence.builder()
-	                            .action(action)
-	                            .source(EvidenceSource.CANDIDATE_DOCUMENT)
-	                            .documentId(evReq.getDocumentId())
-	                            .uploadedBy(SecurityUtils.getCurrentUserId())
-	                            .build();
-
-	                evidenceRepository.save(evidence);
-	            }
-	        }
-	    }
-
-	    return action.getId();
-	}
-*/
+	
 	
 	@Transactional
 	public Long createAction(VerificationActionRequest req) {

@@ -1,27 +1,31 @@
 package com.org.bgv.candidate.dto;
 
+import java.time.LocalDate;
+import java.time.LocalDateTime;
 import java.util.List;
 
-import com.org.bgv.dto.EducationHistoryDTO;
-import com.org.bgv.dto.EducationResponse;
+import com.fasterxml.jackson.annotation.JsonFormat;
+import com.org.bgv.dto.AddressDTO;
+import com.org.bgv.entity.AddressType;
 import com.org.bgv.vendor.action.dto.ActionDTO;
 
 import lombok.AllArgsConstructor;
 import lombok.Builder;
-import lombok.Getter;
+import lombok.Data;
 import lombok.NoArgsConstructor;
-import lombok.Setter;
 
-@Getter
-@Setter
+@Data
 @NoArgsConstructor
 @AllArgsConstructor
 @Builder
-public class IdentityResponse {
+public class AddressResponse {
+
 	private Long checkId;
 	private Long caseId;
 	private Long categoryId;
 	private String status;
 	private List<ActionDTO> actions;
-	private List<IdentityObjectResponse> identityhistory;
+	private List<AddressDTO> addresses;
+	
+	
 }

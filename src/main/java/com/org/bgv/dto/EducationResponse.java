@@ -20,6 +20,7 @@ public class EducationResponse {
 	private Long checkId;
 	private Long caseId;
 	private Long categoryId;
+	private String status;
 	private List<EducationHistoryDTO> educationhistory;
 
 }

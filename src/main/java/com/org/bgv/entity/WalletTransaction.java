@@ -69,6 +69,10 @@ public class WalletTransaction {
     @Builder.Default
     private LocalDateTime updatedAt = LocalDateTime.now();
     
+    @OneToOne(fetch = FetchType.LAZY, optional = false)
+    @JoinColumn(name = "user_id")
+    private User user;
+    
     @PreUpdate
     protected void onUpdate() {
         updatedAt = LocalDateTime.now();

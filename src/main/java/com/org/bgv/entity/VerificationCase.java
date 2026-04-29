@@ -2,10 +2,13 @@ package com.org.bgv.entity;
 
 import jakarta.persistence.*;
 import lombok.*;
+
+import java.math.BigDecimal;
 import java.time.LocalDateTime;
 import java.util.ArrayList;
 import java.util.List;
 
+import com.org.bgv.candidate.entity.Candidate;
 import com.org.bgv.constants.CaseStatus;
 
 @Entity
@@ -27,7 +30,12 @@ public class VerificationCase {
 
     @Column(name = "candidate_id", nullable = false)
     private Long candidateId;
-
+    
+   /*
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "candidate_id", insertable = false, updatable = false)
+    private Candidate candidate;
+*/
     @Column(name = "company_id", nullable = false)
     private Long companyId;
 
@@ -43,7 +51,7 @@ public class VerificationCase {
     private Double addonPrice = 0.0;
     
     @Column(name = "total_price")
-    private Double totalPrice;
+    private BigDecimal totalPrice;
     
     @Enumerated(EnumType.STRING)
     private CaseStatus status = CaseStatus.INITIATED;

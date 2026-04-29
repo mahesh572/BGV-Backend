@@ -62,11 +62,11 @@ public class CandidateVerificationController {
             @RequestBody SectionStatusUpdateRequest sectionStatusUpdateRequest
             ) throws ValidationException {
         
-        log.info("PUT /api/verification/section/status?candidateId={}&section={}&status={} by {}", 
-        		sectionStatusUpdateRequest.getCandidateId(), sectionStatusUpdateRequest.getSection(), sectionStatusUpdateRequest.getStatus());
+        log.info("PUT /api/verification/section/status?candidateId={}&section={}&status={} by {}{}", 
+        		sectionStatusUpdateRequest.getCandidateId(), sectionStatusUpdateRequest.getSection(), sectionStatusUpdateRequest.getStatus(),sectionStatusUpdateRequest.getCaseId());
         
         CandidateVerificationDTO verification = verificationService.updateSectionStatus(
-        		sectionStatusUpdateRequest.getCandidateId(), sectionStatusUpdateRequest.getSection(), sectionStatusUpdateRequest.getStatus());
+        		sectionStatusUpdateRequest);
         
         return ResponseEntity.ok(verification);
     }

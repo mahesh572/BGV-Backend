@@ -19,6 +19,8 @@ public interface CandidateVerificationRepository extends JpaRepository<Candidate
     
     Optional<CandidateVerification> findByCandidateIdAndVerificationCaseCaseId(Long candidateId,Long caseId);
     
+    boolean existsByCandidateIdAndVerificationCaseCaseId(Long candidateId, Long caseId);
+    
   //  List<CandidateVerification> findByEmployerId(String employerId);
     
     List<CandidateVerification> findByStatus(VerificationStatus status);

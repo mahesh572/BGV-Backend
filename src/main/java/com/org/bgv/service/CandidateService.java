@@ -30,6 +30,7 @@ import org.springframework.web.multipart.MultipartFile;
 
 import com.org.bgv.candidate.CandidateMapper;
 import com.org.bgv.candidate.CandidateSearchRequest;
+import com.org.bgv.candidate.dto.CandidateStatus;
 import com.org.bgv.candidate.dto.CreateCandidateRequest;
 import com.org.bgv.candidate.entity.Candidate;
 import com.org.bgv.candidate.entity.CandidateIdentity;
@@ -134,6 +135,7 @@ public class CandidateService {
                     return newUser;
                 });
             
+            /*
          // 1️⃣ Ensure Profile exists
             if (!profileRepository.existsByUserUserId(user.getUserId())) {
 
@@ -158,7 +160,7 @@ public class CandidateService {
                 log.debug("Profile already exists for userId={}", user.getUserId());
             }
 
-
+    */
             log.debug("Using userId={} for candidate creation", user.getUserId());
 
             // 2️⃣ Validate company
@@ -174,8 +176,8 @@ public class CandidateService {
             if (candidateRepository.existsByUserUserIdAndCompanyId(
                     user.getUserId(), dto.getCompanyId())) {
 
-                log.warn("Candidate already exists. userId={}, companyId={}",
-                        user.getUserId(), dto.getCompanyId());
+                log.warn("Candidate already exists. email={}, companyId={}",
+                        user.getEmail(), dto.getCompanyId());
 
                 throw new RuntimeException("Candidate already exists for this company");
             }
@@ -193,6 +195,11 @@ public class CandidateService {
                     .isConsentProvided(false)
                     .candidateRef(candidtaeRef)
                     .createdAt(LocalDateTime.now())
+                    .firstName(dto.getFirstName())
+                    .lastName(dto.getLastName())
+                    .phoneNumber(dto.getMobileNo())
+                    .emailAddress(dto.getEmail())
+                    .status(CandidateStatus.CREATED)
                     .build();
 
             candidateRepository.save(candidate);
@@ -222,8 +229,8 @@ public class CandidateService {
             // assigning roles User,Candidate
             
             List<String> rolenames = new ArrayList<>();
-            rolenames.add(RoleConstants.ROLE_CANDIDATE);
-            rolenames.add(RoleConstants.ROLE_USER);
+            rolenames.add(RoleConstants.ROLE_CANDIDATE); // its created by company so he cannot visit the normal user portal he is now candidate
+           // rolenames.add(RoleConstants.ROLE_USER);
             
             roleService.assignRolesToUserByName(user.getUserId(), rolenames);
 
@@ -429,26 +436,7 @@ public class CandidateService {
             return false;
         }
     }
-    /*
-    public Candidate getCandidateByUserId(Long userId) {
-        try {
-            Optional<Candidate> candidateOpt = candidateRepository.findByUserUserId(userId);
-            
-            if (candidateOpt.isEmpty()) {
-                log.warn("Candidate not found for user ID: {}", userId);
-                return null; // Return null instead of throwing exception
-            }
-            
-            Candidate candidate = candidateOpt.get();
-            log.debug("Found candidate: {} for user ID: {}", candidate.getCandidateId(), userId);
-            return candidate;
-            
-        } catch (Exception e) {
-            log.error("Error fetching candidate for user ID: {}", userId, e);
-            return null; // Return null in case of any exception
-        }
-    }
-    */
+   
     public CandidateDTO getCandidateByUserId(Long userId) {
         return candidateRepository.findByUserUserId(userId)
                 .map(candidateMapper::toDto)
@@ -872,14 +860,16 @@ public class CandidateService {
         columns.add(ColumnMetadata.builder().field("candidateId").displayName("Candidate ID").visible(false).build());
         columns.add(ColumnMetadata.builder().field("name").displayName("Name").visible(true).build());
         columns.add(ColumnMetadata.builder().field("email").displayName("Email").visible(true).build());
-        columns.add(ColumnMetadata.builder().field("phoneNumber").displayName("Phone").visible(true).build());
+        columns.add(ColumnMetadata.builder().field("status").displayName("Status").visible(true).build());
+        columns.add(ColumnMetadata.builder().field("phoneNumber").displayName("Phone").visible(false).build());
         columns.add(ColumnMetadata.builder().field("sourceType").displayName("Source Type").visible(false).build());
-        columns.add(ColumnMetadata.builder().field("verificationStatus").displayName("Verification Status").visible(true).build());
+        columns.add(ColumnMetadata.builder().field("verificationStatus").displayName("Verification Status").visible(false).build());
         columns.add(ColumnMetadata.builder().field("isActive").displayName("Active").visible(false).build());
         columns.add(ColumnMetadata.builder().field("isVerified").displayName("Verified").visible(false).build());
         columns.add(ColumnMetadata.builder().field("jobSearchStatus").displayName("Job Search Status").visible(false).build());
         columns.add(ColumnMetadata.builder().field("isConsentProvided").displayName("Consent Provided").visible(false).build());
         columns.add(ColumnMetadata.builder().field("createdAt").displayName("Created Date").visible(false).build());
+        
         
         if (companyId == null || companyId == 0) {
             columns.add(ColumnMetadata.builder().field("companyName").displayName("Company").visible(false).build());
@@ -899,46 +889,12 @@ public class CandidateService {
             case "verificationStatus": return "Verification Status";
             case "jobSearchStatus": return "Job Search Status";
             case "sourceType": return "Source Type";
+            case "status": return "Status";
             default: return field;
         }
     }
 
-   /*
-    // CRUD operations
-    public CandidateDto createCandidate(CandidateDto candidateDto) {
-        // Validate required fields
-        if (candidateDto.getUserId() == null) {
-            throw new RuntimeException("User ID is required");
-        }
-        if (candidateDto.getCompanyId() == null) {
-            throw new RuntimeException("Company ID is required");
-        }
-        
-        // Check if candidate already exists for user
-        if (candidateRepository.existsByUserUserId(candidateDto.getUserId())) {
-            throw new RuntimeException("Candidate already exists for this user");
-        }
-        
-        // Get user and company
-        User user = userRepository.findById(candidateDto.getUserId())
-                .orElseThrow(() -> new RuntimeException("User not found with id: " + candidateDto.getUserId()));
-        
-        Company company = companyRepository.findById(candidateDto.getCompanyId())
-                .orElseThrow(() -> new RuntimeException("Company not found with id: " + candidateDto.getCompanyId()));
-        
-        // Create candidate
-        Candidate candidate = Candidate.builder()
-                .user(user)
-                .company(company)
-                .sourceType(candidateDto.getSourceType())
-                .jobSearchStatus(candidateDto.getJobSearchStatus())
-                .isConsentProvided(candidateDto.getIsConsentProvided())
-                .build();
-        
-        Candidate savedCandidate = candidateRepository.save(candidate);
-        return candidateMapper.toDto(savedCandidate); // Using normal mapper
-    }
-*/
+   
     public CandidateDTO updateCandidate(Long candidateId, CandidateDTO candidateDto) {
         Candidate existingCandidate = candidateRepository.findById(candidateId)
                 .orElseThrow(() -> new RuntimeException("Candidate not found with id: " + candidateId));

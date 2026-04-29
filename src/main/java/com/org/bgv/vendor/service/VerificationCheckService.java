@@ -260,30 +260,11 @@ public class VerificationCheckService {
 		return documentType.getLabel();
 
 	}
-/*
-	private Map<String, Object> buildIdentityData(IdentityProof identity) {
-
-		Map<String, Object> data = new HashMap<>();
-		data.put("documentNumber", identity.getDocumentNumber());
-		data.put("issueDate", identity.getIssueDate());
-		data.put("expiryDate", identity.getExpiryDate());
-		data.put("verified", identity.getVerified());
-		data.put("verificationStatus", identity.getVerificationStatus());
-		data.put("verifiedBy", identity.getVerifiedBy());
-		data.put("verifiedAt", identity.getVerifiedAt());
-		data.put("expired", identity.isExpired());
-		data.put("daysUntilExpiry", identity.getDaysUntilExpiry());
-
-		return data;
-	}
 	
-	List<ObjectFieldDTO> fields =
-	                         fieldBuilderRegistry.resolveFields(
-	                                 CheckObjectType.IDENTITY,
-	                                 identity
-	                         );
-	                         
-*/
+	
+
+	
+	
 	private List<ObjectDTO> buildEducationObjects(VerificationCaseCheck check) {
 
 	    List<EducationHistory> educations = educationHistoryRepository
@@ -299,8 +280,10 @@ public class VerificationCheckService {
 	                        );
 
 	                // Compute document types once
-	                List<DocumentTypeVerificationDTO> documentTypes =
-	                        buildDocumentTypes(education.getId(), check, fields);
+	              //  List<DocumentTypeVerificationDTO> documentTypes = buildDocumentTypes(education.getId(), check, fields);
+	                
+	                List<DocumentTypeVerificationDTO> documentTypes = buildDocumentTypes(education.getId(), check, null);
+
 
 	                // Compute object status from document types
 	                DocumentStatus objectStatus =
@@ -315,6 +298,7 @@ public class VerificationCheckService {
 	                        .documentTypes(documentTypes)
 	                        .evidence(Collections.emptyList())
 	                        .actions(VendorActionCatalog.objectActions())
+	                        .fields(fields)
 	                        .build();
 	            })
 	            .toList();
@@ -373,25 +357,31 @@ public class VerificationCheckService {
 
 	    List<WorkExperience> experiences = workExperienceRepository
 	            .findByVerificationCaseCheck_CaseCheckId(check.getCaseCheckId());
-
+	    
 	    return experiences.stream()
-	            .map(experience -> {
+	            .map((WorkExperience experience) -> {
 
 	                List<ObjectFieldDTO> fields =
 	                        fieldBuilderRegistry.resolveFields(
 	                                CheckObjectType.WORK_EXPERIENCE,
 	                                experience
 	                        );
-
-	                // Compute document types once
+	                	/*
 	                List<DocumentTypeVerificationDTO> documentTypes =
 	                        buildDocumentTypes(
 	                                experience.getExperienceId(),
 	                                check,
 	                                fields
 	                        );
+	                        */
+	                
+	                List<DocumentTypeVerificationDTO> documentTypes =
+	                        buildDocumentTypes(
+	                                experience.getExperienceId(),
+	                                check,
+	                                null
+	                        );
 
-	                // Compute object status from document types
 	                DocumentStatus objectStatus =
 	                        resolveObjectStatus(documentTypes);
 
@@ -399,11 +389,11 @@ public class VerificationCheckService {
 	                        .objectId(experience.getExperienceId())
 	                        .objectType(CheckObjectType.WORK_EXPERIENCE.name())
 	                        .displayName(resolveWorkExperienceName(experience))
-	                        // .data(buildWorkExperienceData(experience)) // deprecated
 	                        .status(objectStatus.name())
 	                        .documentTypes(documentTypes)
-	                        .actions(VendorActionCatalog.objectActions())
+	                        .actions(resolveObjectActions(check.getStatus()))
 	                        .evidence(Collections.emptyList())
+	                        .fields(fields)
 	                        .build();
 	            })
 	            .toList();
@@ -481,9 +471,9 @@ public class VerificationCheckService {
 					.documentTypeId(String.valueOf(docType.getDocTypeId()))
 					.type(docType.getLabel())
 					.status(resolveDocumentTypeStatus(entry.getValue()))
-					 .actions(VendorActionCatalog.documentActions())
+					// .actions(VendorActionCatalog.documentActions())
 					 .fields(fields)
-					// .actions(resolveDocumentActions(resolveDocumentTypeStatus(entry.getValue())))
+					 .actions(resolveDocumentActions(resolveDocumentTypeStatus(entry.getValue()),check.getStatus()))
 					.files(buildVerificationFiles(entry.getValue(),check)).build();
 		}).toList();
 
@@ -1237,11 +1227,12 @@ public class VerificationCheckService {
 	}
 
 	
-	private List<ActionDTO> resolveDocumentActions(String documentTypeStatus) {
+	private List<ActionDTO> resolveDocumentActions(String documentTypeStatus,CaseCheckStatus checkStatus) {
 
 	    boolean restricted =
 	            "REQUEST_INFO".equals(documentTypeStatus) ||
-	            "INSUFFICIENT".equals(documentTypeStatus);
+	            "INSUFFICIENT".equals(documentTypeStatus) ||
+	            checkStatus == CaseCheckStatus.ACTION_REQUIRED;
 
 	    if (!restricted) {
 	        return VendorActionCatalog.documentActions();
@@ -1274,7 +1265,8 @@ public class VerificationCheckService {
 		        status == DocumentStatus.INSUFFICIENT ||
 		        status == DocumentStatus.REJECTED ||
 		        status == DocumentStatus.VERIFIED ||
-		        check.getStatus() == CaseCheckStatus.REJECTED;
+		        check.getStatus() == CaseCheckStatus.REJECTED ||
+		        check.getStatus() == CaseCheckStatus.ACTION_REQUIRED;
 		
 		
 		log.info("resolveFileActions::::::::::::::::::restricted::::::::::::{}",restricted);
@@ -1329,7 +1321,8 @@ public class VerificationCheckService {
 	             VERIFIED,
 	             REJECTED,
 	             FAILED,
-	             ESCALATED -> true;
+	             ESCALATED,
+	             ACTION_REQUIRED -> true;
 	        default -> false;
 	    };
 
@@ -1357,58 +1350,32 @@ public class VerificationCheckService {
 	
 	
 	
-	/*
+	private List<ActionDTO> resolveObjectActions(CaseCheckStatus checkStatus) {
 
-	private List<ObjectFieldDTO> buildObjectFields(
-	        String objectType,
-	        Object entity
-	) {
-	    return switch (objectType) {
-	        case "IDENTITY"   -> buildIdentityFields((IdentityProof) entity);
-	      //  case "ADDRESS"    -> buildAddressFields((Address) entity);
-	     //   case "EMPLOYMENT" -> buildEmploymentFields((Employment) entity);
-	     //   case "EDUCATION"  -> buildEducationFields((Education) entity);
-	        default -> List.of();
-	    };
+	    boolean restricted = checkStatus == CaseCheckStatus.ACTION_REQUIRED
+	            || checkStatus == CaseCheckStatus.VERIFIED
+	            || checkStatus == CaseCheckStatus.REJECTED;
+
+	    if (!restricted) {
+	        return VendorActionCatalog.objectActions();
+	    }
+
+	    return VendorActionCatalog.objectActions().stream()
+	            .map(action -> {
+	                if (action.getCode() == ActionType.VIEW ||
+	                    action.getCode() == ActionType.DOWNLOAD) {
+	                    return action;
+	                }
+
+	                return ActionDTO.builder()
+	                        .code(action.getCode())
+	                        .label(action.getLabel())
+	                        .level(action.getLevel())
+	                        .enabled(false)
+	                        .build();
+	            })
+	            .toList();
 	}
-	
-	private List<ObjectFieldDTO> buildIdentityFields(IdentityProof identity) {
-
-	    List<ObjectFieldDTO> fields = new ArrayList<>();
-
-	    // 1️⃣ Document Number
-	    fields.add(FieldsUtil.text(
-	            "DOCUMENT_NUMBER",
-	            "Aadhaar Number",
-	            identity.getDocumentNumber(),
-	            true
-	    ));
-
-	    // 2️⃣ Issue Date
-	    fields.add(FieldsUtil.date(
-	            "ISSUE_DATE",
-	            "Issue Date",
-	            identity.getIssueDate(),
-	            false
-	    ));
-
-	    // 3️⃣ Expiry Date
-	    fields.add(FieldsUtil.date(
-	            "EXPIRY_DATE",
-	            "Expiry Date",
-	            identity.getExpiryDate(),
-	            false
-	    ));
-
-	    
-
-	    return fields;
-	}
-
-	
-	*/
-
-	
 
 	
 

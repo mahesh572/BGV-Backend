@@ -5,6 +5,7 @@ import java.time.LocalDateTime;
 import java.util.ArrayList;
 import java.util.List;
 
+import com.org.bgv.candidate.dto.CandidateStatus;
 import com.org.bgv.entity.ActivityTimeline;
 import com.org.bgv.entity.Company;
 import com.org.bgv.entity.JobApplication;
@@ -14,6 +15,8 @@ import com.org.bgv.entity.User;
 import jakarta.persistence.CascadeType;
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
+import jakarta.persistence.EnumType;
+import jakarta.persistence.Enumerated;
 import jakarta.persistence.FetchType;
 import jakarta.persistence.GeneratedValue;
 import jakarta.persistence.GenerationType;
@@ -49,7 +52,7 @@ public class Candidate {
     @Column(name = "candidate_ref", nullable = false, unique = true)
     private String candidateRef;
     
-    /*
+   
     @Column(name = "first_name")
     private String firstName;
     
@@ -75,7 +78,7 @@ public class Candidate {
     @Column(name = "email_address")
     private String emailAddress;
 
-    */
+    
     
     private String sourceType;
     
@@ -97,6 +100,10 @@ public class Candidate {
 
     @Column(name = "is_verified")
     private Boolean isVerified;
+    
+    @Enumerated(EnumType.STRING)
+    @Column
+    private CandidateStatus status = CandidateStatus.CREATED;
 
     @Column(name = "verification_status")
     private String verificationStatus; // PENDING, VERIFIED, REJECTED

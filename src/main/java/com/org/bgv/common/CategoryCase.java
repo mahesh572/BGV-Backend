@@ -17,6 +17,8 @@ public class CategoryCase {
     private Long categoryId;
     
 	private List<Long> selectedRuleIds;
+	
+	private List<Long> selectedDocumentIds;
    
     private List<CaseDocumentSelection> documents;
 }

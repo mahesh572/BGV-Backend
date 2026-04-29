@@ -16,6 +16,8 @@ public interface AddressRepository extends JpaRepository<Address, Long> {
     // Find all addresses for a candidate
     List<Address> findByCandidateId(Long candidateId);
     
+    List<Address> findByCandidateIdAndVerificationCaseCaseId(Long candidateId, Long caseId);
+    
     // Find addresses by candidate ID and status
     List<Address> findByCandidateIdAndStatus(Long candidateId, String status);
     

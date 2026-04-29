@@ -1,10 +1,13 @@
 package com.org.bgv.service;
 
+import com.org.bgv.candidate.dto.VerificationSectionDTO;
 import com.org.bgv.candidate.entity.Candidate;
 import com.org.bgv.candidate.entity.EducationHistory;
 import com.org.bgv.candidate.repository.CandidateRepository;
 import com.org.bgv.candidate.repository.EducationHistoryRepository;
+import com.org.bgv.candidate.service.VerificationHelperService;
 import com.org.bgv.constants.CaseCheckStatus;
+import com.org.bgv.dto.CheckCategoryEnum;
 import com.org.bgv.dto.DegreeTypeResponse;
 import com.org.bgv.dto.DocumentResponse;
 import com.org.bgv.dto.EducationHistoryDTO;
@@ -64,6 +67,7 @@ public class EducationService {
     private final CheckCategoryRepository checkCategoryRepository;
     private final VerificationCaseCheckRepository verificationCaseCheckRepository;
     private final DocumentService documentService;
+    private final VerificationHelperService verificationHelperService;
 
     private static final Logger logger = LoggerFactory.getLogger(EducationService.class);
     
@@ -110,7 +114,7 @@ public class EducationService {
                             );
         }
 
-        final String CATEGORY_NAME = "Education";
+        final String CATEGORY_NAME = CheckCategoryEnum.EDUCATION.getName();
 
         CheckCategory category = checkCategoryRepository
                 .findByNameIgnoreCase(CATEGORY_NAME)
@@ -152,6 +156,9 @@ public class EducationService {
                             return dto;
                         })
                         .collect(Collectors.toList());
+        
+        VerificationSectionDTO verificationSectionDTO = verificationHelperService.getSectionStatusByCaseAndCandidate(candidateId,caseId,CATEGORY_NAME);
+        
 
         // 4️⃣ Build final response
         return EducationResponse.builder()
@@ -159,6 +166,7 @@ public class EducationService {
                 .categoryId(category.getCategoryId())
                 .checkId(checkId)
                 .educationhistory(educationDTOList)
+                .status(verificationSectionDTO.getStatus().name())
                 .build();
     }
 

@@ -44,7 +44,7 @@ public class PaymentService {
     private final PaymentRequestRepository paymentRequestRepository;
     private final RazorpayClient razorpayClient;
     private final CompanyRepository companyRepository;
-    
+    private final UserRepository userRepository;
     
     
     @Value("${razorpay.key.id}")
@@ -359,13 +359,16 @@ public WalletBalanceResponseDto getWalletBalance(Long companyId) {
     @Transactional
     public WalletTransactionResponseDto makePaymentFromWallet(Long userId, Long companyId, 
                                                             BigDecimal amount, String description) {
-        UserWallet wallet = userWalletRepository
-                .findByUserIdAndCompanyId(userId, companyId)
-                .orElseThrow(() -> new RuntimeException("Wallet not found"));
+      //  UserWallet wallet = userWalletRepository.findByUserIdAndCompanyId(userId, companyId).orElseThrow(() -> new RuntimeException("Wallet not found"));
+        
+        UserWallet wallet = userWalletRepository.findByCompanyId(companyId).orElseThrow(() -> new RuntimeException("Wallet not found"));
+        
+        User user = userRepository.findById(userId).orElseThrow(()-> new RuntimeException("User not found"));
         
         if (!wallet.hasSufficientBalance(amount)) {
             throw new RuntimeException("Insufficient wallet balance");
         }
+        
         
         // Create debit transaction
         String transactionRef = "PAY-" + UUID.randomUUID().toString().substring(0, 8).toUpperCase();
@@ -373,6 +376,7 @@ public WalletBalanceResponseDto getWalletBalance(Long companyId) {
                 .transactionRef(transactionRef)
                 .wallet(wallet)
                 .amount(amount)
+                .user(user)
                 .transactionType(com.org.bgv.constants.TransactionType.DEBIT)
                 .status(com.org.bgv.constants.TransactionStatus.SUCCESS)
                 .description(description)
