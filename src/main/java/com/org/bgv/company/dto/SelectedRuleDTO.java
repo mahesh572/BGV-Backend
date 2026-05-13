@@ -20,4 +20,5 @@ public class SelectedRuleDTO {
 
     private Boolean includedInPackage;
     private Boolean addon;
+    private Boolean requiresCount;
 }

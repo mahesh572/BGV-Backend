@@ -49,6 +49,7 @@ public class RuleTypesService {
                 .minCount(request.getMinCount())
                 .maxCount(request.getMaxCount())
                 .ruleGroup(request.getSelectedRulegroup())
+                .requiresCount(request.getRequiresCount())
                 .build();
         
         RuleTypes savedRule = ruleTypesRepository.save(rule);
@@ -132,6 +133,7 @@ public class RuleTypesService {
         existingRule.setMinCount(request.getMinCount());
         existingRule.setMaxCount(request.getMaxCount());
         existingRule.setRuleGroup(request.getSelectedRulegroup());
+        existingRule.setRequiresCount(request.getRequiresCount());
 
         RuleTypes updatedRule = ruleTypesRepository.save(existingRule);
 
@@ -185,6 +187,7 @@ public class RuleTypesService {
                 	        ? rule.getRuleGroup() 
                 	        : RuleGroup.NONE
                 	)
+                .requiresCount(rule.getRequiresCount())
                 .build();
     }
 }

@@ -58,5 +58,10 @@ public interface WorkExperienceRepository extends JpaRepository<WorkExperience, 
     
     List<WorkExperience> findByVerificationCaseCheck_CaseCheckId(Long checkId);
     
+    void deleteByVerificationCaseCaseId(Long caseId);
+    
+   // List<WorkExperience> findByCandidateIdOrderByStartDateDesc(Long candidateId);
+    List<WorkExperience> findByVerificationCaseCaseId(Long caseId);
+    
     
 }

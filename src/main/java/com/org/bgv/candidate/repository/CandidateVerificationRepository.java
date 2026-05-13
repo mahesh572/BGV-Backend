@@ -60,5 +60,7 @@ public interface CandidateVerificationRepository extends JpaRepository<Candidate
            "AND cv.dueDate < CURRENT_TIMESTAMP " +
            "AND cv.status NOT IN ('COMPLETED', 'CANCELLED')")
     List<CandidateVerification> findOverdueVerifications(@Param("candidateId") Long candidateId);
+    
+    void deleteByVerificationCaseCaseId(Long caseId);
 
 }

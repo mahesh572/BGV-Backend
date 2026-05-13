@@ -144,6 +144,7 @@ public class AssignCaseService {
 	                        .maxCount(ruleType.getMaxCount())
 	                        .includedInPackage(true)
 	                        .addon(false)
+	                        .requiresCount(ruleType.getRequiresCount()==null?Boolean.FALSE:ruleType.getRequiresCount())
 	                        .build();
 
 	        CategoryPreviewDTO.CategoryPreviewDTOBuilder builder =
@@ -221,6 +222,7 @@ public class AssignCaseService {
 	                                    		PricingType.PER_RECORD.equals(pricingType)
 	                                    )
 	                                    .selected(false)
+	                                    .requiresCount(addOnRuleType.getRequiresCount()==null?Boolean.FALSE:addOnRuleType.getRequiresCount())
 	                                    .build();
 	                        })
 	                        .collect(Collectors.toList());

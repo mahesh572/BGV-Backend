@@ -32,5 +32,6 @@ public class RuleTypesRequest {
     private Integer maxCount;
     
     private RuleGroup selectedRulegroup;
+    private Boolean requiresCount;
 
 }

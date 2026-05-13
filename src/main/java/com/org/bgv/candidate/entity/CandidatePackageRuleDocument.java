@@ -3,12 +3,16 @@ package com.org.bgv.candidate.entity;
 import com.org.bgv.entity.VerificationCase;
 
 import jakarta.persistence.*;
+import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Data;
+import lombok.NoArgsConstructor;
 
 @Builder
 @Data
 @Entity
+@NoArgsConstructor
+@AllArgsConstructor
 @Table(name = "candidate_package_rule_document")
 public class CandidatePackageRuleDocument {
 

@@ -66,6 +66,12 @@ public class Address {
     @Column(name = "currently_residing_at_this_address", nullable = false)
     private Boolean currentlyResidingAtThisAddress = false;
     
+    @Column(name = "to_date")
+    private LocalDate toDate;
+    
+    @Column(name = "from_date")
+    private LocalDate fromDate;
+    
 
     @ManyToOne
     @JoinColumn(name = "user_id")

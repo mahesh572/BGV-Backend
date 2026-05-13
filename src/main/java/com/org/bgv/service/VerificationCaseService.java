@@ -14,10 +14,14 @@ import com.org.bgv.candidate.entity.Candidate;
 import com.org.bgv.candidate.entity.CandidatePackageRule;
 import com.org.bgv.candidate.entity.CandidatePackageRuleDocument;
 import com.org.bgv.candidate.entity.CandidateVerification;
+import com.org.bgv.candidate.repository.AddressRepository;
 import com.org.bgv.candidate.repository.CandidatePackageRuleDocumentRepository;
 import com.org.bgv.candidate.repository.CandidatePackageRuleRepository;
 import com.org.bgv.candidate.repository.CandidateRepository;
 import com.org.bgv.candidate.repository.CandidateVerificationRepository;
+import com.org.bgv.candidate.repository.EducationHistoryRepository;
+import com.org.bgv.candidate.repository.IdentityProofRepository;
+import com.org.bgv.candidate.repository.WorkExperienceRepository;
 import com.org.bgv.common.ActivityTimelineDTO;
 import com.org.bgv.common.CandidateCaseStatisticsResponse;
 import com.org.bgv.common.CaseDocumentSelection;
@@ -35,6 +39,7 @@ import com.org.bgv.common.Option;
 import com.org.bgv.common.PaginationMetadata;
 import com.org.bgv.common.PaginationRequest;
 import com.org.bgv.common.PaginationResponse;
+import com.org.bgv.common.SelectedRuleRequest;
 import com.org.bgv.common.SortingRequest;
 import com.org.bgv.common.VPackageDTO;
 import com.org.bgv.common.VerificationCaseRequest;
@@ -56,6 +61,8 @@ import com.org.bgv.entity.*;
 import com.org.bgv.enums.RuleGroup;
 import com.org.bgv.notifications.service.NotificationDispatcher;
 import com.org.bgv.repository.*;
+import com.org.bgv.vendor.repository.VerificationActionEvidenceRepository;
+import com.org.bgv.vendor.repository.VerificationActionRepository;
 import com.org.bgv.wallet.service.PaymentService;
 
 import jakarta.persistence.criteria.Predicate;
@@ -113,6 +120,12 @@ public class VerificationCaseService {
 	private final RuleTypesRepository ruleTypesRepository;
 	private final PaymentService paymentService;
 	private final IconService iconService;
+	private final VerificationActionRepository verificationActionRepository;
+	private final IdentityProofRepository identityProofRepository;
+	private final EducationHistoryRepository educationHistoryRepository;
+	private final WorkExperienceRepository workExperienceRepository;
+	private final VerificationActionEvidenceRepository verificationActionEvidenceRepository;
+	private final AddressRepository addressRepository;
 
 	private static final DateTimeFormatter DATE_FORMATTER = DateTimeFormatter.ofPattern("dd MMM yyyy");
 	private static final DateTimeFormatter TIMESTAMP_FORMATTER = DateTimeFormatter.ofPattern("dd MMM yyyy HH:mm");
@@ -959,17 +972,24 @@ public class VerificationCaseService {
 
 			Long categoryId = category.getCategoryId();
 
-			for (Long ruleTypeId : category.getSelectedRuleIds()) {
+			for (SelectedRuleRequest ruleType : category.getSelectedRules()) {
 
 				// 🔹 1. Create Rule
 				CandidatePackageRule rule = CandidatePackageRule.builder().employerPackageId(employerPackage)
-						.companyId(request.getCompanyId()).candidateId(request.getCandidateId())
-						.verificationCase(savedCase).checkCategoryId(categoryId).ruleTypeId(ruleTypeId)
-
-						.required(false).includedInPackage(true).addon(false)
+						.companyId(request.getCompanyId())
+						.candidateId(request.getCandidateId())
+						.verificationCase(savedCase)
+						.checkCategoryId(categoryId)
+						.ruleTypeId(ruleType.getRuleTypeId())
+                        .selectedCount(ruleType.getSelectedCount())
+						.required(false)
+						.includedInPackage(true)
+						.addon(false)
 
 						// Example: can be dynamic later
-						.unitPrice(0.0).selectedCount(1).totalPrice(0.0).build();
+						.unitPrice(0.0)
+						.totalPrice(0.0)
+						.build();
 
 				rulesToSave.add(rule);
 			}
@@ -1006,10 +1026,15 @@ public class VerificationCaseService {
 					if (category.getSelectedDocumentIds() != null) {
 						for (Long docTypeId : category.getSelectedDocumentIds()) {
 
-							CandidatePackageRuleDocument doc = CandidatePackageRuleDocument.builder().rule(rule)
+							CandidatePackageRuleDocument doc = CandidatePackageRuleDocument.builder()
+									.rule(rule)
 									.verificationCase(savedCase) // 🔥 MUST
-									.categoryId(category.getCategoryId()).documentTypeId(docTypeId).selected(true)
-									.required(true).price(0.0).build();
+									.categoryId(category.getCategoryId())
+									.documentTypeId(docTypeId)
+									.selected(true)
+									.required(true)
+									.price(0.0)
+									.build();
 
 							ruleDocsToSave.add(doc);
 						}
@@ -1418,4 +1443,137 @@ public class VerificationCaseService {
 	*/
 	
 	
+	@Transactional
+	public void removeVerificationCase(Long caseId) {
+	    log.info("Removing verification case with caseId: {}", caseId);
+
+	    VerificationCase verificationCase = verificationCaseRepository.findById(caseId)
+	            .orElseThrow(() -> new RuntimeException("Verification case not found with id: " + caseId));
+
+	    // 1. Delete document links first (no cascade from VerificationCaseDocument → Link)
+	    List<VerificationCaseDocument> caseDocuments =
+	            verificationCaseDocumentRepository.findByVerificationCaseCaseId(caseId);
+
+	    for (VerificationCaseDocument doc : caseDocuments) {
+	        verificationCaseDocumentLinkRepository.deleteAllByCaseDocument(doc);
+	    }
+	    log.info("Deleted document links for caseId: {}", caseId);
+
+	    // 2. Delete candidate verification (tracks candidate upload progress)
+	    if (candidateVerificationRepository
+	            .existsByCandidateIdAndVerificationCaseCaseId(
+	                    verificationCase.getCandidateId(), caseId)) {
+	        candidateVerificationRepository
+	                .deleteByVerificationCaseCaseId(caseId);
+	        log.info("Deleted candidate verification for caseId: {}", caseId);
+	    }
+
+	    // 3. Delete candidate package rule documents tied to this case
+	    candidatePackageRuleDocumentRepository.deleteByVerificationCaseCaseId(caseId);
+	    log.info("Deleted candidate package rule documents for caseId: {}", caseId);
+
+	    // 4. Delete candidate package rules tied to this case
+	    candidatePackageRuleRepository.deleteByVerificationCaseCaseId(caseId);
+	    log.info("Deleted candidate package rules for caseId: {}", caseId);
+
+	    // 5. Delete documents (uploaded files) linked to this case
+	    documentRepository.deleteByVerificationCaseCaseId(caseId);
+	    log.info("Deleted uploaded documents for caseId: {}", caseId);
+	    
+	    verificationActionEvidenceRepository.deleteByActionVerificationCaseCaseId(caseId);
+	    log.info("Deleted verification action evidence for caseId: {}", caseId);
+	    
+	    verificationActionRepository.deleteByVerificationCaseCaseId(caseId);
+	    log.info("Deleted verification actions for caseId: {}", caseId);
+	    
+	    identityProofRepository.deleteByVerificationCaseCaseId(caseId);
+	    log.info("Deleted identity proofs for caseId: {}", caseId);
+	    
+	    educationHistoryRepository.deleteByVerificationCaseCaseId(caseId);
+	    log.info("Deleted education history for caseId: {}", caseId);
+	    
+	    workExperienceRepository.deleteByVerificationCaseCaseId(caseId);
+	    log.info("Deleted work experience for caseId: {}", caseId);
+	    
+	    addressRepository.deleteByVerificationCase_CaseId(caseId);
+
+	    // 6. Delete the verification case itself
+	    //    (cascades to VerificationCaseDocument + VerificationCaseCheck via CascadeType.ALL)
+	    verificationCaseRepository.delete(verificationCase);
+	    log.info("Verification case {} removed successfully", caseId);
+	}
+	
+	
+	/*
+	
+	@Transactional
+	public void populateCaseDocuments(Long caseId) {
+
+	    // 1. Fetch case
+	    VerificationCase verificationCase = verificationCaseRepository.findById(caseId)
+	            .orElseThrow(() -> new RuntimeException("Case not found"));
+
+	    // 2. Fetch rule documents
+	    List<CandidatePackageRuleDocument> ruleDocs =
+	            candidatePackageRuleDocumentRepository.findByVerificationCase_CaseId(caseId);
+
+	    for (CandidatePackageRuleDocument ruleDoc : ruleDocs) {
+
+	        Long docTypeId = ruleDoc.getDocumentTypeId();
+	        Long categoryId = ruleDoc.getCategoryId();
+
+	        // 3. Avoid duplicate case document
+	        boolean alreadyExists =
+	                verificationCaseDocumentRepository
+	                        .existsByVerificationCase_CaseIdAndDocumentType_DocTypeId(caseId, docTypeId);
+
+	        if (alreadyExists) continue;
+	        
+	        DocumentType documentType=documentTypeRepository.findById(docTypeId).orElseThrow(()->new RuntimeException("Document type record not Found"));
+	       
+	        CheckCategory checkCategory = checkCategoryRepository.findByCategoryId(categoryId);
+	        // 4. Create VerificationCaseDocument
+	        VerificationCaseDocument caseDoc = VerificationCaseDocument.builder()
+	                .verificationCase(verificationCase)
+	                .checkCategory(checkCategory)
+	                .documentType(documentType) // or fetch if needed
+	                .required(ruleDoc.getRequired()) 
+	                .isAddOn(ruleDoc.getSelected())
+	                .documentPrice(ruleDoc.getPrice())
+	                .verificationStatus(DocumentStatus.PENDING)
+	                .build();
+
+	        caseDoc = verificationCaseDocumentRepository.save(caseDoc);
+
+	        // 5. Fetch uploaded documents
+	        List<Document> uploadedDocs =
+	                documentRepository.findByVerificationCase_CaseIdAndDocTypeId(caseId, documentType);
+
+	        // 6. Link documents
+	        for (Document doc : uploadedDocs) {
+
+	            boolean linkExists =
+	                    verificationCaseDocumentLinkRepository
+	                            .existsByCaseDocumentAndDocument(caseDoc, doc);
+
+	            if (linkExists) continue;
+
+	            VerificationCaseDocumentLink link = VerificationCaseDocumentLink.builder()
+	                    .caseDocument(caseDoc)
+	                    .document(doc)
+	                    .status(DocumentStatus.SUBMITTED)
+	                    .build();
+
+	            verificationCaseDocumentLinkRepository.save(link);
+	        }
+
+	        // 7. Update overall status
+	        if (!uploadedDocs.isEmpty()) {
+	            caseDoc.setVerificationStatus(DocumentStatus.SUBMITTED);
+	        }
+
+	        verificationCaseDocumentRepository.save(caseDoc);
+	    }
+	}
+	*/
 }

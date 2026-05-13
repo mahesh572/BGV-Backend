@@ -24,4 +24,5 @@ public class RuleTypeResponse {
     private PricingType pricingType; // FLAT / PER_RECORD
     private BigDecimal  unitPrice; 
     private Boolean active;
+    private Boolean requiresCount;
 }

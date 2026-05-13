@@ -308,7 +308,7 @@ public class DocumentService {
                 verificationCase.getCaseId(),
                 verificationCaseCheck.getCaseCheckId()
             );
-
+/*
             storeDocumentInCaseTables(
                     document,
                     category,
@@ -316,7 +316,7 @@ public class DocumentService {
                     verificationCase,
                     verificationCaseCheck
             );
-
+*/
             log.info(
                 "Document linked successfully | docId={} | caseId={}",
                 document.getDocId(),

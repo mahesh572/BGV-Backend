@@ -31,4 +31,6 @@ public interface UserIdentityProofRepository
     /* ---------- Document type ---------- */
 
     List<UserIdentityProof> findByDocTypeId(Long docTypeId);
+    
+    
 }

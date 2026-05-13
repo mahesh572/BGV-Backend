@@ -5,6 +5,7 @@ import com.org.bgv.candidate.dto.SectionNamesDisplayDTO;
 import com.org.bgv.common.VerificationCaseResponse;
 import com.org.bgv.common.VerificationCaseRequest;
 import com.org.bgv.constants.CaseStatus;
+import com.org.bgv.service.VerificationCaseSelectionService;
 import com.org.bgv.service.VerificationCaseService;
 
 import jakarta.validation.Valid;
@@ -24,6 +25,7 @@ import java.util.List;
 public class VerificationCaseController {
     
     private final VerificationCaseService verificationCaseService;
+    private final VerificationCaseSelectionService verificationCaseSelectionService;
     
     @PostMapping
     public ResponseEntity<CustomApiResponse<VerificationCaseResponse>> createVerificationCase(
@@ -173,6 +175,33 @@ public class VerificationCaseController {
     }
 
     
+    @DeleteMapping("/{caseId}")
+    public ResponseEntity<CustomApiResponse<Void>> removeVerificationCase(
+            @PathVariable Long caseId) {
+
+        verificationCaseService.removeVerificationCase(caseId);
+        return ResponseEntity.ok(
+                CustomApiResponse.success(
+                        "Verification document sections retrieved successfully",
+                        null,
+                        HttpStatus.OK
+                )
+        );
+    }
+    
+    @GetMapping("/{caseId}")
+    public ResponseEntity<CustomApiResponse<Void>> populateVerificationCaseDocuments(
+            @PathVariable Long caseId) {
+
+    	verificationCaseSelectionService.populateSelections(caseId);
+        return ResponseEntity.ok(
+                CustomApiResponse.success(
+                        "Verification document sections retrieved successfully",
+                        null,
+                        HttpStatus.OK
+                )
+        );
+    }
     
     
 }

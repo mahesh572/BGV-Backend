@@ -228,8 +228,11 @@ public class VerificationService {
                 check.setUpdatedAt(LocalDateTime.now());
                 
                 VerificationAction verificationAction = check.getLastAction();
-                verificationAction.setStatus(ActionStatus.RESOLVED);
-                check.setLastAction(verificationAction);
+                if(verificationAction!=null) {
+                	verificationAction.setStatus(ActionStatus.RESOLVED);
+                    check.setLastAction(verificationAction);
+                }
+                
             }
             verificationCaseCheckRepository.save(check);
 

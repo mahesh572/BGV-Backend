@@ -82,5 +82,8 @@ public interface VerificationActionRepository
             ActionStatus status
     );
 
+    void deleteByVerificationCaseCaseId(Long caseId);
+
+    
 }
 

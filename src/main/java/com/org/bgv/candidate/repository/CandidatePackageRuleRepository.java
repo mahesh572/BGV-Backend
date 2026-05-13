@@ -38,5 +38,9 @@ public interface CandidatePackageRuleRepository extends JpaRepository<CandidateP
 
     // 🔹 Delete rules for a candidate (useful when re-creating package)
   //  void deleteByCandidateId(Long candidateId);
+	
+	void deleteByVerificationCaseCaseId(Long caseId);
+	
+	 List<CandidatePackageRule> findByVerificationCase_CaseId(Long caseId);
 
 }

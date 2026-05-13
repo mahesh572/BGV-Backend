@@ -46,5 +46,9 @@ public class RuleTypes {
 	    @Enumerated(EnumType.STRING)
 	    @Column(name = "rule_group")
 	    private RuleGroup ruleGroup;
+	    
+	    private Boolean requiresCount;
+	    
+	  //  private Integer selectedCount;
 	
 }
