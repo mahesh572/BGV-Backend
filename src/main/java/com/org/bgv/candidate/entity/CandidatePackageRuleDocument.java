@@ -1,5 +1,7 @@
 package com.org.bgv.candidate.entity;
 
+import java.math.BigDecimal;
+
 import com.org.bgv.entity.VerificationCase;
 
 import jakarta.persistence.*;
@@ -48,5 +50,8 @@ public class CandidatePackageRuleDocument {
 
     // pricing snapshot
     @Column(name = "price")
-    private Double price;
+    private BigDecimal price;
+    
+    @Column(name = "included_in_package")
+    private Boolean includedInPackage = false;
 }

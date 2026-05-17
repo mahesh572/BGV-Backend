@@ -164,115 +164,6 @@ public class VerificationService {
         return convertToDTO(candidateVerification);
     }
     
-    @Transactional
-    @CacheEvict(value = "verification", key = "#candidateId")
-    public CandidateVerificationDTO submitForVerification(Long candidateId, Long caseId)
-            throws ValidationException {
-
-        log.info("Submitting verification for candidate: {}, case: {}", candidateId, caseId);
-
-        CandidateVerification candidateverification =
-        		candidateVerificationRepository.findByCandidateIdAndVerificationCaseCaseId(candidateId,caseId)
-                        .orElseThrow(() -> new EntityNotFoundException("Verification not found"));
-        
-        
-
-        VerificationCase verificationCase = verificationCaseRepository
-                .findByCaseIdAndCandidateId(caseId, candidateId)
-                .orElseThrow(() -> new RuntimeException(
-                    String.format("Verification case %d not found for candidate %d", caseId, candidateId)
-                ));
-
-        // 🔐 Ownership validation
-        if (!verificationCase.getCandidateId().equals(candidateId)) {
-            throw new ValidationException("Candidate does not own this case");
-        }
-
-        // ✅ Progress validation
-        
-        /*
-        int progress = calculateProgress(candidateverification);
-        if (progress < 100) {
-            throw new ValidationException(
-                    "Cannot submit verification. Complete all required sections. Progress: " + progress + "%"
-            );
-        }
-*/
-        // -----------------------------
-        // 1️⃣ Candidate Verification
-        // -----------------------------
-        candidateverification.setStatus(VerificationStatus.SUBMITTED);
-        candidateverification.setSubmittedAt(LocalDateTime.now());
-        candidateverification.setUpdatedAt(LocalDateTime.now());
-        candidateVerificationRepository.save(candidateverification);
-        // -----------------------------
-        // 2️⃣ Verification Case
-        // -----------------------------
-        verificationCase.setStatus(CaseStatus.SUBMITTED);
-        verificationCase.setUpdatedAt(LocalDateTime.now());
-        verificationCaseRepository.save(verificationCase);
-
-        // -----------------------------
-        // 3️⃣ Checks + Documents
-        // -----------------------------
-        verificationCase.getCaseChecks().forEach(check -> {
-
-            // Candidate side submit → vendor pending
-            if (check.getStatus() == CaseCheckStatus.AWAITING_CANDIDATE
-                    || check.getStatus() == CaseCheckStatus.INSUFFICIENT
-                    || check.getStatus() == CaseCheckStatus.PENDING_CANDIDATE
-                    || check.getStatus() == CaseCheckStatus.ACTION_REQUIRED) 
-            {
-
-                check.setStatus(CaseCheckStatus.PENDING);
-                check.setUpdatedAt(LocalDateTime.now());
-                
-                VerificationAction verificationAction = check.getLastAction();
-                if(verificationAction!=null) {
-                	verificationAction.setStatus(ActionStatus.RESOLVED);
-                    check.setLastAction(verificationAction);
-                }
-                
-            }
-            verificationCaseCheckRepository.save(check);
-
-         //   List<VerificationCaseDocument> findByVerificationCase_CaseIdAndVerificationCaseCheck_CaseCheckId(caseId,check.get);
-            
-            // Documents
-            check.getDocuments().forEach(document -> {
-                if (document.getVerificationStatus() == DocumentStatus.UPLOADED
-                        || document.getVerificationStatus() == DocumentStatus.IN_PROGRESS
-                        || document.getVerificationStatus() == DocumentStatus.INSUFFICIENT
-                        || document.getVerificationStatus() == DocumentStatus.NONE
-                        || document.getVerificationStatus() == DocumentStatus.ACTION_REQUIRED
-                		) {
-
-                    document.setVerificationStatus(DocumentStatus.PENDING);
-                    document.setUpdatedAt(LocalDateTime.now());
-                    verificationCaseDocumentRepository.save(document);
-                }
-            });
-           
-        });
-        
-              
-       // before submitting check any pending from candidate like action required, 
-        // get all documents irrespective of category update the status to Submitted from upload , re upload && active!=false && status!=verified
-
-        // -----------------------------
-        // 4️⃣ Persist (cascade)
-        // -----------------------------
-        
-       
-
-        // -----------------------------
-        // 5️⃣ Notify vendor / system
-        // -----------------------------
-        sendVerificationSubmittedNotification(candidateverification);
-
-        return convertToDTO(candidateverification);
-    }
-
     
     @Transactional
     @CacheEvict(value = "verification", key = "#candidateId")
@@ -621,11 +512,7 @@ public class VerificationService {
         }
     }
     
-    @Async
-    protected void sendVerificationSubmittedNotification(CandidateVerification verification) {
-        // Implement notification logic (email, push, etc.)
-        log.info("Sending verification submitted notification for candidate: {}", verification.getCandidateId());
-    }
+    
     
     private CandidateVerificationDTO convertToDTO(CandidateVerification verification) {
         CandidateVerificationDTO dto = new CandidateVerificationDTO();

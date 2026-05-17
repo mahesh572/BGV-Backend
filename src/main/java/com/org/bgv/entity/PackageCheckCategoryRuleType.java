@@ -45,4 +45,9 @@ public class PackageCheckCategoryRuleType {
     @Column(name = "rule_type_id", nullable = false)
     private Long ruleTypeId;
     
+    private Boolean requiresCount;
+    
+    @Column(name="selectedCount")
+    private Integer selectedCount;
+    
 }

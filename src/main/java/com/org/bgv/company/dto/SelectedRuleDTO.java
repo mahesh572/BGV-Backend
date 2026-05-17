@@ -14,6 +14,8 @@ public class SelectedRuleDTO {
     private Long ruleTypeId;
     private String ruleCode;
     private String ruleLabel;
+    private String ruleGroup;
+    private String pricingType;
 
     private Integer minCount;
     private Integer maxCount;
@@ -21,4 +23,5 @@ public class SelectedRuleDTO {
     private Boolean includedInPackage;
     private Boolean addon;
     private Boolean requiresCount;
+    private Integer selectedCount;
 }

@@ -16,6 +16,7 @@ public class AllowedAddOnRuleDTO {
     private Long ruleTypeId;
     private String ruleCode;
     private String ruleLabel;
+    private String ruleGroup;
 
     private String pricingType;   // FLAT / PER_RECORD
     private BigDecimal  unitPrice;

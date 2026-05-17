@@ -1,5 +1,7 @@
 package com.org.bgv.candidate.entity;
 
+import java.math.BigDecimal;
+
 import com.org.bgv.entity.EmployerPackage;
 import com.org.bgv.entity.VerificationCase;
 
@@ -60,12 +62,12 @@ public class CandidatePackageRule {
     
  // 🔹 Pricing snapshot (VERY IMPORTANT)
     @Column(name = "unit_price")
-    private Double unitPrice;
+    private BigDecimal unitPrice;
 
     @Column(name = "selected_count")
     private Integer selectedCount;
 
     @Column(name = "total_price")
-    private Double totalPrice;
+    private BigDecimal totalPrice;
     
 }

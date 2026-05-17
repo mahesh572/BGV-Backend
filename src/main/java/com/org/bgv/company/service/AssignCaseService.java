@@ -22,6 +22,8 @@ import com.org.bgv.company.dto.DocumentPreviewDTO;
 import com.org.bgv.company.dto.PriceSummaryDTO;
 import com.org.bgv.company.dto.PricingInfo;
 import com.org.bgv.company.dto.SelectedRuleDTO;
+import com.org.bgv.company.entity.EmployerPackageCheckCategoryAllowedRuleType;
+import com.org.bgv.company.repository.EmployerPackageCheckCategoryAllowedRuleTypeRepository;
 import com.org.bgv.config.SecurityUtils;
 import com.org.bgv.entity.CheckCategory;
 import com.org.bgv.entity.DocumentType;
@@ -50,7 +52,7 @@ public class AssignCaseService {
 	    private final RuleTypesRepository ruleTypesRepository;
 	    private final PlatformCheckPricingRepository platformCheckPricingRepository;
 	    private final EmployerCheckPricingRepository employerCheckPricingRepository;
-
+	   
 	    
 	    public AssignCasePreviewResponseDTO buildPreview(
 	            Long employerPackageId,
@@ -121,8 +123,10 @@ public class AssignCaseService {
 	    ) {
 	    	
 	    	Long companyId = SecurityUtils.getCurrentUserCompanyId();
+	    	
+	    	PackageCheckCategoryRuleType packageCheckCategoryRuleType = baseRules.get(0);
 
-	        CheckCategory category = baseRules.get(0).getBgvPackage()
+	        CheckCategory category = packageCheckCategoryRuleType.getBgvPackage()
 	                .getPackageCheckCategories()
 	                .stream()
 	                .filter(c -> c.getCategory().getCategoryId().equals(categoryId))
@@ -132,17 +136,27 @@ public class AssignCaseService {
 
 	        // Base rule (usually one)
 	        RuleTypes ruleType =
-	                ruleTypesRepository.findById(baseRules.get(0).getRuleTypeId())
+	                ruleTypesRepository.findById(packageCheckCategoryRuleType.getRuleTypeId())
 	                        .orElseThrow();
+	        
+	        PricingInfo selectedpricingInfo = resolvePricing(
+                    companyId,
+                    categoryId,
+                    ruleType
+            );
 
 	        SelectedRuleDTO selectedRuleDTO =
 	                SelectedRuleDTO.builder()
 	                        .ruleTypeId(ruleType.getRuleTypeId())
 	                        .ruleCode(ruleType.getCode())
 	                        .ruleLabel(ruleType.getLabel())
+	                        .pricingType(selectedpricingInfo.getPricingType()!=null?selectedpricingInfo.getPricingType().name():null)
 	                        .minCount(ruleType.getMinCount())
 	                        .maxCount(ruleType.getMaxCount())
+	                        .ruleGroup(ruleType.getRuleGroup()!=null?ruleType.getRuleGroup().name():"")
 	                        .includedInPackage(true)
+	                        .requiresCount(packageCheckCategoryRuleType.getRequiresCount())
+	                        .selectedCount(packageCheckCategoryRuleType.getSelectedCount())
 	                        .addon(false)
 	                        .requiresCount(ruleType.getRequiresCount()==null?Boolean.FALSE:ruleType.getRequiresCount())
 	                        .build();
@@ -216,6 +230,7 @@ public class AssignCaseService {
 	                                    .ruleTypeId(addOnRuleType.getRuleTypeId())
 	                                    .ruleCode(addOnRuleType.getCode())
 	                                    .ruleLabel(addOnRuleType.getLabel())
+	                                    .ruleGroup(ruleType.getRuleGroup()!=null?ruleType.getRuleGroup().name():"")
 	                                    .pricingType(pricingInfo.getPricingType()!=null?pricingInfo.getPricingType().name():null)
 	                                    .unitPrice(pricingInfo.getUnitPrice()!=null?pricingInfo.getUnitPrice():null)
 	                                    .dynamicPricing(
@@ -275,6 +290,6 @@ public class AssignCaseService {
 	        );
 	    }
 	    
-	    
+	   
 	    
 }

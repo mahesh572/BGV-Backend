@@ -9,6 +9,7 @@ import org.springframework.data.jpa.repository.JpaRepository;
 
 import java.util.List;
 import java.util.Optional;
+import java.util.Set;
 
 public interface EmployerCheckPricingRepository
         extends JpaRepository<EmployerCheckPricing, Long> {
@@ -44,6 +45,13 @@ public interface EmployerCheckPricingRepository
             Long companyId,
             Long categoryId,
             Long ruleTypeId
+    );
+    
+    List<EmployerCheckPricing> 
+    findAllByCompany_IdAndCheckCategory_CategoryIdInAndRuleType_RuleTypeIdInAndActiveTrue(
+        Long companyId,
+        Set<Long> categoryIds,
+        Set<Long> ruleTypeIds
     );
 
     List<EmployerCheckPricing> findByCompany_IdAndCheckCategory_CategoryIdAndActiveTrue(

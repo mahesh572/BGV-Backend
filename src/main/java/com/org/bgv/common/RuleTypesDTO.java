@@ -60,4 +60,6 @@ public class RuleTypesDTO {
     private RuleGroup selectedRulegroup;
     
     private Boolean requiresCount;
+    
+    private Integer selectedCount;
 }

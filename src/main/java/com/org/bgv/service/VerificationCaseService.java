@@ -5,6 +5,8 @@ import com.org.bgv.common.VerificationCaseResponse;
 import com.org.bgv.common.VerificationCheckDTO;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.node.ObjectNode;
+import com.org.bgv.bgvpackage.entity.EmployerCheckPricing;
+import com.org.bgv.bgvpackage.repository.EmployerCheckPricingRepository;
 import com.org.bgv.candidate.dto.CaseStatisticsDTO;
 import com.org.bgv.candidate.dto.SectionNamesDisplayDTO;
 import com.org.bgv.candidate.dto.VerificationCaseDTO;
@@ -50,6 +52,10 @@ import com.org.bgv.company.dto.CaseSearchRequest;
 import com.org.bgv.company.dto.CompanyVerificationCaseDTO;
 import com.org.bgv.company.dto.PricingDTO;
 import com.org.bgv.company.dto.VerificationCaseDetailsDTO;
+import com.org.bgv.company.entity.EmployerDocumentPricing;
+import com.org.bgv.company.entity.EmployerPackageRule;
+import com.org.bgv.company.repository.EmployerDocumentPricingRepository;
+import com.org.bgv.company.repository.EmployerPackageRuleRepository;
 import com.org.bgv.config.SecurityUtils;
 import com.org.bgv.constants.CaseCheckStatus;
 import com.org.bgv.constants.CaseStatus;
@@ -80,11 +86,13 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.util.StringUtils;
 
+import java.math.BigDecimal;
 import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.HashMap;
+import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
@@ -126,6 +134,9 @@ public class VerificationCaseService {
 	private final WorkExperienceRepository workExperienceRepository;
 	private final VerificationActionEvidenceRepository verificationActionEvidenceRepository;
 	private final AddressRepository addressRepository;
+	private final EmployerCheckPricingRepository employerCheckPricingRepository;
+	private final EmployerPackageRuleRepository employerPackageRuleRepository;
+	private final EmployerDocumentPricingRepository employerDocumentPricingRepository;
 
 	private static final DateTimeFormatter DATE_FORMATTER = DateTimeFormatter.ofPattern("dd MMM yyyy");
 	private static final DateTimeFormatter TIMESTAMP_FORMATTER = DateTimeFormatter.ofPattern("dd MMM yyyy HH:mm");
@@ -151,20 +162,7 @@ public class VerificationCaseService {
 			throw new RuntimeException("Candidate already has a case with this package");
 		}
 
-		/*
-		 * 
-		 * // Extract all selected document IDs from categories List<Long>
-		 * selectedDocumentIds = extractSelectedDocumentIds(request.getCategories());
-		 * 
-		 * // Get employer package documents List<EmployerPackageDocument>
-		 * employerDocuments = employerPackageDocumentRepository
-		 * .findByEmployerPackageId(request.getEmployerPackageId());
-		 * 
-		 * // Calculate pricing PricingResult pricing =
-		 * calculateCandidatePricing(employerDocuments, selectedDocumentIds);
-		 * 
-		 */
-
+		
 		// Create verification case
 		VerificationCase verificationCase = VerificationCase.builder().candidateId(request.getCandidateId())
 				.companyId(request.getCompanyId()).employerPackage(employerPackage)
@@ -188,15 +186,7 @@ public class VerificationCaseService {
 
 		savedCase.setCaseChecks(caseChecks);
 
-		// Update verification case with checks and documents
-		// savedCase = verificationCaseRepository.save(savedCase);
-
-		// Create candidate case documents based on selected documents
-		/*
-		 * List<VerificationCaseDocument> caseDocuments = createCandidateCaseDocuments(
-		 * savedCase, employerDocuments, selectedDocumentIds, request.getCategories());
-		 * savedCase.setCaseDocuments(caseDocuments);
-		 */
+		
 		savedCase = verificationCaseRepository.save(savedCase);
 
 		// Asssigning vendor to Category Check START
@@ -216,8 +206,7 @@ public class VerificationCaseService {
 
 		// debit an amount
 
-		paymentService.makePaymentFromWallet(SecurityUtils.getCurrentUserId(), company.getId(), request.getTotalPrice(),
-				"");
+		// paymentService.makePaymentFromWallet(SecurityUtils.getCurrentUserId(), company.getId(), request.getTotalPrice(),"");
 
 		notificationDispatcher.dispatchCandidateBgvInvitation(company, candidate, candidate.getUser());
 
@@ -962,121 +951,186 @@ public class VerificationCaseService {
 	@Transactional
 	public void saveCandidatePackageRules(VerificationCaseRequest request, VerificationCase savedCase) {
 
-		EmployerPackage employerPackage = employerPackageRepository.findById(request.getEmployerPackageId())
-				.orElseThrow(() -> new RuntimeException("Package not found"));
+	    EmployerPackage employerPackage = employerPackageRepository.findById(request.getEmployerPackageId())
+	            .orElseThrow(() -> new RuntimeException("Package not found"));
 
-		List<CandidatePackageRule> rulesToSave = new ArrayList<>();
-		List<CandidatePackageRuleDocument> ruleDocsToSave = new ArrayList<>();
+	    List<CandidatePackageRule> rulesToSave = new ArrayList<>();
+	    List<CandidatePackageRuleDocument> ruleDocsToSave = new ArrayList<>();
 
-		for (CategoryCase category : request.getCategories()) {
+	    // 🔥 Collect all IDs for bulk fetch
+	    Set<Long> categoryIds = request.getCategories().stream()
+	            .map(CategoryCase::getCategoryId)
+	            .collect(Collectors.toSet());
 
-			Long categoryId = category.getCategoryId();
+	    Set<Long> ruleTypeIds = request.getCategories().stream()
+	            .flatMap(c -> c.getSelectedRules().stream())
+	            .map(SelectedRuleRequest::getRuleTypeId)
+	            .collect(Collectors.toSet());
 
-			for (SelectedRuleRequest ruleType : category.getSelectedRules()) {
+	    Set<Long> docTypeIds = request.getCategories().stream()
+	            .filter(c -> c.getSelectedDocumentIds() != null)
+	            .flatMap(c -> c.getSelectedDocumentIds().stream())
+	            .collect(Collectors.toSet());
+	    
+	    Map<Long, RuleTypes> ruleTypeMap = ruleTypesRepository
+	            .findAllById(ruleTypeIds)
+	            .stream()
+	            .collect(Collectors.toMap(
+	                    RuleTypes::getRuleTypeId, // ⚠️ use correct getter
+	                    r -> r
+	            ));
 
-				// 🔹 1. Create Rule
-				CandidatePackageRule rule = CandidatePackageRule.builder().employerPackageId(employerPackage)
-						.companyId(request.getCompanyId())
-						.candidateId(request.getCandidateId())
-						.verificationCase(savedCase)
-						.checkCategoryId(categoryId)
-						.ruleTypeId(ruleType.getRuleTypeId())
-                        .selectedCount(ruleType.getSelectedCount())
-						.required(false)
-						.includedInPackage(true)
-						.addon(false)
+	    // 🔥 Bulk fetch pricing
+	    List<EmployerCheckPricing> checkPricingList =
+	            employerCheckPricingRepository
+	                    .findAllByCompany_IdAndCheckCategory_CategoryIdInAndRuleType_RuleTypeIdInAndActiveTrue(
+	                            request.getCompanyId(), categoryIds, ruleTypeIds
+	                    );
 
-						// Example: can be dynamic later
-						.unitPrice(0.0)
-						.totalPrice(0.0)
-						.build();
+	    Map<String, EmployerCheckPricing> checkPricingMap = checkPricingList.stream()
+	            .collect(Collectors.toMap(
+	                    p -> p.getCheckCategory().getCategoryId() + "_" + p.getRuleType().getRuleTypeId(),
+	                    p -> p
+	            ));
 
-				rulesToSave.add(rule);
-			}
-		}
+	    List<EmployerDocumentPricing> docPricingList =
+	            employerDocumentPricingRepository
+	                    .findAllByCompany_IdAndCheckCategory_CategoryIdInAndDocumentType_docTypeIdInAndActiveTrue(
+	                            request.getCompanyId(), categoryIds, docTypeIds
+	                    );
 
-		// 🔥 Save rules first (to get IDs)
-		List<CandidatePackageRule> savedRules = candidatePackageRuleRepository.saveAll(rulesToSave);
+	    Map<String, EmployerDocumentPricing> docPricingMap = docPricingList.stream()
+	            .collect(Collectors.toMap(
+	                    p -> p.getCheckCategory().getCategoryId() + "_" + p.getDocumentType().getDocTypeId(),
+	                    p -> p
+	            ));
 
-		// 🔥 Map rules back to categories (important)
-		Map<Long, List<CandidatePackageRule>> categoryRuleMap = savedRules.stream()
-				.collect(Collectors.groupingBy(CandidatePackageRule::getCheckCategoryId));
+	    // 🔥 Fetch package rules
+	    List<EmployerPackageRule> packageRules =
+	            employerPackageRuleRepository.findByEmployerPackage_Id(employerPackage.getId());
 
-		// 🔹 2. Handle DOCUMENT SELECTION
-		for (CategoryCase category : request.getCategories()) {
+	    Map<Long, EmployerPackageRule> packageRuleMap = packageRules.stream()
+	            .collect(Collectors.toMap(
+	                    EmployerPackageRule::getRuleTypeId,
+	                    r -> r
+	            ));
 
-			Long categoryId = category.getCategoryId();
+	    // 🔹 1. Create Rules
+	    for (CategoryCase category : request.getCategories()) {
 
-			List<CandidatePackageRule> categoryRules = categoryRuleMap.get(categoryId);
-			if (categoryRules == null)
-				continue;
+	        Long categoryId = category.getCategoryId();
 
-			for (CandidatePackageRule rule : categoryRules) {
+	        for (SelectedRuleRequest ruleReq : category.getSelectedRules()) {
 
-				// 👉 You need RuleType to decide behavior
-				RuleTypes ruleType = ruleTypesRepository.findById(rule.getRuleTypeId())
-						.orElseThrow(() -> new RuntimeException("RuleType not found"));
+	            String key = categoryId + "_" + ruleReq.getRuleTypeId();
 
-				RuleGroup ruleGroup = ruleType.getRuleGroup();
+	            EmployerCheckPricing pricing = checkPricingMap.get(key);
+	            
+	            RuleTypes ruleType = ruleTypeMap.get(ruleReq.getRuleTypeId());
+	            if (ruleType == null) {
+	                throw new RuntimeException("RuleType not found: " + ruleReq.getRuleTypeId());
+	            }
+	            RuleGroup ruleGroup = ruleType.getRuleGroup();
 
-				switch (ruleGroup) {
+	            if (pricing == null && ruleGroup != RuleGroup.DOCUMENT_SELECTION) {
+	                throw new RuntimeException("Pricing not found for rule: " + ruleReq.getRuleTypeId());
+	            }
 
-				case DOCUMENT_SELECTION -> {
-					// 🔹 Save selected documents
-					if (category.getSelectedDocumentIds() != null) {
-						for (Long docTypeId : category.getSelectedDocumentIds()) {
+	            EmployerPackageRule pkgRule = packageRuleMap.get(ruleReq.getRuleTypeId());
 
-							CandidatePackageRuleDocument doc = CandidatePackageRuleDocument.builder()
-									.rule(rule)
-									.verificationCase(savedCase) // 🔥 MUST
-									.categoryId(category.getCategoryId())
-									.documentTypeId(docTypeId)
-									.selected(true)
-									.required(true)
-									.price(0.0)
-									.build();
+	            boolean included = pkgRule != null && Boolean.TRUE.equals(pkgRule.getIncludedInBase());
+	          //  boolean addon = pkgRule != null && Boolean.TRUE.equals(pkgRule.getAddon());
 
-							ruleDocsToSave.add(doc);
-						}
-					}
-				}
+	            CandidatePackageRule rule = CandidatePackageRule.builder()
+	                    .employerPackageId(employerPackage)
+	                    .companyId(request.getCompanyId())
+	                    .candidateId(request.getCandidateId())
+	                    .verificationCase(savedCase)
+	                    .checkCategoryId(categoryId)
+	                    .ruleTypeId(ruleReq.getRuleTypeId())
+	                    .selectedCount(ruleReq.getSelectedCount())
+	                    .required(false)
+	                    .includedInPackage(included)
+	                    //.addon(addon)
+	                    .unitPrice(pricing!=null?pricing.getUnitPrice():BigDecimal.ZERO)
+	                    .totalPrice(BigDecimal.ZERO)
+	                    .build();
 
-				case RECORD_COUNT -> {
-					// 🔹 Example: number of records (store in rule)
-					//  Integer count = category.getSelectedCount() != null? category.getSelectedCount(): 1;
+	            rulesToSave.add(rule);
+	        }
+	    }
 
-					//  rule.setSelectedCount(count);
-				}
+	    // 🔥 Save rules
+	    List<CandidatePackageRule> savedRules = candidatePackageRuleRepository.saveAll(rulesToSave);
 
-				case ADD_ON -> {
-					// 🔹 Add-on documents
-					if (category.getSelectedDocumentIds() != null) {
-						for (Long docTypeId : category.getSelectedDocumentIds()) {
+	    Map<Long, List<CandidatePackageRule>> categoryRuleMap = savedRules.stream()
+	            .collect(Collectors.groupingBy(CandidatePackageRule::getCheckCategoryId));
 
-							CandidatePackageRuleDocument doc = CandidatePackageRuleDocument.builder().rule(rule)
-									.documentTypeId(docTypeId).selected(true).required(false).price(0.0).build();
+	    Map<Long, BigDecimal> ruleTotalMap = new HashMap<>();
 
-							ruleDocsToSave.add(doc);
-						}
-					}
+	    // 🔹 2. Create Documents
+	    for (CategoryCase category : request.getCategories()) {
 
-					rule.setAddon(true);
-				}
+	        Long categoryId = category.getCategoryId();
+	        List<CandidatePackageRule> categoryRules = categoryRuleMap.get(categoryId);
 
-				default -> {
-					// handle future rule types
-				}
-				}
-			}
-		}
+	        if (categoryRules == null) continue;
 
-		// 🔥 Save rule documents
-		if (!ruleDocsToSave.isEmpty()) {
-			candidatePackageRuleDocumentRepository.saveAll(ruleDocsToSave);
-		}
+	        if (category.getSelectedDocumentIds() == null || category.getSelectedDocumentIds().isEmpty())
+	            continue;
 
-		// 🔥 Update rules if modified (record count etc.)
-		candidatePackageRuleRepository.saveAll(savedRules);
+	        Set<Long> uniqueDocs = new HashSet<>(category.getSelectedDocumentIds());
+
+	        for (CandidatePackageRule rule : categoryRules) {
+
+	            for (Long docTypeId : uniqueDocs) {
+
+	                String key = categoryId + "_" + docTypeId;
+
+	                EmployerDocumentPricing docPricing = docPricingMap.get(key);
+	                if (docPricing == null) {
+	                    throw new RuntimeException("Document pricing not found for docType: " + docTypeId);
+	                }
+
+	                BigDecimal docPrice;
+
+	                if (Boolean.TRUE.equals(rule.getIncludedInPackage())) {
+	                    docPrice = BigDecimal.ZERO;
+	                } else {
+	                        docPrice = docPricing.getUnitPrice();
+	                }
+
+	                CandidatePackageRuleDocument doc = CandidatePackageRuleDocument.builder()
+	                        .rule(rule)
+	                        .verificationCase(savedCase)
+	                        .categoryId(categoryId)
+	                        .documentTypeId(docTypeId)
+	                        .selected(true)
+	                        .required(true)
+	                        .price(docPrice)
+	                        .includedInPackage(rule.getIncludedInPackage())
+	                        .build();
+
+	                ruleDocsToSave.add(doc);
+
+	                // 🔥 accumulate rule total
+	                ruleTotalMap.merge(rule.getId(), docPrice, BigDecimal::add);
+	            }
+	        }
+	    }
+
+	    // 🔥 Save documents
+	    if (!ruleDocsToSave.isEmpty()) {
+	        candidatePackageRuleDocumentRepository.saveAll(ruleDocsToSave);
+	    }
+
+	    // 🔥 Update rule totals
+	    for (CandidatePackageRule rule : savedRules) {
+	        BigDecimal total = ruleTotalMap.getOrDefault(rule.getId(), BigDecimal.ZERO);
+	        rule.setTotalPrice(total);
+	    }
+
+	    candidatePackageRuleRepository.saveAll(savedRules);
 	}
 
 	private Specification<VerificationCase> buildSpecification(CaseSearchRequest request) {

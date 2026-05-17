@@ -43,6 +43,9 @@ public class EmployerPackageDocument {
     @Column(name = "selection_type")
     private SelectionType selectionType;
     
+    private Boolean required;
+    private Boolean defaultSelected;
+    
     @Builder.Default
     private LocalDateTime createdAt = LocalDateTime.now();
     

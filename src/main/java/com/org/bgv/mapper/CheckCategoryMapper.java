@@ -26,7 +26,9 @@ import com.org.bgv.repository.PlatformDocumentPricingRepository;
 import com.org.bgv.repository.RuleTypesRepository;
 
 import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 
+@Slf4j
 @Component
 @RequiredArgsConstructor
 public class CheckCategoryMapper {
@@ -279,15 +281,16 @@ public class CheckCategoryMapper {
                     .toList();
             
          // RULE BASED PRICING
-            List<PlatformCheckPricing> rulePricing =
-                    platformCheckPricingRepository
-                            .findByCheckCategory_CategoryIdAndActiveTrue(
-                                    category.getCategoryId());
+            List<RuleTypes> ruleTypes =
+                    ruleTypesRepository.findByCategory(category);
 
-            List<RuleTypeResponse> ruleResponses =
-                    rulePricing.stream()
-                            .map(this::mapToRulePricingResponse)
-                            .toList();
+            List<RuleTypeResponse> ruleResponses = ruleTypes.stream()
+                    .map(rule -> RuleTypeResponse.builder()
+                            .ruleTypeId(rule.getRuleTypeId())
+                            .name(rule.getName())
+                            .code(rule.getCode())
+                            .build())
+                    .toList();
 
             return CheckCategoryResponse.builder()
                     .categoryId(category.getCategoryId())
@@ -338,6 +341,7 @@ public class CheckCategoryMapper {
                 .pricingType(pricing.getPricingType())
                 .unitPrice(pricing.getUnitPrice())
                 .active(pricing.getActive())
+                .requiresCount(rule.getRequiresCount())
                 .build();
     }
     
