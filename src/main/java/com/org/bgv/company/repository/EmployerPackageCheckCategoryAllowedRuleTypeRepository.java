@@ -33,18 +33,17 @@ public interface EmployerPackageCheckCategoryAllowedRuleTypeRepository
 
     // 🔹 Get specific rule
     Optional<EmployerPackageCheckCategoryAllowedRuleType>
-    findByEmployerPackage_IdAndCheckCategoryIdAndRuleTypeId(
+    findByEmployerPackage_IdAndCheckCategoryIdAndRuleType_RuleTypeId(
             Long employerPackageId,
             Long checkCategoryId,
             Long ruleTypeId
     );
 
-    // 🔹 Bulk fetch for rules
-    List<EmployerPackageCheckCategoryAllowedRuleType>
-    findByEmployerPackage_IdAndRuleTypeIdIn(
-            Long employerPackageId,
-            Set<Long> ruleTypeIds
-    );
+	/*
+	 * // 🔹 Bulk fetch for rules List<EmployerPackageCheckCategoryAllowedRuleType>
+	 * findByEmployerPackage_IdAndRuleTypeIdIn1( Long employerPackageId, Set<Long>
+	 * ruleTypeIds );
+	 */
 
     // 🔹 Delete all rules for package (useful on reassign/reset)
     void deleteByEmployerPackage_Id(Long employerPackageId);

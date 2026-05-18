@@ -33,5 +33,6 @@ public class RuleTypesRequest {
     
     private RuleGroup selectedRulegroup;
     private Boolean requiresCount;
+    private Long documentTypeId;
 
 }

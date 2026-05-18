@@ -2,9 +2,11 @@ package com.org.bgv.company.service;
 
 import java.util.ArrayList;
 import java.util.Collections;
+import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
+import java.util.Set;
 import java.util.stream.Collectors;
 
 import org.springframework.stereotype.Service;
@@ -23,7 +25,9 @@ import com.org.bgv.company.dto.PriceSummaryDTO;
 import com.org.bgv.company.dto.PricingInfo;
 import com.org.bgv.company.dto.SelectedRuleDTO;
 import com.org.bgv.company.entity.EmployerPackageCheckCategoryAllowedRuleType;
+import com.org.bgv.company.entity.EmployerPackageRule;
 import com.org.bgv.company.repository.EmployerPackageCheckCategoryAllowedRuleTypeRepository;
+import com.org.bgv.company.repository.EmployerPackageRuleRepository;
 import com.org.bgv.config.SecurityUtils;
 import com.org.bgv.entity.CheckCategory;
 import com.org.bgv.entity.DocumentType;
@@ -32,6 +36,7 @@ import com.org.bgv.entity.PackageCheckCategoryRuleType;
 import com.org.bgv.entity.RuleTypes;
 import com.org.bgv.enums.PricingType;
 import com.org.bgv.enums.RuleGroup;
+import com.org.bgv.repository.CheckCategoryRepository;
 import com.org.bgv.repository.DocumentTypeRepository;
 import com.org.bgv.repository.EmployerPackageRepository;
 import com.org.bgv.repository.PackageCheckCategoryRuleTypeRepository;
@@ -52,7 +57,9 @@ public class AssignCaseService {
 	    private final RuleTypesRepository ruleTypesRepository;
 	    private final PlatformCheckPricingRepository platformCheckPricingRepository;
 	    private final EmployerCheckPricingRepository employerCheckPricingRepository;
-	   
+	    private final EmployerPackageRuleRepository employerPackageRuleRepository;
+	    private final EmployerPackageCheckCategoryAllowedRuleTypeRepository employerPackageCheckCategoryAllowedRuleTypeRepository;
+	    private final CheckCategoryRepository checkCategoryRepository;
 	    
 	    public AssignCasePreviewResponseDTO buildPreview(
 	            Long employerPackageId,
@@ -64,29 +71,41 @@ public class AssignCaseService {
 	                        .orElseThrow(() -> new RuntimeException("Employer Package not found"));
 
 	        // 1️⃣ Fetch base included rules
-	        List<PackageCheckCategoryRuleType> baseRules =
-	                packageRuleRepository.findByBgvPackagePackageId(employerPackage.getBgvPackage().getPackageId());
+	       // List<PackageCheckCategoryRuleType> baseRules = packageRuleRepository.findByBgvPackagePackageId(employerPackage.getBgvPackage().getPackageId());
 
+	        List<EmployerPackageRule> baseRules =
+	                employerPackageRuleRepository.findByEmployerPackage_Id(employerPackageId);
+	        
 	        // 2️⃣ Fetch allowed add-on rules
-	        List<PackageCheckCategoryAllowedRuleType> allowedRules =
-	                allowedRuleRepository.findByBgvPackage_PackageId(employerPackage.getBgvPackage().getPackageId());
+	       // List<PackageCheckCategoryAllowedRuleType> allowedRules = allowedRuleRepository.findByBgvPackage_PackageId(employerPackage.getBgvPackage().getPackageId());
 
+	        List<EmployerPackageCheckCategoryAllowedRuleType> allowedRules =
+	        		employerPackageCheckCategoryAllowedRuleTypeRepository.findByEmployerPackage_Id(employerPackageId);
+	        
 	        // 3️⃣ Group by category
-	        Map<Long, List<PackageCheckCategoryRuleType>> baseRuleMap =
+	      //  Map<Long, List<PackageCheckCategoryRuleType>> baseRuleMap = baseRules.stream().collect(Collectors.groupingBy(PackageCheckCategoryRuleType::getCheckCategoryId));
+
+	      //  Map<Long, List<PackageCheckCategoryAllowedRuleType>> allowedRuleMap = allowedRules.stream().collect(Collectors.groupingBy(r -> r.getCheckCategory().getCategoryId()));
+
+	        Map<Long, List<EmployerPackageRule>> baseRuleMap =
 	                baseRules.stream()
-	                        .collect(Collectors.groupingBy(PackageCheckCategoryRuleType::getCheckCategoryId));
+	                        .collect(Collectors.groupingBy(EmployerPackageRule::getCheckCategoryId));
 
-	        Map<Long, List<PackageCheckCategoryAllowedRuleType>> allowedRuleMap =
+	        Map<Long, List<EmployerPackageCheckCategoryAllowedRuleType>> allowedRuleMap =
 	                allowedRules.stream()
-	                        .collect(Collectors.groupingBy(r -> r.getCheckCategory().getCategoryId()));
-
+	                        .collect(Collectors.groupingBy(EmployerPackageCheckCategoryAllowedRuleType::getCheckCategoryId));
+	        
+	        
 	        List<CategoryPreviewDTO> categoryPreviews = new ArrayList();
+	        
+	        Set<Long> allCategoryIds = new HashSet();
+	        allCategoryIds.addAll(baseRuleMap.keySet());
+	        allCategoryIds.addAll(allowedRuleMap.keySet());
 
-	        for (Long categoryId : baseRuleMap.keySet()) {
+	        for (Long categoryId : allCategoryIds) {
 
-	            List<PackageCheckCategoryRuleType> baseCategoryRules = baseRuleMap.get(categoryId);
-	            List<PackageCheckCategoryAllowedRuleType> allowedCategoryRules =
-	                    allowedRuleMap.getOrDefault(categoryId, Collections.emptyList());
+	            List<EmployerPackageRule> baseCategoryRules = baseRuleMap.get(categoryId);
+	            List<EmployerPackageCheckCategoryAllowedRuleType> allowedCategoryRules = allowedRuleMap.getOrDefault(categoryId, Collections.emptyList());
 
 	            CategoryPreviewDTO categoryDTO =
 	                    buildCategoryPreview(categoryId, baseCategoryRules, allowedCategoryRules);
@@ -117,22 +136,17 @@ public class AssignCaseService {
 	    }
 	    
 	    private CategoryPreviewDTO buildCategoryPreview(
-	            Long categoryId,
-	            List<PackageCheckCategoryRuleType> baseRules,
-	            List<PackageCheckCategoryAllowedRuleType> allowedRules
+	    		Long categoryId,
+	    	    List<EmployerPackageRule> baseRules,
+	    	    List<EmployerPackageCheckCategoryAllowedRuleType> allowedRules
 	    ) {
 	    	
 	    	Long companyId = SecurityUtils.getCurrentUserCompanyId();
 	    	
-	    	PackageCheckCategoryRuleType packageCheckCategoryRuleType = baseRules.get(0);
+	    	EmployerPackageRule packageCheckCategoryRuleType = baseRules.get(0);
 
-	        CheckCategory category = packageCheckCategoryRuleType.getBgvPackage()
-	                .getPackageCheckCategories()
-	                .stream()
-	                .filter(c -> c.getCategory().getCategoryId().equals(categoryId))
-	                .findFirst()
-	                .orElseThrow()
-	                .getCategory();
+	    	CheckCategory category = checkCategoryRepository.findById(categoryId)
+	    	        .orElseThrow(() -> new RuntimeException("Category not found"));
 
 	        // Base rule (usually one)
 	        RuleTypes ruleType =
@@ -182,12 +196,9 @@ public class AssignCaseService {
 	            log.info("documents:::::::::::::::::::::::::::{}",documents.size());
 	            
 	         // Extract allowed rule names
-	            List<String> allowedRuleNames =
-	                    allowedRules.stream()
+	            List<String> allowedRuleNames = allowedRules.stream()
 	                            .map(r -> r.getRuleType().getName().toLowerCase())
 	                            .collect(Collectors.toList());
-	            
-	            
 
 	            List<DocumentPreviewDTO> docDTOs =
 	                    documents.stream()

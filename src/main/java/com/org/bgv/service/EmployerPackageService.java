@@ -15,6 +15,12 @@ import com.org.bgv.common.PackageDocumentDTO;
 import com.org.bgv.common.PackageDocumentRequest;
 import com.org.bgv.common.PackageInfo;
 import com.org.bgv.common.PackageRequest;
+import com.org.bgv.common.PackageRuleTypeDTO;
+import com.org.bgv.company.entity.EmployerPackageCheckCategoryAllowedRuleType;
+import com.org.bgv.company.entity.EmployerPackageRule;
+import com.org.bgv.company.repository.EmployerPackageCheckCategoryAllowedRuleTypeRepository;
+import com.org.bgv.company.repository.EmployerPackageCheckCategoryRepository;
+import com.org.bgv.company.repository.EmployerPackageRuleRepository;
 import com.org.bgv.config.SecurityUtils;
 import com.org.bgv.constants.CaseStatus;
 import com.org.bgv.constants.EmployerPackageStatus;
@@ -51,6 +57,11 @@ public class EmployerPackageService {
     private final DocumentTypeRepository documentTypeRepository;
     private final VerificationCaseRepository candidateCaseRepository;
     private final PackageService packageService;
+    private final EmployerPackageCheckCategoryAllowedRuleTypeRepository employerPackageCheckCategoryAllowedRuleTypeRepository;
+    private final EmployerPackageCheckCategoryRepository employerPackageCheckCategoryRepository;
+    private final EmployerPackageRuleRepository employerPackageRuleRepository;
+    private final RuleTypesRepository ruleTypesRepository;
+   
     
     @Transactional
     public EmployerPackageResponse createEmployerPackage(EmployerPackageRequest request) {
@@ -98,46 +109,67 @@ public class EmployerPackageService {
     
     
     
-    public PackageDTO getEmployerPackage(Long packageId) {
-        // Get base package details
-        PackageDTO packageDTO = packageService.getPackageById(packageId);
-        
-        Long companyId = SecurityUtils.getCurrentUserCompanyId();
-        Optional<EmployerPackage> employerPackageOpt = employerPackageRepository
-                .findActiveByCompanyAndPackage(companyId, packageId);
-        
-        if (employerPackageOpt.isPresent()) {
-            EmployerPackage employerPackage = employerPackageOpt.get();
-            
-            // Get all documents selected by employer for this package
-            List<EmployerPackageDocument> employerSelectedDocuments = employerPackageDocumentRepository
-                    .findByEmployerPackageId(employerPackage.getId());
-            
-            log.info("employerPackage::::::::employerPackage.getId():::::{}",employerPackage.getId());
-            log.info("employerPackage::::::::employerPackage.size():::::{}",employerSelectedDocuments.size());
-            
-            // Create a map of documentTypeId -> EmployerPackageDocument for quick lookup
-            Map<Long, EmployerPackageDocument> employerDocumentMap = employerSelectedDocuments.stream()
-                    .filter(epd -> epd.getDocumentType() != null)
-                    .collect(Collectors.toMap(
-                        epd -> epd.getDocumentType().getDocTypeId(),
-                        epd -> epd,
-                        (existing, replacement) -> existing // handle duplicates if any
-                    ));
-            
-            // Update PackageDocumentDTOs to mark selected ones as true
-            updateDocumentSelections(packageDTO, employerDocumentMap);
-            
-            // Set additional employer-specific information
-          //  packageDTO.setEmployerPackageId(employerPackage.getId());
-          //  packageDTO.setCustomized(true);
-            packageDTO.setBasePrice(employerPackage.getBasePrice());
-        } else {
-            // If no employer package exists, mark as not customized
-          //  packageDTO.setCustomized(false);
+    public PackageDTO getEmployerPackage(Long employerPackageId) {
+
+        // 🔹 1. Fetch employer package directly
+        EmployerPackage employerPackage = employerPackageRepository.findById(employerPackageId)
+                .orElseThrow(() -> new RuntimeException("Employer Package not found"));
+
+        // 🔹 2. Build categories from employer tables ONLY
+        List<PackageCategoryDTO> categories =
+                buildEmployerPackageCategories(employerPackageId);
+
+        // 🔹 3. Fetch employer selected documents
+        List<EmployerPackageDocument> employerDocs =
+                employerPackageDocumentRepository.findByEmployerPackageId(employerPackageId);
+
+        Map<Long, EmployerPackageDocument> employerDocumentMap =
+                employerDocs.stream()
+                        .filter(d -> d.getDocumentType() != null)
+                        .collect(Collectors.toMap(
+                                d -> d.getDocumentType().getDocTypeId(),
+                                d -> d,
+                                (a, b) -> a
+                        ));
+
+        // 🔹 4. Mark selected documents
+        updateDocumentSelections(categories, employerDocumentMap);
+
+        // 🔹 5. Build DTO (NO admin package dependency)
+        return PackageDTO.builder()
+                .packageId(employerPackage.getId())
+                .name(employerPackage.getBgvPackage().getName()) // safe (just label)
+                .basePrice(employerPackage.getBasePrice())
+                .categories(categories)
+                .build();
+    }
+    
+    
+    private void updateDocumentSelections(
+            List<PackageCategoryDTO> categories,
+            Map<Long, EmployerPackageDocument> employerDocumentMap
+    ) {
+        for (PackageCategoryDTO category : categories) {
+
+            if (category.getAllowedDocuments() == null) continue;
+
+            for (PackageDocumentDTO doc : category.getAllowedDocuments()) {
+
+                EmployerPackageDocument employerDoc =
+                        employerDocumentMap.get(doc.getDocumentTypeId());
+
+                if (employerDoc != null) {
+                    doc.setSelected(true);
+
+                    // 🔥 Important (you were ignoring this)
+                   // doc.setPrice(employerDoc.getAddonPrice());
+                    doc.setIncludedInBase(employerDoc.getIncludedInBase());
+
+                } else {
+                    doc.setSelected(false);
+                }
+            }
         }
-        
-        return packageDTO;
     }
     
 
@@ -695,5 +727,121 @@ private void updateDocumentSelections(PackageDTO packageDTO,
                 .employerPackageDocumentId(existingSelection != null ? existingSelection.getId() : null)
                 .build();
     }
+    
+    
+    public List<PackageCategoryDTO> buildEmployerPackageCategories(Long employerPackageId) {
+
+        // 🔹 Fetch employer package
+        EmployerPackage employerPackage = employerPackageRepository.findById(employerPackageId)
+                .orElseThrow(() -> new RuntimeException("Employer Package not found"));
+
+        // 🔹 BULK FETCH (NO N+1)
+
+        List<EmployerPackageRule> rules =
+                employerPackageRuleRepository.findByEmployerPackage_Id(employerPackageId);
+
+        List<EmployerPackageCheckCategoryAllowedRuleType> allowedRules =
+        		employerPackageCheckCategoryAllowedRuleTypeRepository.findByEmployerPackage_Id(employerPackageId);
+
+        List<EmployerPackageDocument> documents =
+                employerPackageDocumentRepository.findByEmployerPackageId(employerPackageId);
+
+        // 🔹 GROUPING
+
+        Map<Long, List<EmployerPackageRule>> ruleMap =
+                rules.stream().collect(Collectors.groupingBy(EmployerPackageRule::getCheckCategoryId));
+
+        Map<Long, List<EmployerPackageCheckCategoryAllowedRuleType>> allowedRuleMap =
+                allowedRules.stream().collect(Collectors.groupingBy(EmployerPackageCheckCategoryAllowedRuleType::getCheckCategoryId));
+
+        Map<Long, List<EmployerPackageDocument>> documentMap =
+                documents.stream().collect(Collectors.groupingBy(d -> d.getCheckCategory().getCategoryId()));
+
+        // 🔹 Collect all categoryIds
+        Set<Long> categoryIds = ruleMap.keySet();
+
+        // 🔹 Fetch categories once
+        Map<Long, CheckCategory> categoryMap =
+                checkCategoryRepository.findAllById(categoryIds)
+                        .stream()
+                        .collect(Collectors.toMap(CheckCategory::getCategoryId, c -> c));
+
+        // 🔹 Build DTO
+
+        List<PackageCategoryDTO> result = new ArrayList<>();
+
+        for (Long categoryId : categoryIds) {
+
+            CheckCategory category = categoryMap.get(categoryId);
+
+            List<EmployerPackageRule> baseRules = ruleMap.getOrDefault(categoryId, List.of());
+            List<EmployerPackageCheckCategoryAllowedRuleType> addOnRules =
+                    allowedRuleMap.getOrDefault(categoryId, List.of());
+            List<EmployerPackageDocument> docs =
+                    documentMap.getOrDefault(categoryId, List.of());
+
+            // 🔹 Base Rule (usually 1)
+            EmployerPackageRule baseRule = baseRules.isEmpty() ? null : baseRules.get(0);
+
+            PackageRuleTypeDTO selectedRule = null;
+
+            if (baseRule != null) {
+                RuleTypes ruleType = baseRule.getRuleTypeId() != null
+                        ? ruleTypesRepository.findById(baseRule.getRuleTypeId()).orElse(null)
+                        : null;
+
+                if (ruleType != null) {
+                    selectedRule = PackageRuleTypeDTO.builder()
+                            .ruleTypeId(ruleType.getRuleTypeId())
+                            .ruleCode(ruleType.getCode())
+                            .ruleName(ruleType.getLabel())
+                            .requiresCount(baseRule.getRequiresCount())
+                            .selectedCount(baseRule.getSelectedCount())
+                            .maxCount(ruleType.getMaxCount())
+                            .minCount(ruleType.getMinCount())
+                            .build();
+                }
+            }
+
+            // 🔹 Documents
+            List<PackageDocumentDTO> documentDTOs = docs.stream()
+                    .map(d -> PackageDocumentDTO.builder()
+                            .documentTypeId(d.getDocumentType().getDocTypeId())
+                            .documentName(d.getDocumentType().getName())
+                           // .price(d.getAddonPrice())
+                            .required(d.getRequired())
+                            .includedInBase(d.getIncludedInBase())
+                            .build())
+                    .toList();
+
+            // 🔹 Add-on rules
+            List<PackageRuleTypeDTO> addOnDTOs = addOnRules.stream()
+                    .map(r -> {
+                        RuleTypes rt = r.getRuleType();
+                        return PackageRuleTypeDTO.builder()
+                                .ruleTypeId(rt.getRuleTypeId())
+                                .ruleCode(rt.getCode())
+                                .ruleName(rt.getLabel())
+                                .requiresCount(r.getRequiresCount())
+                                .minCount(r.getMinCount())
+                                .maxCount(r.getMaxCount())
+                                .build();
+                    })
+                    .toList();
+
+            result.add(
+                    PackageCategoryDTO.builder()
+                            .categoryId(categoryId)
+                            .categoryName(category.getName())
+                            .ruleTypes(selectedRule != null ? List.of(selectedRule) : List.of())
+                            .allowedDocuments(documentDTOs)
+                            .allowedRules(addOnDTOs)
+                            .build()
+            );
+        }
+
+        return result;
+    }
+    
     
 }

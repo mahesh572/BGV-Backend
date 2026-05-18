@@ -20,4 +20,5 @@ public class PackageRuleTypeDTO {
     private Integer priorityOrder;
     private Boolean selected;
     private Integer selectedCount;
+    private Boolean requiresCount;
 }

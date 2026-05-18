@@ -11,11 +11,16 @@ import com.org.bgv.common.PackageDocumentRequest;
 import com.org.bgv.common.PackageRequest;
 import com.org.bgv.common.PackageRuleTypeDTO;
 import com.org.bgv.common.RuleTypesDTO;
+import com.org.bgv.company.entity.EmployerPackageAllowedDocument;
+import com.org.bgv.company.entity.EmployerPackageCheckCategory;
 import com.org.bgv.company.entity.EmployerPackageCheckCategoryAllowedRuleType;
 import com.org.bgv.company.entity.EmployerPackageRule;
+import com.org.bgv.company.repository.EmployerPackageAllowedDocumentRepository;
 import com.org.bgv.company.repository.EmployerPackageCheckCategoryAllowedRuleTypeRepository;
+import com.org.bgv.company.repository.EmployerPackageCheckCategoryRepository;
 import com.org.bgv.company.repository.EmployerPackageRuleRepository;
 import com.org.bgv.constants.EmployerPackageStatus;
+import com.org.bgv.constants.SelectionType;
 import com.org.bgv.dto.*;
 import com.org.bgv.entity.*;
 import com.org.bgv.repository.*;
@@ -51,8 +56,8 @@ public class PackageService  {
     private final EmployerPackageDocumentRepository employerPackageDocumentRepository;
     private final EmployerPackageRuleRepository employerPackageRuleRepository;
     private final EmployerPackageCheckCategoryAllowedRuleTypeRepository employerPackageCheckCategoryAllowedRuleTypeRepository;
-
-   
+    private final EmployerPackageCheckCategoryRepository employerPackageCheckCategoryRepository;
+    private final EmployerPackageAllowedDocumentRepository employerPackageAllowedDocumentRepository;
 
     
     @Transactional
@@ -410,9 +415,9 @@ public class PackageService  {
             List<PackageCheckCategory> packageCategories =
                     packageCheckCategoryRepository.findByBgvPackage_PackageId(bgvPackage.getPackageId());
 
-            categoryDTOs = packageCategories.stream()
-                    .map(this::convertToCategoryDTO)
+            categoryDTOs = packageCategories.stream().map(this::convertToCategoryDTO)
                     .collect(Collectors.toList());
+            
         }
 
         return PackageDTO.builder()
@@ -556,6 +561,22 @@ public class PackageService  {
                 .build();
 
         EmployerPackage savedPackage = employerPackageRepository.save(employerPackage);
+        
+        List<PackageCheckCategory> packageCategories =
+                packageCheckCategoryRepository
+                        .findByBgvPackage_PackageId(packageId);
+
+        List<EmployerPackageCheckCategory> empCategories = packageCategories.stream()
+                .map(pc -> EmployerPackageCheckCategory.builder()
+                        .employerPackage(savedPackage)
+                        .category(pc.getCategory())
+                        .rulesData(pc.getRulesData())
+                        .enabled(true)
+                        .required(false)
+                        .build())
+                .collect(Collectors.toList());
+
+        employerPackageCheckCategoryRepository.saveAll(empCategories);
 
         // 🔹 4. Fetch package rules (structure only)
         List<PackageCheckCategoryRuleType> rules =
@@ -592,8 +613,34 @@ public class PackageService  {
         // List<PackageCheckCategoryAllowedRuleType> adminRules
         
         copyAllowedRulesToEmployer(savedPackage, adminRules);
+        
+        
+        List<PackageCheckCategoryAllowedDocument> adminDocs =
+                packageAllowedDocumentRepository.findByBgvPackagePackageId(packageId);
+        
+        log.info("Package assigned successfully with {} adminDocs", adminDocs.size());
+
+        List<EmployerPackageAllowedDocument> employerDocs = adminDocs.stream()
+                .map(doc -> EmployerPackageAllowedDocument.builder()
+                        .employerPackage(savedPackage)
+                        .checkCategoryId(doc.getCheckCategory().getCategoryId())
+                        .documentType(doc.getDocumentType())
+                        .required(doc.getRequired())
+                        .priorityOrder(doc.getPriorityOrder())
+
+                        // 🔥 default values
+                        .includedInBase(false)
+                        .addonPrice(0.0)
+                        .defaultSelected(false)
+                       // .selectionType(SelectionType.OPTIONAL)
+                        .build()
+                ).toList();
+
+        employerPackageAllowedDocumentRepository.saveAll(employerDocs);
 
         log.info("Package assigned successfully with {} rules", employerRules.size());
+        
+        log.info("Package assigned successfully with {} employerDocs", employerDocs.size());
     }
     
     public void unassignPackageFromCompany(Long companyId, Long packageId) {
@@ -637,7 +684,7 @@ public class PackageService  {
                     EmployerPackageCheckCategoryAllowedRuleType.builder()
                             .employerPackage(employerPackage)
                             .checkCategoryId(admin.getCheckCategory().getCategoryId())
-                            .ruleTypeId(ruleType.getRuleTypeId())
+                            .ruleType(ruleType)
                             .required(admin.getRequired())
                             .includedInBase(admin.getRequired()) // or business logic
                            // .requiresCount(count > 0)
@@ -652,5 +699,9 @@ public class PackageService  {
 
         employerPackageCheckCategoryAllowedRuleTypeRepository.saveAll(list);
     }
+    
+    
+   
+    
     
 }

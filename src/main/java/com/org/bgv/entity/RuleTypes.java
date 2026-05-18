@@ -50,5 +50,7 @@ public class RuleTypes {
 	    private Boolean requiresCount;
 	    
 	  //  private Integer selectedCount;
+	    
+	    private Long documentTypeId;
 	
 }

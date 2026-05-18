@@ -14,6 +14,7 @@ import com.fasterxml.jackson.annotation.JsonAlias;
 import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
 import com.fasterxml.jackson.annotation.JsonInclude;
 import com.fasterxml.jackson.annotation.JsonProperty;
+import com.org.bgv.dto.DocumentDto;
 import com.org.bgv.enums.RuleGroup;
 
 @Data
@@ -62,4 +63,6 @@ public class RuleTypesDTO {
     private Boolean requiresCount;
     
     private Integer selectedCount;
+    
+    private List<RulesDocumentDTO> documents;
 }

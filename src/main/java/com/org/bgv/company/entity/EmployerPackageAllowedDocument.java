@@ -1,10 +1,13 @@
 package com.org.bgv.company.entity;
 
+import com.org.bgv.constants.SelectionType;
+import com.org.bgv.entity.DocumentType;
 import com.org.bgv.entity.EmployerPackage;
-import com.org.bgv.entity.RuleTypes;
 
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
+import jakarta.persistence.EnumType;
+import jakarta.persistence.Enumerated;
 import jakarta.persistence.FetchType;
 import jakarta.persistence.GeneratedValue;
 import jakarta.persistence.GenerationType;
@@ -21,9 +24,9 @@ import lombok.Setter;
 
 @Entity
 @Table(
-    name = "employer_package_allowed_ruletype",
+    name = "employer_package_allowed_document",
     uniqueConstraints = @UniqueConstraint(
-        columnNames = {"employer_package_id", "check_category_id", "rule_type_id"}
+        columnNames = {"employer_package_id", "check_category_id", "document_type_id"}
     )
 )
 @Getter
@@ -31,7 +34,7 @@ import lombok.Setter;
 @NoArgsConstructor
 @AllArgsConstructor
 @Builder
-public class EmployerPackageCheckCategoryAllowedRuleType {
+public class EmployerPackageAllowedDocument {
 
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
@@ -42,38 +45,38 @@ public class EmployerPackageCheckCategoryAllowedRuleType {
     @JoinColumn(name = "employer_package_id", nullable = false)
     private EmployerPackage employerPackage;
 
-    // 🔹 Category (flatten for performance)
+    // 🔹 Flattened for performance
     @Column(name = "check_category_id", nullable = false)
     private Long checkCategoryId;
 
-    // 🔹 Rule Type (flatten)
+    // 🔹 Document
     @ManyToOne(fetch = FetchType.LAZY)
-    @JoinColumn(name = "rule_type_id", nullable = false)
-    private RuleTypes ruleType;
+    @JoinColumn(name = "document_type_id", nullable = false)
+    private DocumentType documentType;
 
-    // 🔹 Whether employer MUST select this rule
+    // 🔹 Admin copied fields
     @Column(name = "is_required")
     private Boolean required;
 
-    // 🔹 Whether rule is part of base package
+    @Column(name = "priority_order")
+    private Integer priorityOrder;
+
+    // 🔥 Employer customization
+
+    // Whether included in base package
     @Column(name = "included_in_base")
     private Boolean includedInBase;
 
-    // 🔹 For ANY_X / MIN_X rules
-    @Column(name = "requires_count")
-    private Boolean requiresCount;
+    // Add-on price (if not included)
+    @Column(name = "addon_price")
+    private Double addonPrice;
 
-    @Column(name = "min_count")
-    private Integer minCount;
+    // Whether selected by default
+    @Column(name = "default_selected")
+    private Boolean defaultSelected;
 
-    @Column(name = "max_count")
-    private Integer maxCount;
-
-    // 🔹 Default value from admin (can be overridden by employer)
-    @Column(name = "default_selected_count")
-    private Integer defaultSelectedCount;
-
-    // 🔹 UI ordering
-    @Column(name = "priority_order")
-    private Integer priorityOrder;
+    // UI / logic support (MANDATORY / OPTIONAL)
+    @Column(name = "selection_type")
+    @Enumerated(EnumType.STRING)
+    private SelectionType selectionType;
 }

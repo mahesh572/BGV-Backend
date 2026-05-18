@@ -8,11 +8,14 @@ import org.springframework.transaction.annotation.Transactional;
 
 import com.org.bgv.common.RuleTypesDTO;
 import com.org.bgv.common.RuleTypesRequest;
+import com.org.bgv.common.RulesDocumentDTO;
 import com.org.bgv.dto.CheckCategoryEnum;
 import com.org.bgv.entity.CheckCategory;
+import com.org.bgv.entity.DocumentType;
 import com.org.bgv.entity.RuleTypes;
 import com.org.bgv.enums.RuleGroup;
 import com.org.bgv.repository.CheckCategoryRepository;
+import com.org.bgv.repository.DocumentTypeRepository;
 import com.org.bgv.repository.RuleTypesRepository;
 
 import lombok.RequiredArgsConstructor;
@@ -25,7 +28,11 @@ import lombok.extern.slf4j.Slf4j;
 public class RuleTypesService {
 	private final RuleTypesRepository ruleTypesRepository;
     private final CheckCategoryRepository checkCategoryRepository;
+    private final DocumentTypeRepository documentTypeRepository;
 
+    private RuleTypesDTO convertToDTO(RuleTypes rule) {
+        return convertToDTO(rule, null);
+    }
     
     @Transactional
     public RuleTypesDTO createRule(RuleTypesRequest request) {
@@ -55,7 +62,7 @@ public class RuleTypesService {
         RuleTypes savedRule = ruleTypesRepository.save(rule);
         log.info("Rule created successfully with ID: {}", savedRule.getRuleTypeId());
         
-        return convertToDTO(savedRule);
+        return convertToDTO(savedRule,null);
     }
 
     
@@ -65,7 +72,7 @@ public class RuleTypesService {
         RuleTypes rule = ruleTypesRepository.findById(ruleTypeId)
                 .orElseThrow(() -> new RuntimeException("Rule not found with id: " + ruleTypeId));
         
-        return convertToDTO(rule);
+        return convertToDTO(rule,null);
     }
 
     
@@ -82,9 +89,12 @@ public class RuleTypesService {
     public List<RuleTypesDTO> getRulesByCategory(Long categoryId) {
         log.debug("Fetching rules for category ID: {}", categoryId);
         
+        List<DocumentType> documentTypes = documentTypeRepository.findByCategoryCategoryId(categoryId);
+        
+        
         return ruleTypesRepository.findByCategoryCategoryId(categoryId)
                 .stream()
-                .map(this::convertToDTO)
+                .map(r -> convertToDTO(r,documentTypes))
                 .collect(Collectors.toList());
     }
 
@@ -134,12 +144,13 @@ public class RuleTypesService {
         existingRule.setMaxCount(request.getMaxCount());
         existingRule.setRuleGroup(request.getSelectedRulegroup());
         existingRule.setRequiresCount(request.getRequiresCount());
+        existingRule.setDocumentTypeId(request.getDocumentTypeId());
 
         RuleTypes updatedRule = ruleTypesRepository.save(existingRule);
 
         log.info("Rule updated successfully with ID: {}", updatedRule.getRuleTypeId());
 
-        return convertToDTO(updatedRule);
+        return convertToDTO(updatedRule,null);
     }
 
     
@@ -163,15 +174,30 @@ public class RuleTypesService {
         RuleTypes rule = ruleTypesRepository.findByCode(code)
                 .orElseThrow(() -> new RuntimeException("Rule not found with code: " + code));
         
-        return convertToDTO(rule);
+        return convertToDTO(rule,null);
     }
 
     // Helper method to convert Entity to DTO
-    private RuleTypesDTO convertToDTO(RuleTypes rule) {
-    	log.info("rule:::::::::::::::::::::::::::{}",rule.getCategory().getName());  // Identity
-    	
-    	log.info("CheckCategoryEnum.IDENTITY.name()::::::::::::::::::::{}",CheckCategoryEnum.IDENTITY.name());
-    	
+    private RuleTypesDTO convertToDTO(RuleTypes rule, List<DocumentType> documentTypes) {
+
+        List<RulesDocumentDTO> documentDTOs = null;
+
+        Long selectedDocId = rule.getDocumentTypeId(); // ✅ direct
+
+        if (documentTypes != null && !documentTypes.isEmpty()) {
+            documentDTOs = documentTypes.stream()
+                    .map(doc -> RulesDocumentDTO.builder()
+                            .documentTypeId(doc.getDocTypeId())
+                            .name(doc.getName())
+                            .code(doc.getCode())
+                            .selected(
+                                    selectedDocId != null &&
+                                    selectedDocId.equals(doc.getDocTypeId())
+                            ) // ✅ FIX
+                            .build())
+                    .collect(Collectors.toList());
+        }
+
         return RuleTypesDTO.builder()
                 .ruleTypeId(rule.getRuleTypeId())
                 .categoryId(rule.getCategory().getCategoryId())
@@ -183,11 +209,12 @@ public class RuleTypesService {
                 .maxCount(rule.getMaxCount())
                 .ruleGroup(RuleGroup.getByCategory(rule.getCategory().getName()))
                 .selectedRulegroup(
-                	    rule.getRuleGroup() != null 
-                	        ? rule.getRuleGroup() 
-                	        : RuleGroup.NONE
-                	)
+                        rule.getRuleGroup() != null
+                                ? rule.getRuleGroup()
+                                : RuleGroup.NONE
+                )
                 .requiresCount(rule.getRequiresCount())
+                .documents(documentDTOs)
                 .build();
     }
 }
