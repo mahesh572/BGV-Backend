@@ -19,7 +19,7 @@ import lombok.NoArgsConstructor;
 @Builder
 @Entity
 @Table(name = "employer_package_rule")
-public class EmployerPackageRule {
+public class EmployerPackageRule {     // this table is used for saving what ever the rules configured by admin like Any_1,Last_N
 
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)

@@ -19,8 +19,8 @@ import lombok.*;
 @Setter
 @NoArgsConstructor
 @AllArgsConstructor
-@Builder
-public class EmployerPackageSelectedRule {
+// @Builder
+public class EmployerPackageSelectedRule {     // saving the rules configured by employer within in the limit of rules configured by admin. example: admin configured Any_1- employer selected the Aadhar is stored in this entity
 
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)

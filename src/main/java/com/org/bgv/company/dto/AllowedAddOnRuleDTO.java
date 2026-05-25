@@ -24,4 +24,5 @@ public class AllowedAddOnRuleDTO {
     private Boolean dynamicPricing;
     private Boolean selected;
     private Boolean requiresCount;
+    private boolean disabled;
 }

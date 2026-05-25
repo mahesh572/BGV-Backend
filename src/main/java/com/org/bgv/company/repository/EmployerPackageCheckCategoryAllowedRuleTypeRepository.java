@@ -47,4 +47,12 @@ public interface EmployerPackageCheckCategoryAllowedRuleTypeRepository
 
     // 🔹 Delete all rules for package (useful on reassign/reset)
     void deleteByEmployerPackage_Id(Long employerPackageId);
+    
+    
+    Optional<EmployerPackageCheckCategoryAllowedRuleType> 
+    findByEmployerPackageIdAndCheckCategoryIdAndRuleType_RuleTypeId(
+            Long employerPackageId,
+            Long categoryId,
+            Long ruleTypeId
+    );
 }

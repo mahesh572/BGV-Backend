@@ -21,18 +21,24 @@ import com.org.bgv.company.dto.AllowedAddOnRuleDTO;
 import com.org.bgv.company.dto.AssignCasePreviewResponseDTO;
 import com.org.bgv.company.dto.CategoryPreviewDTO;
 import com.org.bgv.company.dto.DocumentPreviewDTO;
+import com.org.bgv.company.dto.EmployerPackageConfigurationRequestDTO;
 import com.org.bgv.company.dto.PriceSummaryDTO;
 import com.org.bgv.company.dto.PricingInfo;
 import com.org.bgv.company.dto.SelectedRuleDTO;
+import com.org.bgv.company.entity.EmployerDocumentPricing;
 import com.org.bgv.company.entity.EmployerPackageCheckCategoryAllowedRuleType;
 import com.org.bgv.company.entity.EmployerPackageRule;
+import com.org.bgv.company.entity.EmployerPackageSelectedRule;
+import com.org.bgv.company.repository.EmployerDocumentPricingRepository;
 import com.org.bgv.company.repository.EmployerPackageCheckCategoryAllowedRuleTypeRepository;
 import com.org.bgv.company.repository.EmployerPackageRuleRepository;
+import com.org.bgv.company.repository.EmployerPackageSelectedRuleRepository;
 import com.org.bgv.config.SecurityUtils;
 import com.org.bgv.entity.CheckCategory;
 import com.org.bgv.entity.DocumentType;
 import com.org.bgv.entity.EmployerPackage;
 import com.org.bgv.entity.PackageCheckCategoryRuleType;
+import com.org.bgv.entity.PlatformDocumentPricing;
 import com.org.bgv.entity.RuleTypes;
 import com.org.bgv.enums.PricingType;
 import com.org.bgv.enums.RuleGroup;
@@ -40,6 +46,7 @@ import com.org.bgv.repository.CheckCategoryRepository;
 import com.org.bgv.repository.DocumentTypeRepository;
 import com.org.bgv.repository.EmployerPackageRepository;
 import com.org.bgv.repository.PackageCheckCategoryRuleTypeRepository;
+import com.org.bgv.repository.PlatformDocumentPricingRepository;
 import com.org.bgv.repository.RuleTypesRepository;
 
 import lombok.RequiredArgsConstructor;
@@ -60,6 +67,10 @@ public class AssignCaseService {
 	    private final EmployerPackageRuleRepository employerPackageRuleRepository;
 	    private final EmployerPackageCheckCategoryAllowedRuleTypeRepository employerPackageCheckCategoryAllowedRuleTypeRepository;
 	    private final CheckCategoryRepository checkCategoryRepository;
+	    private final EmployerPackageSelectedRuleRepository employerPackageSelectedRuleRepository;
+	    private final PlatformDocumentPricingRepository platformDocumentPricingRepository;
+	    private final EmployerDocumentPricingRepository employerDocumentPricingRepository;
+	    private final PackagePricingService pricingService;
 	    
 	    public AssignCasePreviewResponseDTO buildPreview(
 	            Long employerPackageId,
@@ -153,13 +164,13 @@ public class AssignCaseService {
 	                ruleTypesRepository.findById(packageCheckCategoryRuleType.getRuleTypeId())
 	                        .orElseThrow();
 	        
-	        PricingInfo selectedpricingInfo = resolvePricing(
+	        PricingInfo selectedpricingInfo = pricingService.resolvePricing(
                     companyId,
                     categoryId,
                     ruleType
             );
 
-	        SelectedRuleDTO selectedRuleDTO =
+	        SelectedRuleDTO packageRuleDTO =
 	                SelectedRuleDTO.builder()
 	                        .ruleTypeId(ruleType.getRuleTypeId())
 	                        .ruleCode(ruleType.getCode())
@@ -174,6 +185,8 @@ public class AssignCaseService {
 	                        .addon(false)
 	                        .requiresCount(ruleType.getRequiresCount()==null?Boolean.FALSE:ruleType.getRequiresCount())
 	                        .build();
+	        
+	        List<SelectedRuleDTO> selectedRuleDTO = mapFromSelectedRules(packageCheckCategoryRuleType.getEmployerPackage().getId(), categoryId);
 
 	        CategoryPreviewDTO.CategoryPreviewDTOBuilder builder =
 	                CategoryPreviewDTO.builder()
@@ -182,7 +195,10 @@ public class AssignCaseService {
 	                        .ruleGroup(ruleType.getRuleGroup()!=null?ruleType.getRuleGroup().name():"")
 	                        .includedInPackage(true)
 	                        .mandatory(true)
-	                        .selectedRule(selectedRuleDTO);
+	                        .selectedRule(selectedRuleDTO)
+	                        .packageRules(packageRuleDTO);
+	                        
+	                        
          //  log.info("ruleType.getRuleGroup().name()::::::::::::{}",ruleType.getRuleGroup().name());
            log.info("RuleGroup.DOCUMENT_SELECTION::::::::::::{}",RuleGroup.DOCUMENT_SELECTION);
 	        // If DOCUMENT_SELECTION → Load documents
@@ -219,24 +235,35 @@ public class AssignCaseService {
 	                                    .build())
 	                            .collect(Collectors.toList());
 
-	            builder.documents(docDTOs);
+	          //  builder.documents(docDTOs);
 	        }
 	        log.info("AssignCaseService::::::::::::category.getName():::::::::::{}",category.getName());
 	        log.info("AssignCaseService::::::::::::allowedRules:::::::::::{}",allowedRules);
 
+	        Set<Long> selectedRuleIds = selectedRuleDTO.stream()
+	                .map(SelectedRuleDTO::getRuleTypeId)
+	                .collect(Collectors.toSet());
+
+	        
 	        // Add-ons
 	        List<AllowedAddOnRuleDTO> addOnDTOs =
 	                allowedRules.stream()
-	                        .map(rule -> {
+	                // 🔥 KEY FIX → remove already selected rules
+	                .filter(rule -> 
+	                        !selectedRuleIds.contains(rule.getRuleType().getRuleTypeId())
+	                )
+	                .map(rule -> {
 
 	                            RuleTypes addOnRuleType = rule.getRuleType();
 
-	                            PricingInfo pricingInfo = resolvePricing(
+	                            PricingInfo pricingInfo = pricingService.resolvePricing(
 	                                    companyId,
 	                                    categoryId,
 	                                    addOnRuleType
 	                            );
 	                            PricingType pricingType = pricingInfo != null ? pricingInfo.getPricingType() : null;
+	                           
+	                            boolean alreadySelected = selectedRuleIds.contains(addOnRuleType.getRuleTypeId());
 	                            return AllowedAddOnRuleDTO.builder()
 	                                    .ruleTypeId(addOnRuleType.getRuleTypeId())
 	                                    .ruleCode(addOnRuleType.getCode())
@@ -248,6 +275,7 @@ public class AssignCaseService {
 	                                    		PricingType.PER_RECORD.equals(pricingType)
 	                                    )
 	                                    .selected(false)
+	                                    .disabled(alreadySelected)
 	                                    .requiresCount(addOnRuleType.getRequiresCount()==null?Boolean.FALSE:addOnRuleType.getRequiresCount())
 	                                    .build();
 	                        })
@@ -259,48 +287,54 @@ public class AssignCaseService {
 	    }
 	    
 	    
-	    private PricingInfo resolvePricing(
-	            Long companyId,
-	            Long categoryId,
-	            RuleTypes ruleType
+	    
+	    private List<SelectedRuleDTO> mapFromSelectedRules(
+	            Long employerPackageId,
+	            Long categoryId
 	    ) {
 
-	        // 1️⃣ Try Employer specific pricing
-	        Optional<EmployerCheckPricing> employerPricing =
-	                employerCheckPricingRepository
-	                        .findByCompany_IdAndCheckCategory_CategoryIdAndRuleType_RuleTypeIdAndActiveTrue(
-	                                companyId,
-	                                categoryId,
-	                                ruleType.getRuleTypeId()
+	        log.info("Fetching selected rules for employerPackageId={}, categoryId={}",
+	                employerPackageId, categoryId);
+
+	        List<EmployerPackageSelectedRule> selectedRules =
+	                employerPackageSelectedRuleRepository
+	                        .findByEmployerPackageIdAndCheckCategoryId(
+	                                employerPackageId, categoryId
 	                        );
 
-	        if (employerPricing.isPresent()) {
-	            EmployerCheckPricing pricing = employerPricing.get();
-	            return new PricingInfo(
-	                    pricing.getPricingType(),
-	                    pricing.getUnitPrice(),
-	                    pricing.getMinCharge(),
-	                    pricing.getMaxCharge()
-	            );
+	        if (selectedRules.isEmpty()) {
+	            log.info("No selected rules found for categoryId={}", categoryId);
+	            return Collections.emptyList();
 	        }
 
-	        // 2️⃣ Fallback to Platform default pricing
-	        PlatformCheckPricing platformPricing =
-	                platformCheckPricingRepository
-	                        .findByCheckCategory_CategoryIdAndRuleType_RuleTypeIdAndActiveTrue(
-	                                categoryId,
-	                                ruleType.getRuleTypeId()
-	                        )
-	                        .orElse(null);
+	        List<SelectedRuleDTO> response = new ArrayList<>();
 
-	        return new PricingInfo(
-	        		platformPricing!=null?platformPricing.getPricingType():null,
-	        		platformPricing!=null?platformPricing.getUnitPrice():null,
-	                null,
-	                null
-	        );
+	        for (EmployerPackageSelectedRule entity : selectedRules) {
+
+	            RuleTypes ruleType = entity.getRuleType();
+
+	            SelectedRuleDTO dto = SelectedRuleDTO.builder()
+	                    .ruleTypeId(ruleType.getRuleTypeId())
+	                    .ruleCode(ruleType.getCode())
+	                    .ruleLabel(ruleType.getLabel())
+	                    .ruleGroup(ruleType.getRuleGroup() != null
+	                            ? ruleType.getRuleGroup().name() : null)
+	                    .pricingType(entity.getUnitPrice() != null ? "FIXED" : null)
+	                    .minCount(ruleType.getMinCount())
+	                    .maxCount(ruleType.getMaxCount())
+	                    .includedInPackage(Boolean.TRUE.equals(entity.getIncludedInBase()))
+	                    .requiresCount(entity.getRequiresCount())
+	                    .selectedCount(entity.getSelectedCount())
+	                    .addon(!Boolean.TRUE.equals(entity.getIncludedInBase()))
+	                    .build();
+
+	            response.add(dto);
+	        }
+
+	        log.info("Mapped {} selected rules for categoryId={}", response.size(), categoryId);
+
+	        return response;
 	    }
 	    
-	   
 	    
 }

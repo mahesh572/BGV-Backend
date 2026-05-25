@@ -1,6 +1,7 @@
 package com.org.bgv.service;
 
 import java.util.List;
+import java.util.Objects;
 import java.util.stream.Collectors;
 
 import org.springframework.stereotype.Service;
@@ -107,8 +108,8 @@ public class RuleTypesService {
                 .orElseThrow(() -> new RuntimeException("Rule not found with id: " + ruleTypeId));
 
         // Only check duplicate if code or category is changed
-        if (!existingRule.getCode().equals(request.getCode()) ||
-            !existingRule.getCategory().getCategoryId().equals(request.getCategoryId())) {
+        if (!Objects.equals(existingRule.getCode(), request.getCode()) ||
+        	    !Objects.equals(existingRule.getCategory().getCategoryId(), request.getCategoryId())) {
 
             boolean exists = ruleTypesRepository
                     .existsByCodeAndCategoryCategoryId(

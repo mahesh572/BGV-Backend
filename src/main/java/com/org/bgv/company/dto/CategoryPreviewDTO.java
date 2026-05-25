@@ -20,7 +20,8 @@ public class CategoryPreviewDTO {
     private Boolean includedInPackage;
     private Boolean mandatory;
 
-    private SelectedRuleDTO selectedRule;
+    private List<SelectedRuleDTO> selectedRule;
+    private SelectedRuleDTO packageRules;
 
     private List<DocumentPreviewDTO> documents;          // For Identity
     private List<AllowedAddOnRuleDTO> allowedAddOnRules; // For Employment/Education/Address

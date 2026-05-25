@@ -18,9 +18,11 @@ import com.org.bgv.common.PackageRequest;
 import com.org.bgv.common.PackageRuleTypeDTO;
 import com.org.bgv.company.entity.EmployerPackageCheckCategoryAllowedRuleType;
 import com.org.bgv.company.entity.EmployerPackageRule;
+import com.org.bgv.company.repository.EmployerPackageAllowedDocumentRepository;
 import com.org.bgv.company.repository.EmployerPackageCheckCategoryAllowedRuleTypeRepository;
 import com.org.bgv.company.repository.EmployerPackageCheckCategoryRepository;
 import com.org.bgv.company.repository.EmployerPackageRuleRepository;
+import com.org.bgv.company.repository.EmployerPackageSelectedRuleRepository;
 import com.org.bgv.config.SecurityUtils;
 import com.org.bgv.constants.CaseStatus;
 import com.org.bgv.constants.EmployerPackageStatus;
@@ -61,6 +63,8 @@ public class EmployerPackageService {
     private final EmployerPackageCheckCategoryRepository employerPackageCheckCategoryRepository;
     private final EmployerPackageRuleRepository employerPackageRuleRepository;
     private final RuleTypesRepository ruleTypesRepository;
+    private final EmployerPackageSelectedRuleRepository employerPackageSelectedRuleRepository;
+    private final EmployerPackageAllowedDocumentRepository employerPackageAllowedDocumentRepository;
    
     
     @Transactional
@@ -438,23 +442,37 @@ private void updateDocumentSelections(PackageDTO packageDTO,
     // NEW METHOD: Delete employer package
     @Transactional
     public void deleteEmployerPackage(Long id, Long companyId) {
-        EmployerPackage employerPackage = employerPackageRepository.findByIdAndCompanyId(id, companyId)
+
+        log.info("Deleting employer package: id={}, companyId={}", id, companyId);
+
+        EmployerPackage employerPackage = employerPackageRepository
+                .findByIdAndCompanyId(id, companyId)
                 .orElseThrow(() -> new RuntimeException("Employer package not found"));
-        
-        // Check if there are any active candidate cases using this package
-        Long activeCaseCount = candidateCaseRepository.countByEmployerPackageAndStatusNot(
-                employerPackage, CaseStatus.COMPLETED);
-        
+
+        // 🔹 Check active cases
+        Long activeCaseCount = candidateCaseRepository
+                .countByEmployerPackageAndStatusNot(employerPackage, CaseStatus.COMPLETED);
+
+        log.info("Active cases count for package {} = {}", id, activeCaseCount);
+
         if (activeCaseCount > 0) {
+            log.error("Cannot delete package {} بسبب active cases", id);
             throw new RuntimeException("Cannot delete package with active candidate cases");
         }
-        
-        // Soft delete - set status to DELETED
-      //  employerPackage.setStatus(EmployerPackageStatus.DELETED);
-        employerPackage.setStatus(EmployerPackageStatus.INACTIVE);
-        employerPackageRepository.save(employerPackage);
-        
-        log.info("Soft deleted employer package with id: {}", id);
+
+        // 🔹 Delete child records FIRST (important)
+        log.info("Deleting related rules & configs for employerPackageId={}", id);
+
+        employerPackageSelectedRuleRepository.deleteByEmployerPackageId(id);
+        employerPackageRuleRepository.deleteByEmployerPackage_Id(id);
+        employerPackageCheckCategoryAllowedRuleTypeRepository.deleteByEmployerPackage_Id(id);
+        employerPackageAllowedDocumentRepository.deleteByEmployerPackage_Id(id);
+        employerPackageCheckCategoryRepository.deleteByEmployerPackage_Id(id);
+
+        // 🔹 Finally delete main entity
+        employerPackageRepository.delete(employerPackage);
+
+        log.info("Successfully deleted employer package with id={}", id);
     }
     
     // NEW METHOD: Get employer packages by status for a company

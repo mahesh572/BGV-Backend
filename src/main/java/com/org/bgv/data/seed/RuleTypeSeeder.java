@@ -47,7 +47,7 @@ public class RuleTypeSeeder implements CommandLineRunner {
 
         saveOrUpdate(RuleTypes.builder()
                 .name("All Education")
-                .code("ALL_EDUCATION")
+                .code("ALL")
                 .label("Verify all qualifications")
                 .category(education)
                 .ruleGroup(RuleGroup.ALL)
@@ -56,7 +56,7 @@ public class RuleTypeSeeder implements CommandLineRunner {
 
         saveOrUpdate(RuleTypes.builder()
                 .name("Last N Education")
-                .code("LAST_N_EDUCATION")
+                .code("LAST_N")
                 .label("Verify last N qualifications")
                 .category(education)
                 .ruleGroup(RuleGroup.EDUCATION_RECORD_SELECTION)
@@ -68,7 +68,7 @@ public class RuleTypeSeeder implements CommandLineRunner {
         // =========================
         saveOrUpdate(RuleTypes.builder()
                 .name("Last N Companies")
-                .code("LAST_N_COMPANIES")
+                .code("LAST_N")
                 .label("Verify last N companies")
                 .category(work)
                 .ruleGroup(RuleGroup.RECORD_COUNT)
@@ -77,7 +77,7 @@ public class RuleTypeSeeder implements CommandLineRunner {
 
         saveOrUpdate(RuleTypes.builder()
                 .name("All Companies")
-                .code("ALL_COMPANIES")
+                .code("ALL")
                 .label("Verify all employment")
                 .category(work)
                 .ruleGroup(RuleGroup.ALL)
@@ -119,7 +119,7 @@ public class RuleTypeSeeder implements CommandLineRunner {
         // =========================
         saveOrUpdate(RuleTypes.builder()
                 .name("Last N Addresses")
-                .code("LAST_N_ADDRESS")
+                .code("LAST_N")
                 .label("Verify last N addresses")
                 .category(address)
                 .ruleGroup(RuleGroup.ADDRESS_RECORD_COUNT)

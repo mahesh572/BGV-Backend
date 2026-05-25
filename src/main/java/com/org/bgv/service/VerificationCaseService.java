@@ -51,11 +51,13 @@ import com.org.bgv.company.dto.CandidateSummary;
 import com.org.bgv.company.dto.CaseSearchRequest;
 import com.org.bgv.company.dto.CompanyVerificationCaseDTO;
 import com.org.bgv.company.dto.PricingDTO;
+import com.org.bgv.company.dto.PricingInfo;
 import com.org.bgv.company.dto.VerificationCaseDetailsDTO;
 import com.org.bgv.company.entity.EmployerDocumentPricing;
 import com.org.bgv.company.entity.EmployerPackageRule;
 import com.org.bgv.company.repository.EmployerDocumentPricingRepository;
 import com.org.bgv.company.repository.EmployerPackageRuleRepository;
+import com.org.bgv.company.service.PackagePricingService;
 import com.org.bgv.config.SecurityUtils;
 import com.org.bgv.constants.CaseCheckStatus;
 import com.org.bgv.constants.CaseStatus;
@@ -91,6 +93,7 @@ import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
 import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.Collections;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.List;
@@ -137,6 +140,7 @@ public class VerificationCaseService {
 	private final EmployerCheckPricingRepository employerCheckPricingRepository;
 	private final EmployerPackageRuleRepository employerPackageRuleRepository;
 	private final EmployerDocumentPricingRepository employerDocumentPricingRepository;
+	private final PackagePricingService pricingService;
 
 	private static final DateTimeFormatter DATE_FORMATTER = DateTimeFormatter.ofPattern("dd MMM yyyy");
 	private static final DateTimeFormatter TIMESTAMP_FORMATTER = DateTimeFormatter.ofPattern("dd MMM yyyy HH:mm");
@@ -165,10 +169,12 @@ public class VerificationCaseService {
 		
 		// Create verification case
 		VerificationCase verificationCase = VerificationCase.builder().candidateId(request.getCandidateId())
-				.companyId(request.getCompanyId()).employerPackage(employerPackage)
+				.companyId(request.getCompanyId())
+				.employerPackage(employerPackage)
 				//  .basePrice(pricing.getBasePrice())
 				//  .addonPrice(pricing.getAddonPrice())
-				.totalPrice(request.getTotalPrice()).status(CaseStatus.INITIATED).build();
+				.totalPrice(request.getTotalPrice())
+				.status(CaseStatus.INITIATED).build();
 
 		String caseRef = referenceNumberGenerator.generateCaseNumber();
 		verificationCase.setCaseNumber(caseRef);
@@ -953,6 +959,10 @@ public class VerificationCaseService {
 
 	    EmployerPackage employerPackage = employerPackageRepository.findById(request.getEmployerPackageId())
 	            .orElseThrow(() -> new RuntimeException("Package not found"));
+	    
+	    savedCase.setBasePrice(employerPackage.getBasePrice());
+	    
+	    verificationCaseRepository.save(savedCase);
 
 	    List<CandidatePackageRule> rulesToSave = new ArrayList<>();
 	    List<CandidatePackageRuleDocument> ruleDocsToSave = new ArrayList<>();
@@ -964,7 +974,7 @@ public class VerificationCaseService {
 
 	    Set<Long> ruleTypeIds = request.getCategories().stream()
 	            .flatMap(c -> c.getSelectedRules().stream())
-	            .map(SelectedRuleRequest::getRuleTypeId)
+	            .map(SelectedRuleRequest::getRuleTypeId)      // here SelectedRuleRequest means add on ruleTypes
 	            .collect(Collectors.toSet());
 
 	    Set<Long> docTypeIds = request.getCategories().stream()
@@ -1014,13 +1024,61 @@ public class VerificationCaseService {
 	                    EmployerPackageRule::getRuleTypeId,
 	                    r -> r
 	            ));
+	    
+	    Map<Long, List<EmployerPackageRule>> packageRuleByCategory =
+	            packageRules.stream()
+	                    .collect(Collectors.groupingBy(r -> r.getCheckCategoryId()));
 
 	    // 🔹 1. Create Rules
 	    for (CategoryCase category : request.getCategories()) {
 
 	        Long categoryId = category.getCategoryId();
+	     // ✅ Use Set to avoid duplicates
+	        Set<Long> processedRuleTypeIds = new HashSet<>();
+	        
+	     // 🔹 1. ADD BASE RULES (MANDATORY)
+	        List<EmployerPackageRule> baseRules =
+	                packageRuleByCategory.getOrDefault(categoryId, Collections.emptyList());
+	        
+	        for (EmployerPackageRule pkgRule : baseRules) {
+
+	            if (!Boolean.TRUE.equals(pkgRule.getIncludedInBase())) continue;
+
+	            Long ruleTypeId = pkgRule.getRuleTypeId();
+
+	            processedRuleTypeIds.add(ruleTypeId);
+
+	            String key = categoryId + "_" + ruleTypeId;
+	            EmployerCheckPricing pricing = checkPricingMap.get(key);
+
+	            CandidatePackageRule rule = CandidatePackageRule.builder()
+	                    .employerPackageId(employerPackage)
+	                    .companyId(request.getCompanyId())
+	                    .candidateId(request.getCandidateId())
+	                    .verificationCase(savedCase)
+	                    .checkCategoryId(categoryId)
+	                    .ruleTypeId(ruleTypeId)
+	                    .selectedCount(pkgRule.getSelectedCount()) // helper
+	                    .required(true)
+	                    .includedInPackage(true)
+	                    .unitPrice(pricing != null ? pricing.getUnitPrice() : BigDecimal.ZERO)
+	                    .totalPrice(BigDecimal.ZERO)
+	                    .build();
+
+	            rulesToSave.add(rule);
+	        }
+	   
+	       
 
 	        for (SelectedRuleRequest ruleReq : category.getSelectedRules()) {
+	        	
+	        	
+	        	Long ruleTypeId = ruleReq.getRuleTypeId();
+
+	            // ❌ Skip duplicates (already added as base)
+	            if (processedRuleTypeIds.contains(ruleTypeId)) continue;
+
+	            processedRuleTypeIds.add(ruleTypeId);
 
 	            String key = categoryId + "_" + ruleReq.getRuleTypeId();
 
@@ -1040,7 +1098,14 @@ public class VerificationCaseService {
 
 	            boolean included = pkgRule != null && Boolean.TRUE.equals(pkgRule.getIncludedInBase());
 	          //  boolean addon = pkgRule != null && Boolean.TRUE.equals(pkgRule.getAddon());
+	            
+	            PricingInfo pricingInfo = pricingService.resolvePricing(
+	            		request.getCompanyId(),
+                        categoryId,
+                        ruleType
+                );
 
+	            
 	            CandidatePackageRule rule = CandidatePackageRule.builder()
 	                    .employerPackageId(employerPackage)
 	                    .companyId(request.getCompanyId())
@@ -1052,7 +1117,7 @@ public class VerificationCaseService {
 	                    .required(false)
 	                    .includedInPackage(included)
 	                    //.addon(addon)
-	                    .unitPrice(pricing!=null?pricing.getUnitPrice():BigDecimal.ZERO)
+	                    .unitPrice(pricingInfo!=null?pricingInfo.getUnitPrice():BigDecimal.ZERO)
 	                    .totalPrice(BigDecimal.ZERO)
 	                    .build();
 

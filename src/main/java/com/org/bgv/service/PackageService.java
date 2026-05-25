@@ -534,11 +534,17 @@ public class PackageService  {
     @Transactional
     public void assignPackageToCompany(Long companyId, Long packageId) {
 
-        log.info("Assigning package {} to company {}", packageId, companyId);
+        log.info("START: Assigning packageId={} to companyId={}", packageId, companyId);
 
         // 🔹 1. Validate package
         BgvPackage bgvPackage = packageRepository.findById(packageId)
-                .orElseThrow(() -> new RuntimeException("BGV Package not found: " + packageId));
+                .orElseThrow(() -> {
+                    log.error("BGV Package not found for packageId={}", packageId);
+                    return new RuntimeException("BGV Package not found: " + packageId);
+                });
+
+        log.info("Fetched BGV package: packageId={}, basePrice={}",
+                bgvPackage.getPackageId(), bgvPackage.getBasePrice());
 
         // 🔹 2. Prevent duplicate active package
         boolean alreadyExists = employerPackageRepository
@@ -549,22 +555,27 @@ public class PackageService  {
                 );
 
         if (alreadyExists) {
+            log.warn("Active package already exists for companyId={}, packageId={}", companyId, packageId);
             throw new RuntimeException("Active package already assigned to this company");
         }
 
-        // 🔹 3. Create EmployerPackage (NO pricing logic here)
+        // 🔹 3. Create EmployerPackage
         EmployerPackage employerPackage = EmployerPackage.builder()
                 .companyId(companyId)
                 .bgvPackage(bgvPackage)
-                .basePrice(bgvPackage.getBasePrice()) // optional (can keep as reference)
+                .basePrice(bgvPackage.getBasePrice())
                 .status(EmployerPackageStatus.ACTIVE)
                 .build();
 
         EmployerPackage savedPackage = employerPackageRepository.save(employerPackage);
-        
+
+        log.info("EmployerPackage created successfully: employerPackageId={}", savedPackage.getId());
+
+        // 🔹 4. Copy Categories
         List<PackageCheckCategory> packageCategories =
-                packageCheckCategoryRepository
-                        .findByBgvPackage_PackageId(packageId);
+                packageCheckCategoryRepository.findByBgvPackage_PackageId(packageId);
+
+        log.info("Fetched {} categories for packageId={}", packageCategories.size(), packageId);
 
         List<EmployerPackageCheckCategory> empCategories = packageCategories.stream()
                 .map(pc -> EmployerPackageCheckCategory.builder()
@@ -578,69 +589,94 @@ public class PackageService  {
 
         employerPackageCheckCategoryRepository.saveAll(empCategories);
 
-        // 🔹 4. Fetch package rules (structure only)
+        log.info("Saved {} employer categories for employerPackageId={}",
+                empCategories.size(), savedPackage.getId());
+
+        // 🔹 5. Fetch Rules
         List<PackageCheckCategoryRuleType> rules =
                 packagecheckcategoryRuleTypeRepository
                         .findByBgvPackagePackageId(packageId);
 
         if (rules == null || rules.isEmpty()) {
-            log.warn("No rules found for package {}", packageId);
-            return;
+            log.warn("No rules found for packageId={}", packageId);
+        } else {
+            log.info("Fetched {} rules for packageId={}", rules.size(), packageId);
         }
 
-        // 🔹 5. Copy rules to EmployerPackageRule (NO pricing)
+        // 🔹 6. Copy Rules
+     // 🔹 Delete existing rules
+        log.info("Deleting existing rules for employerPackageId={}", savedPackage.getId());
+        employerPackageRuleRepository.deleteByEmployerPackage_Id(savedPackage.getId());
+
+        // 🔹 Insert fresh rules
         List<EmployerPackageRule> employerRules = rules.stream()
-                .map(r -> EmployerPackageRule.builder()
-                        .employerPackage(savedPackage)
-                        .checkCategoryId(r.getCheckCategoryId())
-                        .ruleTypeId(r.getRuleTypeId())
-                        .includedInBase(true)
-                        .requiresCount(r.getRequiresCount())
-                        .selectedCount(r.getSelectedCount())
+                .map(r -> {
+                    log.debug("Copying rule: categoryId={}, ruleTypeId={}",
+                            r.getCheckCategoryId(), r.getRuleTypeId());
 
-                        // ❌ DO NOT COPY PRICING HERE
-                        // Pricing will come from EmployerCheckPricing later
-
-                        .build()
-                )
+                    return EmployerPackageRule.builder()
+                            .employerPackage(savedPackage)
+                            .checkCategoryId(r.getCheckCategoryId())
+                            .ruleTypeId(r.getRuleTypeId())
+                            .includedInBase(true)
+                            .requiresCount(r.getRequiresCount())
+                            .selectedCount(r.getSelectedCount())
+                            .build();
+                })
                 .collect(Collectors.toList());
 
+        log.info("Saving {} employer rules", employerRules.size());
+
         employerPackageRuleRepository.saveAll(employerRules);
-        
-        
-        List<PackageCheckCategoryAllowedRuleType> adminRules = packageCheckCategoryAllowedRuleTypeRepository.findByBgvPackage_PackageId(packageId);
-        
-        // List<PackageCheckCategoryAllowedRuleType> adminRules
-        
+
+
+        log.info("Saved {} employer rules for employerPackageId={}",
+                employerRules.size(), savedPackage.getId());
+
+        // 🔹 7. Copy Allowed Rules
+        List<PackageCheckCategoryAllowedRuleType> adminRules =
+                packageCheckCategoryAllowedRuleTypeRepository
+                        .findByBgvPackage_PackageId(packageId);
+
+        log.info("Fetched {} allowed rules from admin config", adminRules.size());
+
         copyAllowedRulesToEmployer(savedPackage, adminRules);
-        
-        
+
+        log.info("Allowed rules copied successfully for employerPackageId={}", savedPackage.getId());
+
+        // 🔹 8. Copy Allowed Documents
         List<PackageCheckCategoryAllowedDocument> adminDocs =
                 packageAllowedDocumentRepository.findByBgvPackagePackageId(packageId);
-        
-        log.info("Package assigned successfully with {} adminDocs", adminDocs.size());
+
+        log.info("Fetched {} allowed documents from admin config", adminDocs.size());
 
         List<EmployerPackageAllowedDocument> employerDocs = adminDocs.stream()
-                .map(doc -> EmployerPackageAllowedDocument.builder()
-                        .employerPackage(savedPackage)
-                        .checkCategoryId(doc.getCheckCategory().getCategoryId())
-                        .documentType(doc.getDocumentType())
-                        .required(doc.getRequired())
-                        .priorityOrder(doc.getPriorityOrder())
+                .map(doc -> {
+                    log.debug("Copying document: categoryId={}, documentType={}",
+                            doc.getCheckCategory().getCategoryId(),
+                            doc.getDocumentType().getName());
 
-                        // 🔥 default values
-                        .includedInBase(false)
-                        .addonPrice(0.0)
-                        .defaultSelected(false)
-                       // .selectionType(SelectionType.OPTIONAL)
-                        .build()
-                ).toList();
+                    return EmployerPackageAllowedDocument.builder()
+                            .employerPackage(savedPackage)
+                            .checkCategoryId(doc.getCheckCategory().getCategoryId())
+                            .documentType(doc.getDocumentType())
+                            .required(doc.getRequired())
+                            .priorityOrder(doc.getPriorityOrder())
+                            .includedInBase(false)
+                            .addonPrice(0.0)
+                            .defaultSelected(false)
+                            .build();
+                })
+                .toList();
 
         employerPackageAllowedDocumentRepository.saveAll(employerDocs);
 
-        log.info("Package assigned successfully with {} rules", employerRules.size());
-        
-        log.info("Package assigned successfully with {} employerDocs", employerDocs.size());
+        log.info("Saved {} employer documents for employerPackageId={}",
+                employerDocs.size(), savedPackage.getId());
+
+        // 🔹 FINAL LOG
+        log.info("SUCCESS: Package assignment completed for companyId={}, employerPackageId={}",
+                companyId, savedPackage.getId());
     }
     
     public void unassignPackageFromCompany(Long companyId, Long packageId) {
@@ -672,34 +708,74 @@ public class PackageService  {
             EmployerPackage employerPackage,
             List<PackageCheckCategoryAllowedRuleType> adminRules) {
 
-        List<EmployerPackageCheckCategoryAllowedRuleType> list = new ArrayList<>();
+        log.info("Starting copyAllowedRulesToEmployer for employerPackageId={}, totalAdminRules={}",
+                employerPackage.getId(), adminRules.size());
+
+        List<EmployerPackageCheckCategoryAllowedRuleType> finalList = new ArrayList<>();
 
         for (PackageCheckCategoryAllowedRuleType admin : adminRules) {
 
             RuleTypes ruleType = admin.getRuleType();
+            Long categoryId = admin.getCheckCategory().getCategoryId();
+            Long ruleTypeId = ruleType.getRuleTypeId();
 
-           // int count = extractCount(ruleType); // ANY_1 → 1
+            log.info("Processing admin rule: categoryId={}, ruleTypeId={}, ruleCode={}",
+                    categoryId, ruleTypeId, ruleType.getCode());
 
-            EmployerPackageCheckCategoryAllowedRuleType e = 
-                    EmployerPackageCheckCategoryAllowedRuleType.builder()
-                            .employerPackage(employerPackage)
-                            .checkCategoryId(admin.getCheckCategory().getCategoryId())
-                            .ruleType(ruleType)
-                            .required(admin.getRequired())
-                            .includedInBase(admin.getRequired()) // or business logic
-                           // .requiresCount(count > 0)
-                            .minCount(ruleType.getMinCount())
-                            .maxCount(ruleType.getMaxCount())
-                           // .defaultSelectedCount(count)
-                            .priorityOrder(admin.getPriorityOrder())
-                            .build();
+            try {
+                // 🔹 CHECK EXISTING
+                Optional<EmployerPackageCheckCategoryAllowedRuleType> existingOpt =
+                        employerPackageCheckCategoryAllowedRuleTypeRepository
+                                .findByEmployerPackageIdAndCheckCategoryIdAndRuleType_RuleTypeId(
+                                        employerPackage.getId(),
+                                        categoryId,
+                                        ruleTypeId
+                                );
 
-            list.add(e);
+                EmployerPackageCheckCategoryAllowedRuleType entity;
+
+                if (existingOpt.isPresent()) {
+                    // 🔹 UPDATE
+                    entity = existingOpt.get();
+
+                    log.info("Updating existing rule: id={}", entity.getId());
+
+                } else {
+                    // 🔹 INSERT
+                    entity = new EmployerPackageCheckCategoryAllowedRuleType();
+                    entity.setEmployerPackage(employerPackage);
+                    entity.setCheckCategoryId(categoryId);
+                    entity.setRuleType(ruleType);
+
+                    log.info("Creating new rule: categoryId={}, ruleTypeId={}",
+                            categoryId, ruleTypeId);
+                }
+
+                // 🔹 COMMON FIELDS (update or insert)
+                entity.setRequired(admin.getRequired());
+                entity.setIncludedInBase(admin.getRequired());
+                entity.setMinCount(ruleType.getMinCount());
+                entity.setMaxCount(ruleType.getMaxCount());
+                entity.setPriorityOrder(admin.getPriorityOrder());
+                entity.setRequiresCount(ruleType.getRequiresCount());
+
+                finalList.add(entity);
+
+            } catch (Exception e) {
+                log.error("Error processing rule: categoryId={}, ruleTypeId={}",
+                        categoryId, ruleTypeId, e);
+            }
         }
 
-        employerPackageCheckCategoryAllowedRuleTypeRepository.saveAll(list);
+        log.info("Saving {} allowed rules (after upsert) for employerPackageId={}",
+                finalList.size(), employerPackage.getId());
+
+        List<EmployerPackageCheckCategoryAllowedRuleType> saved =
+                employerPackageCheckCategoryAllowedRuleTypeRepository.saveAll(finalList);
+
+        log.info("Saved {} allowed rules successfully for employerPackageId={}",
+                saved.size(), employerPackage.getId());
     }
-    
     
    
     

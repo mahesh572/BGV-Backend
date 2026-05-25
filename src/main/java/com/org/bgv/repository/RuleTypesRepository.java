@@ -18,7 +18,7 @@ public interface RuleTypesRepository extends JpaRepository<RuleTypes, Long> {
     
     List<RuleTypes> findByCategoryCategoryId(Long categoryId);
     
-
+    Optional<RuleTypes> findByRuleTypeId(Long ruleTypeId);
     
     Optional<RuleTypes> findByCode(String code);
     

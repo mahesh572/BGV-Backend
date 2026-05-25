@@ -190,14 +190,14 @@ public class VerificationCaseSelectionService {
 
 			    	selectedEducation.addAll(selectLatestEducation(caseId,1));
 			    }// 🔥 2. ALL EDUCATION
-			    else if ("ALL_EDUCATION".equalsIgnoreCase(ruleType.getCode())) {
+			    else if ("ALL".equalsIgnoreCase(ruleType.getCode())) {
 
 			        selectedEducation.addAll(
 			                educationHistoryRepository.findByVerificationCaseCaseId(caseId)
 			        );
 			    }
 			 // 🔥 3. COUNT BASED (e.g. last N records)
-			    else if ("LAST_N_EDUCATION".equalsIgnoreCase(ruleType.getCode())) {
+			    else if ("LAST_N".equalsIgnoreCase(ruleType.getCode())) {
 
 			        selectedEducation.addAll(selectLatestEducation(caseId, maxCount));
 			    }
@@ -237,13 +237,13 @@ public class VerificationCaseSelectionService {
 				
 				
 			 // 🔥 1. LAST N COMPANIES
-			    if ("LAST_N_COMPANIES".equalsIgnoreCase(ruleCode)) {
+			    if ("LAST_N".equalsIgnoreCase(ruleCode)) {
 
 			        selectedWork.addAll(selectLatestWork(caseId, maxCount));
 			    }
 
 			    // 🔥 2. ALL COMPANIES
-			    else if ("ALL_COMPANIES".equalsIgnoreCase(ruleCode)) {
+			    else if ("ALL".equalsIgnoreCase(ruleCode)) {
 
 			        selectedWork.addAll(
 			                workExperienceRepository.findByVerificationCaseCaseId(caseId)
@@ -285,7 +285,7 @@ public class VerificationCaseSelectionService {
 			    int value = rule.getSelectedCount() != null ? rule.getSelectedCount() : 1;
 
 			    // 🔥 1. LAST N ADDRESSES
-			    if ("LAST_N_ADDRESS".equalsIgnoreCase(ruleCode)) {
+			    if ("LAST_N".equalsIgnoreCase(ruleCode)) {
 
 			        selectedAddresses.addAll(selectLatestAddresses(caseId, value));
 			    }
