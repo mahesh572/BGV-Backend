@@ -23,6 +23,8 @@ public class VerificationCaseDetailsDTO {
     private String status;
     private LocalDateTime createdAt;
     private LocalDateTime completedAt;
+    private Boolean pricingConfirmed;
+    private Boolean invoiceGenerated;
 
     private CandidateSummary candidate;
     @JsonProperty("verificationChecks")

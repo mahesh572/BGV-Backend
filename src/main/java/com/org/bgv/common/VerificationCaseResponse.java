@@ -19,8 +19,8 @@ public class VerificationCaseResponse {
     private Long candidateId;
     private Long companyId;
     private EmployerPackageInfo employerPackage;
-    private Double basePrice;
-    private Double addonPrice;
+    private BigDecimal basePrice;
+    private BigDecimal addonPrice;
     private BigDecimal totalPrice;
     private String status;
     private LocalDateTime createdAt;

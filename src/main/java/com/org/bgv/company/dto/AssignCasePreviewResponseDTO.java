@@ -1,5 +1,6 @@
 package com.org.bgv.company.dto;
 
+import java.math.BigDecimal;
 import java.util.List;
 
 import lombok.AllArgsConstructor;
@@ -19,9 +20,9 @@ public class AssignCasePreviewResponseDTO {
     private Long employerPackageId;
     private String packageName;
 
-    private Double basePrice;
-    private Double addonPrice;
-    private Double estimatedTotalPrice;
+    private BigDecimal basePrice;
+    private BigDecimal addonPrice;
+    private BigDecimal estimatedTotalPrice;
     private Boolean finalPriceDynamic;
 
     private List<CategoryPreviewDTO> categories;

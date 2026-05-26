@@ -10,6 +10,8 @@ import com.org.bgv.invoice.entity.InvoiceItem;
 import com.org.bgv.invoice.repository.InvoiceItemRepository;
 import com.org.bgv.invoice.repository.InvoiceRepository;
 import com.org.bgv.repository.*;
+import com.org.bgv.service.ReferenceNumberGenerator;
+
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.data.domain.Page;
@@ -37,6 +39,7 @@ public class InvoiceGenerationService {
     private final InvoiceRepository invoiceRepository;
     private final InvoiceItemRepository invoiceItemRepository;
     private final CandidateRepository candidateRepository;
+    private final ReferenceNumberGenerator referenceNumberGenerator;
 
     // =========================
     // INVOICE GENERATION & BASIC CRUD
@@ -46,6 +49,11 @@ public class InvoiceGenerationService {
     public InvoiceDTO generateInvoice(Long caseId) {
         VerificationCase verificationCase = verificationCaseRepository.findById(caseId)
                 .orElseThrow(() -> new RuntimeException("Case not found: " + caseId));
+        
+     // VALIDATION: Check if pricing is confirmed
+        if (!Boolean.TRUE.equals(verificationCase.getPricingConfirmed())) {
+            throw new RuntimeException("Pricing must be confirmed before generating invoice");
+        }
 
         // Check if invoice already exists
         Optional<Invoice> existingInvoice = invoiceRepository.findByVerificationCase(verificationCase);
@@ -69,12 +77,13 @@ public class InvoiceGenerationService {
                 .collect(Collectors.toList());
 
         // Calculate totals
-        BigDecimal baseTotal = BigDecimal.ZERO;
+        BigDecimal baseTotal = verificationCase.getBasePrice();
         BigDecimal addonTotal = addonSelections.stream()
                 .map(VerificationCaseSelection::getUnitPrice)
                 .reduce(BigDecimal.ZERO, BigDecimal::add);
 
         BigDecimal grandTotal = baseTotal.add(addonTotal);
+        grandTotal = grandTotal.add(calculateTax(addonTotal));
 
         Company company = companyRepository.findById(verificationCase.getCompanyId()).orElse(null);
         Candidate candidate = candidateRepository.findByCompanyIdAndCandidateId(verificationCase.getCompanyId(), 
@@ -91,7 +100,7 @@ public class InvoiceGenerationService {
                 .baseTotal(baseTotal)
                 .addonTotal(addonTotal)
                 .taxAmount(calculateTax(addonTotal))
-                .grandTotal(grandTotal.add(calculateTax(addonTotal)))
+                .grandTotal(grandTotal)
                 .status(InvoiceStatus.PENDING)
                 .currency("INR")
                 .build();
@@ -112,9 +121,17 @@ public class InvoiceGenerationService {
         }
         
         invoiceItemRepository.saveAll(allItems);
+        
+        verificationCase.setInvoiceGenerated(true);
+        verificationCase.setInvoiceGeneratedAt(LocalDateTime.now());
+        verificationCase.setAddonPrice(addonTotal);
+        verificationCase.setTotalPrice(grandTotal);
+        verificationCaseRepository.save(verificationCase);
 
         log.info("Invoice generated for case {}: {} - Total: {}", 
-                 caseId, invoice.getInvoiceNumber(), invoice.getGrandTotal());
+                caseId, invoice.getInvoiceNumber(), invoice.getGrandTotal());
+       log.info("Case updated - invoiceGenerated: {}, invoiceGeneratedAt: {}", 
+                verificationCase.getInvoiceGenerated(), verificationCase.getInvoiceGeneratedAt());
 
         return convertToDTO(invoice);
     }
@@ -439,9 +456,9 @@ public class InvoiceGenerationService {
     }
 
     private String generateInvoiceNumber(VerificationCase verificationCase) {
-        String datePart = LocalDateTime.now().format(DateTimeFormatter.ofPattern("yyyyMMdd"));
-        String caseIdPart = String.format("%04d", verificationCase.getCaseId());
-        return "INV-" + datePart + "-" + caseIdPart;
+        
+        return referenceNumberGenerator.generateInvoiceNumber();
+        
     }
 
     private BigDecimal calculateAddonTotal(List<VerificationCaseSelection> selections) {

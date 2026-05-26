@@ -196,13 +196,13 @@ public class EmployerPackageConfigurationService {
         // 4️⃣ Update package pricing
         log.info("💰 Calculating final pricing for employerPackageId={}", employerPackageId);
 
-        employerPackage.setAddonPrice(totalAddonPrice.doubleValue());
+        employerPackage.setAddonPrice(totalAddonPrice);
 
-        double basePrice = employerPackage.getBasePrice() != null
+        BigDecimal basePrice = employerPackage.getBasePrice() != null
                 ? employerPackage.getBasePrice()
-                : 0.0;
+                : BigDecimal.ZERO;
 
-        double finalPrice = basePrice + totalAddonPrice.doubleValue();
+        BigDecimal finalPrice = basePrice.add(totalAddonPrice);
 
         employerPackage.setTotalPrice(finalPrice);
 
@@ -275,14 +275,14 @@ public class EmployerPackageConfigurationService {
                 .employerPackageId(employerPackageId)
                 .packageName(employerPackage.getBgvPackage().getName())
                 .basePrice(employerPackage.getBasePrice())
-                .addonPrice(0.0)
+                .addonPrice(BigDecimal.ZERO)
                 .estimatedTotalPrice(employerPackage.getBasePrice())
                 .finalPriceDynamic(true)
                 .categories(categoryPreviews)
                 .priceSummary(
                         PriceSummaryDTO.builder()
                                 .basePrice(employerPackage.getBasePrice())
-                                .addonPrice(0.0)
+                                .addonPrice(BigDecimal.ZERO)
                                 .estimatedTotal(employerPackage.getBasePrice())
                                 .finalPriceCalculatedAfterSubmission(true)
                                 .note("Final price depends on record count.")

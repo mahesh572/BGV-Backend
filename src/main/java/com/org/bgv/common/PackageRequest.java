@@ -7,6 +7,8 @@ import lombok.NoArgsConstructor;
 
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.NotNull;
+
+import java.math.BigDecimal;
 import java.util.List;
 
 @Data
@@ -25,12 +27,12 @@ public class PackageRequest {
     @NotNull(message = "Customizable flag is required")
     private Boolean customizable;
     
-    private Double basePrice;
+    private BigDecimal basePrice;
     
     @NotNull(message = "Active status is required")
     private Boolean isActive;
     
-    private Double price;
+    private BigDecimal price;
     
     private List<PackageCategoryRequest> categories;
 }

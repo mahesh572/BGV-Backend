@@ -1,5 +1,7 @@
 package com.org.bgv.company.dto;
 
+import java.math.BigDecimal;
+
 import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Data;
@@ -11,9 +13,9 @@ import lombok.NoArgsConstructor;
 @AllArgsConstructor
 public class PriceSummaryDTO {
 
-    private Double basePrice;
-    private Double addonPrice;
-    private Double estimatedTotal;
+    private BigDecimal basePrice;
+    private BigDecimal addonPrice;
+    private BigDecimal estimatedTotal;
 
     private Boolean finalPriceCalculatedAfterSubmission;
     private String note;

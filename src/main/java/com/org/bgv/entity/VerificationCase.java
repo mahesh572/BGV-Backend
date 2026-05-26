@@ -44,11 +44,10 @@ public class VerificationCase {
     private EmployerPackage employerPackage;
 
     @Column(name = "base_price")
-    private Double basePrice;
+    private BigDecimal basePrice;
     
     @Column(name = "addon_price")
-    @Builder.Default
-    private Double addonPrice = 0.0;
+    private BigDecimal addonPrice;
     
     @Column(name = "total_price")
     private BigDecimal totalPrice;
@@ -77,6 +76,20 @@ public class VerificationCase {
     @Column(name = "vendor_id")
     private Long vendorId;
    */
+    
+    @Column(name = "pricing_confirmed")
+    private Boolean pricingConfirmed = false;
+
+    @Column(name = "pricing_confirmed_at")
+    private LocalDateTime pricingConfirmedAt;
+
+    @Column(name = "invoice_generated")
+    private Boolean invoiceGenerated = false;
+
+    @Column(name = "invoice_generated_at")
+    private LocalDateTime invoiceGeneratedAt;
+    
+    
     @PreUpdate
     protected void onUpdate() {
         updatedAt = LocalDateTime.now();

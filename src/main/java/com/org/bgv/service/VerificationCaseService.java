@@ -91,6 +91,7 @@ import org.springframework.transaction.annotation.Transactional;
 import org.springframework.util.StringUtils;
 
 import java.math.BigDecimal;
+import java.math.RoundingMode;
 import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
 import java.util.ArrayList;
@@ -571,22 +572,41 @@ public class VerificationCaseService {
 		return mapToVerificationCaseDocumentResponse(updatedDocument);
 	}
 
-	private PricingResult calculateCandidatePricing(List<EmployerPackageDocument> employerDocuments,
-			List<Long> selectedAddonDocumentIds) {
-		double basePrice = 0.0;
-		double addonPrice = 0.0;
+	private PricingResult calculateCandidatePricing(
+	        List<EmployerPackageDocument> employerDocuments,
+	        List<Long> selectedAddonDocumentIds) {
 
-		for (EmployerPackageDocument empDoc : employerDocuments) {
-			if (empDoc.getIncludedInBase()) {
-				// Base documents contribute to base price
-				basePrice += empDoc.getEmployerPackage().getBasePrice() / countIncludedDocuments(employerDocuments);
-			} else if (selectedAddonDocumentIds.contains(empDoc.getDocumentType().getDocTypeId())) {
-				// Selected addon documents
-				addonPrice += empDoc.getAddonPrice();
-			}
-		}
+	    BigDecimal basePrice = BigDecimal.ZERO;
+	    BigDecimal addonPrice = BigDecimal.ZERO;
 
-		return new PricingResult(basePrice, addonPrice, basePrice + addonPrice);
+	    long baseDocCount = countIncludedDocuments(employerDocuments);
+
+	    for (EmployerPackageDocument empDoc : employerDocuments) {
+
+	        if (Boolean.TRUE.equals(empDoc.getIncludedInBase())) {
+
+	            if (baseDocCount > 0) {
+	                BigDecimal perDocPrice = empDoc.getEmployerPackage()
+	                        .getBasePrice()
+	                        .divide(BigDecimal.valueOf(baseDocCount), 2, RoundingMode.HALF_UP);
+
+	                basePrice = basePrice.add(perDocPrice);
+	            }
+
+	        } else if (selectedAddonDocumentIds.contains(
+	                empDoc.getDocumentType().getDocTypeId())) {
+
+	            addonPrice = addonPrice.add(
+	                    empDoc.getAddonPrice()
+	            );
+	        }
+	    }
+
+	    return new PricingResult(
+	            basePrice,
+	            addonPrice,
+	            basePrice.add(addonPrice)
+	    );
 	}
 
 	private long countIncludedDocuments(List<EmployerPackageDocument> employerDocuments) {
@@ -868,18 +888,23 @@ public class VerificationCaseService {
 	@Data
 	@AllArgsConstructor
 	private static class PricingResult {
-		private Double basePrice;
-		private Double addonPrice;
-		private Double totalPrice;
+		private BigDecimal basePrice;
+		private BigDecimal addonPrice;
+		private BigDecimal totalPrice;
 	}
 
 	private VerificationCaseResponse mapToVerificationCaseResponse(VerificationCase candidateCase) {
-		return VerificationCaseResponse.builder().caseId(candidateCase.getCaseId())
-				.candidateId(candidateCase.getCandidateId()).companyId(candidateCase.getCompanyId())
+		return VerificationCaseResponse.builder()
+				.caseId(candidateCase.getCaseId())
+				.candidateId(candidateCase.getCandidateId())
+				.companyId(candidateCase.getCompanyId())
 				.employerPackage(mapToEmployerPackageInfo(candidateCase.getEmployerPackage()))
-				.basePrice(candidateCase.getBasePrice()).addonPrice(candidateCase.getAddonPrice())
-				.totalPrice(candidateCase.getTotalPrice()).status(candidateCase.getStatus().name())
-				.createdAt(candidateCase.getCreatedAt()).documents(candidateCase.getCaseDocuments().stream()
+				.basePrice(candidateCase.getBasePrice())
+				.addonPrice(candidateCase.getAddonPrice())
+				.totalPrice(candidateCase.getTotalPrice())
+				.status(candidateCase.getStatus().name())
+				.createdAt(candidateCase.getCreatedAt())
+				.documents(candidateCase.getCaseDocuments().stream()
 						.map(this::mapToVerificationCaseDocumentResponse).collect(Collectors.toList()))
 				.build();
 	}
@@ -1398,17 +1423,22 @@ public class VerificationCaseService {
 		VPackageDTO vpackageDTO = buildVPackageDTO(verificationCase);
 
 		PricingDTO pricingDTO = PricingDTO.builder()
-				.basePrice(Optional.ofNullable(verificationCase.getBasePrice()).orElse(0.0))
-				.addonPrice(Optional.ofNullable(verificationCase.getAddonPrice()).orElse(0.0))
+				.basePrice(Optional.ofNullable(verificationCase.getBasePrice()).orElse(BigDecimal.ZERO))
+				.addonPrice(Optional.ofNullable(verificationCase.getAddonPrice()).orElse(BigDecimal.ZERO))
 				.totalPrice(
-						verificationCase.getTotalPrice() != null ? verificationCase.getTotalPrice().doubleValue() : 0.0)
+						verificationCase.getTotalPrice() != null ? verificationCase.getTotalPrice() : BigDecimal.ZERO)
 				.build();
 
 		return VerificationCaseDetailsDTO.builder().caseId(verificationCase.getCaseId())
 				.caseNumber(verificationCase.getCaseNumber())
 				.status(verificationCase.getStatus() != null ? verificationCase.getStatus().name() : null)
-				.createdAt(verificationCase.getCreatedAt()).completedAt(verificationCase.getCompletedAt())
-				.candidate(candidateSummary).verificationChecks(verificationChecks).activityTimeline(activityTimeline)
+				.createdAt(verificationCase.getCreatedAt())
+				.completedAt(verificationCase.getCompletedAt())
+				.candidate(candidateSummary)
+				.verificationChecks(verificationChecks)
+				.pricingConfirmed(verificationCase.getPricingConfirmed())
+				.invoiceGenerated(verificationCase.getInvoiceGenerated())
+				.activityTimeline(activityTimeline)
 				.vpackage(vpackageDTO).pricing(pricingDTO).build();
 	}
 

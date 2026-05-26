@@ -37,6 +37,7 @@ import org.apache.catalina.security.SecurityUtil;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.math.BigDecimal;
 import java.time.LocalDateTime;
 import java.util.ArrayList;
 import java.util.HashMap;
@@ -83,8 +84,8 @@ public class EmployerPackageService {
         }
         
         // Calculate total price
-        Double addonPrice = calculateAddonPrice(request.getDocuments());
-        Double totalPrice = request.getBasePrice() + addonPrice;
+        BigDecimal addonPrice = calculateAddonPrice(request.getDocuments());
+        BigDecimal totalPrice = request.getBasePrice().add(addonPrice);
         
         // Create employer package
         EmployerPackage employerPackage = EmployerPackage.builder()
@@ -240,13 +241,13 @@ private void updateDocumentSelections(PackageDTO packageDTO,
         log.info("Deleted employer package with id: {}", id);
     }
     
-    private Double calculateAddonPrice(List<EmployerPackageDocumentRequest> documents) {
+    private BigDecimal calculateAddonPrice(List<EmployerPackageDocumentRequest> documents) {
         return documents.stream()
-                .filter(doc -> !doc.getIncludedInBase())
-                .mapToDouble(EmployerPackageDocumentRequest::getAddonPrice)
-                .sum();
+                .filter(doc -> !Boolean.TRUE.equals(doc.getIncludedInBase()))
+                .map(EmployerPackageDocumentRequest::getAddonPrice)
+                .filter(price -> price != null)
+                .reduce(BigDecimal.ZERO, BigDecimal::add);
     }
-    
     private List<EmployerPackageDocument> createEmployerPackageDocuments(
             EmployerPackage employerPackage, List<EmployerPackageDocumentRequest> documentRequests) {
         
@@ -590,7 +591,7 @@ private void updateDocumentSelections(PackageDTO packageDTO,
                                     .employerPackage(employerPackage)
                                     .checkCategory(checkCategory)
                                     .documentType(documentType)
-                                    .addonPrice(0.0) // Set appropriate addon price
+                                    .addonPrice(BigDecimal.ZERO) // Set appropriate addon price
                                     .includedInBase(true) // Set based on your business logic
                                     .selectionType(SelectionType.INCLUDED) // Set based on your business logic
                                     .createdAt(LocalDateTime.now())

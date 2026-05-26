@@ -49,8 +49,11 @@ import com.org.bgv.common.VerificationStatisticsResponse;
 import com.org.bgv.common.VerificationUpdateRequest;
 import com.org.bgv.company.dto.CandidateSummary;
 import com.org.bgv.company.dto.CaseSearchRequest;
+import com.org.bgv.company.dto.CategoryPricingDTO;
 import com.org.bgv.company.dto.CompanyVerificationCaseDTO;
+import com.org.bgv.company.dto.PricingConfirmationDTO;
 import com.org.bgv.company.dto.PricingDTO;
+import com.org.bgv.company.dto.PricingSummaryDTO;
 import com.org.bgv.company.dto.VerificationCaseDetailsDTO;
 import com.org.bgv.config.SecurityUtils;
 import com.org.bgv.constants.CaseCheckStatus;
@@ -85,6 +88,7 @@ import org.springframework.transaction.annotation.Transactional;
 import org.springframework.util.StringUtils;
 
 import java.math.BigDecimal;
+import java.math.RoundingMode;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
@@ -625,5 +629,75 @@ public class VerificationCaseSelectionService {
 	    }
 
 	    return result;
+	}
+	
+	
+	
+	// Add to VerificationCaseSelectionService.java
+
+	public PricingSummaryDTO getCasePricingSummary(Long caseId) {
+	    VerificationCase verificationCase = verificationCaseRepository.findById(caseId)
+	            .orElseThrow(() -> new RuntimeException("Case not found: " + caseId));
+	    
+	    List<VerificationCaseSelection> selections = verificationCaseSelectionRepository
+	            .findByVerificationCase(verificationCase);
+	    
+	    // Calculate totals
+	    BigDecimal baseTotal = verificationCase.getBasePrice();
+	    BigDecimal addonTotal = BigDecimal.ZERO;
+	    
+	    Map<String, CategoryPricingDTO> pricingByCategory = new HashMap<>();
+	    
+	    for (VerificationCaseSelection selection : selections) {
+	        String categoryName = selection.getType().getName();
+	        CategoryPricingDTO categoryPricing = pricingByCategory
+	                .computeIfAbsent(categoryName, k -> new CategoryPricingDTO(categoryName));
+	        
+	        if (Boolean.TRUE.equals(selection.getIncludedInBase())) {
+	            categoryPricing.addBaseItem(selection.getId());
+	        } else if (selection.getUnitPrice() != null && selection.getUnitPrice().compareTo(BigDecimal.ZERO) > 0) {
+	            categoryPricing.addAddonItem(selection.getId(), selection.getUnitPrice());
+	            addonTotal = addonTotal.add(selection.getUnitPrice());
+	        }
+	    }
+	    
+	    BigDecimal taxAmount = addonTotal.multiply(new BigDecimal("0.18")).setScale(2, RoundingMode.HALF_UP);
+	    BigDecimal grandTotal = baseTotal.add(addonTotal).add(taxAmount);
+	    
+	    return PricingSummaryDTO.builder()
+	            .caseId(caseId)
+	            .caseNumber(verificationCase.getCaseNumber())
+	            .baseTotal(baseTotal)
+	            .addonTotal(addonTotal)
+	            .taxAmount(taxAmount)
+	            .grandTotal(grandTotal)
+	            .pricingByCategory(pricingByCategory)
+	            .currency("INR")
+	            .build();
+	}
+
+	public PricingConfirmationDTO confirmPricing(Long caseId) {
+	    VerificationCase verificationCase = verificationCaseRepository.findById(caseId)
+	            .orElseThrow(() -> new RuntimeException("Case not found: " + caseId));
+	    
+	    // Check if pricing is already confirmed
+	    if (verificationCase.getPricingConfirmed() != null && verificationCase.getPricingConfirmed()) {
+	        throw new RuntimeException("Pricing already confirmed for this case");
+	    }
+	    
+	    // Get pricing summary
+	    PricingSummaryDTO pricingSummary = getCasePricingSummary(caseId);
+	    
+	    // Mark case as pricing confirmed
+	    verificationCase.setPricingConfirmed(true);
+	    verificationCase.setPricingConfirmedAt(LocalDateTime.now());
+	    verificationCaseRepository.save(verificationCase);
+	    
+	    return PricingConfirmationDTO.builder()
+	            .caseId(caseId)
+	            .confirmed(true)
+	            .confirmedAt(LocalDateTime.now())
+	            .pricingSummary(pricingSummary)
+	            .build();
 	}
 }

@@ -1,5 +1,6 @@
 package com.org.bgv.company.service;
 
+import java.math.BigDecimal;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.HashSet;
@@ -130,14 +131,14 @@ public class AssignCaseService {
 	                .employerPackageId(employerPackageId)
 	                .packageName(employerPackage.getBgvPackage().getName())
 	                .basePrice(employerPackage.getBasePrice())
-	                .addonPrice(0.0)
+	                .addonPrice(BigDecimal.ZERO)
 	                .estimatedTotalPrice(employerPackage.getBasePrice())
 	                .finalPriceDynamic(true)
 	                .categories(categoryPreviews)
 	                .priceSummary(
 	                        PriceSummaryDTO.builder()
 	                                .basePrice(employerPackage.getBasePrice())
-	                                .addonPrice(0.0)
+	                                .addonPrice(BigDecimal.ZERO)
 	                                .estimatedTotal(employerPackage.getBasePrice())
 	                                .finalPriceCalculatedAfterSubmission(true)
 	                                .note("Final price depends on record count.")

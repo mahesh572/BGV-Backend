@@ -38,6 +38,11 @@ public class ReferenceNumberGenerator {
     public String generateCheckCaseNumber() {
         return generate("CHECK", "CHECK");
     }
+    
+    @Transactional
+    public String generateInvoiceNumber() {
+        return generate("INVOICE", "INV");
+    }
 
     private String generate(String type, String prefix) {
         int year = Year.now().getValue();

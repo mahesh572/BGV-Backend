@@ -1,5 +1,6 @@
 package com.org.bgv.entity;
 
+import java.math.BigDecimal;
 import java.time.LocalDateTime;
 
 import com.org.bgv.constants.SelectionType;
@@ -34,7 +35,7 @@ public class EmployerPackageDocument {
     private DocumentType documentType;
 
     @Column(name = "addon_price")
-    private Double addonPrice;
+    private BigDecimal addonPrice;
 
     @Column(name = "included_in_base")
     private Boolean includedInBase;

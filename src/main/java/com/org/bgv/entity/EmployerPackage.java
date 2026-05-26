@@ -2,6 +2,8 @@ package com.org.bgv.entity;
 
 import jakarta.persistence.*;
 import lombok.*;
+
+import java.math.BigDecimal;
 import java.time.LocalDateTime;
 import java.util.ArrayList;
 import java.util.List;
@@ -30,14 +32,13 @@ public class EmployerPackage {
     private BgvPackage bgvPackage;
 
     @Column(name = "base_price", nullable = false)
-    private Double basePrice;
+    private BigDecimal basePrice;
     
     @Column(name = "addon_price")
-    @Builder.Default
-    private Double addonPrice = 0.0;
+    private BigDecimal addonPrice;
     
     @Column(name = "total_price")
-    private Double totalPrice;
+    private BigDecimal totalPrice;
     
     @Enumerated(EnumType.STRING)
     @Column(name = "status", nullable = false)
