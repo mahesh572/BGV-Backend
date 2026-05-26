@@ -83,6 +83,13 @@ public class EmployerPackageConfigurationService {
                     log.error("❌ Employer Package not found. employerPackageId={}", employerPackageId);
                     return new RuntimeException("Employer Package not found");
                 });
+        
+        List<EmployerPackageRule> baseRules =
+                employerPackageRuleRepository.findByEmployerPackage_Id(employerPackageId);
+        
+        Map<Long, List<EmployerPackageRule>> baseRuleMap =
+                baseRules.stream()
+                        .collect(Collectors.groupingBy(EmployerPackageRule::getCheckCategoryId));
 
         if (!employerPackage.getCompanyId().equals(companyId)) {
             log.error("❌ Unauthorized access. employerPackageId={}, requestCompanyId={}, actualCompanyId={}",
@@ -118,6 +125,16 @@ public class EmployerPackageConfigurationService {
 
                 log.info("➡️ Processing ruleTypeId={} for categoryId={}",
                         ruleDto.getRuleTypeId(), category.getCategoryId());
+                
+                List<EmployerPackageRule> epackageRules =
+                        baseRuleMap.getOrDefault(category.getCategoryId(), Collections.emptyList());
+                
+                EmployerPackageRule employerPackageRule =
+                        epackageRules.stream()
+                            .findFirst()
+                            .orElse(null);
+                
+                log.info("employerPackageRule:::::::::::::::::::::{}",employerPackageRule);
 
                 // 🔹 Fetch rule master
                 RuleTypes ruleType = ruleTypesRepository.findByRuleTypeId(ruleDto.getRuleTypeId())
@@ -131,29 +148,42 @@ public class EmployerPackageConfigurationService {
                 log.debug("🔢 Rule details: ruleTypeId={}, requiresCount={}, selectedCount={}",
                         ruleType.getRuleTypeId(), ruleType.getRequiresCount(), count);
 
-                // 🔹 (Optional Pricing - currently disabled)
-                /*
-                BigDecimal unitPrice = ruleType.getUnitPrice() != null
-                        ? ruleType.getUnitPrice()
-                        : BigDecimal.ZERO;
+                
+                Optional<EmployerPackageSelectedRule> existing =
+                        employerPackageSelectedRuleRepository
+                                .findByEmployerPackageIdAndCheckCategoryIdAndRuleTypeRuleTypeId(
+                                        employerPackage.getId(),
+                                        category.getCategoryId(),
+                                        ruleType.getRuleTypeId()
+                                );
+                
+                EmployerPackageSelectedRule entity;
 
-                BigDecimal totalPrice = unitPrice.multiply(BigDecimal.valueOf(count));
-                totalAddonPrice = totalAddonPrice.add(totalPrice);
+                if (existing.isPresent()) {
+                    // 🔁 UPDATE
+                    entity = existing.get();
 
-                log.debug("💰 Pricing calculated: unitPrice={}, count={}, totalPrice={}",
-                        unitPrice, count, totalPrice);
-                */
+                    log.info("♻️ Updating existing rule: packageId={}, categoryId={}, ruleTypeId={}",
+                            employerPackage.getId(), category.getCategoryId(), ruleType.getRuleTypeId());
 
-                // 🔹 Save entity
-                EmployerPackageSelectedRule entity = new EmployerPackageSelectedRule();
+                } else {
+                    // ➕ INSERT
+                    entity = new EmployerPackageSelectedRule();
 
-                entity.setEmployerPackage(employerPackage);
-                entity.setCheckCategoryId(category.getCategoryId());
-                entity.setRuleType(ruleType);
+                    entity.setEmployerPackage(employerPackage);
+                    entity.setCheckCategoryId(category.getCategoryId());
+                    entity.setRuleType(ruleType);
+
+                    log.info("➕ Creating new rule: packageId={}, categoryId={}, ruleTypeId={}",
+                            employerPackage.getId(), category.getCategoryId(), ruleType.getRuleTypeId());
+                }
+
+                // 🔥 Common fields
                 entity.setSelectedCount(count);
                 entity.setIncludedInBase(true);
                 entity.setRequired(false);
                 entity.setRequiresCount(ruleType.getRequiresCount());
+                entity.setPackageRule(employerPackageRule);
 
                 employerPackageSelectedRuleRepository.save(entity);
                 totalRulesSaved++;
@@ -407,12 +437,15 @@ public class EmployerPackageConfigurationService {
 
         if (employerPricing.isPresent()) {
             EmployerCheckPricing pricing = employerPricing.get();
-            return new PricingInfo(
-                    pricing.getPricingType(),
-                    pricing.getUnitPrice(),
-                    pricing.getMinCharge(),
-                    pricing.getMaxCharge()
-            );
+            
+            return  PricingInfo.builder()
+            .pricingType(pricing.getPricingType())
+            .unitPrice(pricing.getUnitPrice())
+            .minCharge(pricing.getMinCharge())
+            .maxCharge(pricing.getMaxCharge())
+            .build();
+            
+            
         }
 
         // 2️⃣ Fallback to Platform default pricing
@@ -423,13 +456,14 @@ public class EmployerPackageConfigurationService {
                                 ruleType.getRuleTypeId()
                         )
                         .orElse(null);
+        
+        return  PricingInfo.builder()
+        		.pricingType(platformPricing!=null?platformPricing.getPricingType():null)
+                .unitPrice(platformPricing!=null?platformPricing.getUnitPrice():null)
+        		
+        		.build();
 
-        return new PricingInfo(
-        		platformPricing!=null?platformPricing.getPricingType():null,
-        		platformPricing!=null?platformPricing.getUnitPrice():null,
-                null,
-                null
-        );
+        
     }
     
     private List<SelectedRuleDTO> mapFromSelectedRules(

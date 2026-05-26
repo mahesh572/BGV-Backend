@@ -15,6 +15,7 @@ import com.org.bgv.candidate.entity.CandidatePackageRule;
 import com.org.bgv.candidate.entity.CandidatePackageRuleDocument;
 import com.org.bgv.candidate.entity.CandidateVerification;
 import com.org.bgv.candidate.entity.EducationHistory;
+import com.org.bgv.candidate.entity.IdentityProof;
 import com.org.bgv.candidate.entity.WorkExperience;
 import com.org.bgv.candidate.repository.AddressRepository;
 import com.org.bgv.candidate.repository.CandidatePackageRuleDocumentRepository;
@@ -60,6 +61,8 @@ import com.org.bgv.constants.VerificationStatus;
 import com.org.bgv.dto.*;
 import com.org.bgv.entity.*;
 import com.org.bgv.enums.RuleGroup;
+import com.org.bgv.global.service.RuleExecutionStrategy;
+import com.org.bgv.global.service.RuleExecutionStrategyFactory;
 import com.org.bgv.notifications.service.NotificationDispatcher;
 import com.org.bgv.repository.*;
 import com.org.bgv.vendor.repository.VerificationActionEvidenceRepository;
@@ -81,6 +84,7 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.util.StringUtils;
 
+import java.math.BigDecimal;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
@@ -129,231 +133,411 @@ public class VerificationCaseSelectionService {
 	private final VerificationActionEvidenceRepository verificationActionEvidenceRepository;
 	private final AddressRepository addressRepository;
 	private final VerificationCaseSelectionRepository verificationCaseSelectionRepository;
+	private final RuleExecutionStrategyFactory strategyFactory;
 
 	@Transactional
 	public void populateSelections(Long caseId) {
+	    
+	    VerificationCase verificationCase = verificationCaseRepository.findById(caseId)
+	            .orElseThrow(() -> new RuntimeException("Case not found"));
 
-		VerificationCase verificationCase = verificationCaseRepository.findById(caseId)
-				.orElseThrow(() -> new RuntimeException("Case not found"));
+	    List<CandidatePackageRule> rules = candidatePackageRuleRepository.findByVerificationCase_CaseId(caseId);
+	    
+	    // Separate base package rules and add-on rules
+	    List<CandidatePackageRule> baseRules = rules.stream()
+	            .filter(rule -> Boolean.TRUE.equals(rule.getIncludedInPackage()))
+	            .collect(Collectors.toList());
+	    
+	    List<CandidatePackageRule> addonRules = rules.stream()
+	            .filter(rule -> Boolean.FALSE.equals(rule.getIncludedInPackage()) || rule.getIncludedInPackage() == null)
+	            .collect(Collectors.toList());
 
-		List<CandidatePackageRule> rules = candidatePackageRuleRepository.findByVerificationCase_CaseId(caseId);
-
-		for (CandidatePackageRule rule : rules) {
-
-			Long categoryId = rule.getCheckCategoryId();
-			
-			CheckCategory checkCategory =checkCategoryRepository.findByCategoryId(categoryId);
-
-			// =========================
-			// 1. DOCUMENT TYPE RULES
-			// =========================
-			List<CandidatePackageRuleDocument> docRules = candidatePackageRuleDocumentRepository.findByRule(rule);
-
-			for (CandidatePackageRuleDocument docRule : docRules) {
-
-				VerificationCaseSelection selection = createSelection(verificationCase, CheckCategoryEnum.IDENTITY,
-						docRule.getDocumentTypeId());
-
-				// Attach documents
-				List<Document> docs = documentRepository.findByVerificationCase_CaseIdAndDocTypeIdDocTypeId(caseId,docRule.getDocumentTypeId());
-
-				for (Document doc : docs) {
-					if (doc.getSelection() == null) {
-						doc.setSelection(selection);
-						documentRepository.save(doc);
-					}
-				}
-
-				updateSelectionStatus(selection);
-			}
-
-			// =========================
-			// 2. EDUCATION RULES
-			// =========================
-			if (checkCategory!=null && checkCategory.getName().equalsIgnoreCase(CheckCategoryEnum.EDUCATION.getName())) {
-
-				RuleTypes ruleType = ruleTypesRepository
-			            .findById(rule.getRuleTypeId())
-			            .orElse(null);
-
-			    if (ruleType == null) continue;
-
-				
-				int maxCount = rule.getSelectedCount() != null ? rule.getSelectedCount() : 1;
-
-				// List<EducationHistory> selectedEducation = selectLatestEducation(caseId, maxCount);
-				
-				List<EducationHistory> selectedEducation = new ArrayList<>();
-				
-				// 🔥 HIGHEST_ONLY LOGIC
-			    if ("HIGHEST_EDUCATION".equalsIgnoreCase(ruleType.getCode())) {
-
-			    	selectedEducation.addAll(selectLatestEducation(caseId,1));
-			    }// 🔥 2. ALL EDUCATION
-			    else if ("ALL".equalsIgnoreCase(ruleType.getCode())) {
-
-			        selectedEducation.addAll(
-			                educationHistoryRepository.findByVerificationCaseCaseId(caseId)
-			        );
-			    }
-			 // 🔥 3. COUNT BASED (e.g. last N records)
-			    else if ("LAST_N".equalsIgnoreCase(ruleType.getCode())) {
-
-			        selectedEducation.addAll(selectLatestEducation(caseId, maxCount));
-			    }
-
-				for (EducationHistory edu : selectedEducation) {
-
-					VerificationCaseSelection selection = createSelection(verificationCase, CheckCategoryEnum.EDUCATION,
-							edu.getId());
-
-					// attach case reference
-					edu.setVerificationCase(verificationCase);
-					educationHistoryRepository.save(edu);
-
-					// link documents
-					attachDocumentsToSelection(selection, edu.getId(), checkCategory.getCategoryId());
-
-					updateSelectionStatus(selection);
-				}
-			}
-
-			// =========================
-			// 3. WORK RULES
-			// =========================
-			if (checkCategory!=null && checkCategory.getName().equalsIgnoreCase(CheckCategoryEnum.WORK.getName())) {
-
-				RuleTypes ruleType = ruleTypesRepository
-			            .findById(rule.getRuleTypeId())
-			            .orElse(null);
-
-			    if (ruleType == null) continue;
-			    
-			    List<WorkExperience> selectedWork = new ArrayList<>();
-			    
-			    String ruleCode = ruleType.getCode();
-			    
-			    int maxCount = rule.getSelectedCount() != null ? rule.getSelectedCount() : 2;
-				
-				
-			 // 🔥 1. LAST N COMPANIES
-			    if ("LAST_N".equalsIgnoreCase(ruleCode)) {
-
-			        selectedWork.addAll(selectLatestWork(caseId, maxCount));
-			    }
-
-			    // 🔥 2. ALL COMPANIES
-			    else if ("ALL".equalsIgnoreCase(ruleCode)) {
-
-			        selectedWork.addAll(
-			                workExperienceRepository.findByVerificationCaseCaseId(caseId)
-			        );
-			    }
-
-				// List<WorkExperience> selectedWork = selectLatestWork(caseId, maxCount);
-
-				for (WorkExperience work : selectedWork) {
-
-					VerificationCaseSelection selection = createSelection(verificationCase, CheckCategoryEnum.WORK,
-							work.getExperienceId());
-
-					work.setVerificationCase(verificationCase);
-					workExperienceRepository.save(work);
-
-					attachDocumentsToSelection(selection, work.getExperienceId(), checkCategory.getCategoryId());
-
-					updateSelectionStatus(selection);
-				}
-			}
-			
-			// =========================
-			// 4. ADDRESS RULES
-			// =========================
-			if (checkCategory != null &&
-			    checkCategory.getName().equalsIgnoreCase(CheckCategoryEnum.ADDRESS.getName())) {
-
-			    RuleTypes ruleType = ruleTypesRepository
-			            .findById(rule.getRuleTypeId())
-			            .orElse(null);
-
-			    if (ruleType == null) continue;
-
-			    List<Address> selectedAddresses = new ArrayList<>();
-
-			    String ruleCode = ruleType.getCode();
-
-			    int value = rule.getSelectedCount() != null ? rule.getSelectedCount() : 1;
-
-			    // 🔥 1. LAST N ADDRESSES
-			    if ("LAST_N".equalsIgnoreCase(ruleCode)) {
-
-			        selectedAddresses.addAll(selectLatestAddresses(caseId, value));
-			    }
-
-			    // 🔥 2. ADDRESS DURATION (X YEARS)
-			    else if ("ADDRESS_DURATION".equalsIgnoreCase(ruleCode)) {
-
-			        selectedAddresses.addAll(selectAddressByDuration(caseId, value));
-			    }
-
-			    // 🔥 SAVE SELECTIONS
-			    for (Address addr : selectedAddresses) {
-
-			        VerificationCaseSelection selection = createSelection(
-			                verificationCase,
-			                CheckCategoryEnum.ADDRESS,
-			                addr.getId()
-			        );
-
-			        addr.setVerificationCase(verificationCase);
-			        addressRepository.save(addr);
-
-			        attachDocumentsToSelection(
-			                selection,
-			                addr.getId(),
-			                checkCategory.getCategoryId()
-			        );
-
-			        updateSelectionStatus(selection);
-			    }
-			}
-		}
+	    // First process all base rules
+	    for (CandidatePackageRule rule : baseRules) {
+	        processRule(verificationCase, rule);
+	    }
+	    
+	    // Then process add-on rules (these should enhance/override base selections)
+	    for (CandidatePackageRule rule : addonRules) {
+	        processRule(verificationCase, rule);
+	    }
 	}
 
+	private void processRule(VerificationCase verificationCase, CandidatePackageRule rule) {
+	    Long categoryId = rule.getCheckCategoryId();
+	    CheckCategory checkCategory = checkCategoryRepository.findByCategoryId(categoryId);
+
+	    // =========================
+	    // 1. DOCUMENT TYPE RULES
+	    // =========================
+	    if (checkCategory != null && checkCategory.getName().equalsIgnoreCase(CheckCategoryEnum.IDENTITY.getName())) {
+	        processDocumentTypeRules(verificationCase, rule);
+	    }
+
+	    // =========================
+	    // 2. EDUCATION RULES
+	    // =========================
+	    else if (checkCategory != null && checkCategory.getName().equalsIgnoreCase(CheckCategoryEnum.EDUCATION.getName())) {
+	        processEducationRules(verificationCase, rule);
+	    }
+
+	    // =========================
+	    // 3. WORK RULES
+	    // =========================
+	    else if (checkCategory != null && checkCategory.getName().equalsIgnoreCase(CheckCategoryEnum.WORK.getName())) {
+	        processWorkRules(verificationCase, rule);
+	    }
+	    
+	    // =========================
+	    // 4. ADDRESS RULES
+	    // =========================
+	    else if (checkCategory != null && checkCategory.getName().equalsIgnoreCase(CheckCategoryEnum.ADDRESS.getName())) {
+	        processAddressRules(verificationCase, rule);
+	    }
+	}
+
+	private void processDocumentTypeRules(VerificationCase verificationCase, CandidatePackageRule rule) {
+	    RuleTypes ruleType = ruleTypesRepository.findById(rule.getRuleTypeId()).orElse(null);
+	    if (ruleType == null) return;
+	    
+	    boolean isAddon = rule.getIncludedInPackage() != null && !rule.getIncludedInPackage();
+	    String ruleCode = ruleType.getCode();
+	    
+	    // Case 1: Specific document type rule (e.g., AADHAR, PAN, VOTER, PASSPORT)
+	    if (!"ANY_1".equalsIgnoreCase(ruleCode) && !"ANY_2".equalsIgnoreCase(ruleCode)) {
+	        Long documentTypeId = ruleType.getDocumentTypeId();
+	        
+	        if (documentTypeId != null) {
+	            // Find all identity proofs of this type for this case
+	            List<IdentityProof> identityProofs = identityProofRepository
+	                    .findByVerificationCaseCaseIdAndDocTypeId(verificationCase.getCaseId(), documentTypeId);
+	            
+	            for (IdentityProof identityProof : identityProofs) {
+	                processIdentityProofSelection(verificationCase, identityProof, rule, isAddon);
+	            }
+	        } else {
+	            // Fallback: Check CandidatePackageRuleDocument
+	            List<CandidatePackageRuleDocument> docRules = candidatePackageRuleDocumentRepository.findByRule(rule);
+	            for (CandidatePackageRuleDocument docRule : docRules) {
+	                List<IdentityProof> identityProofs = identityProofRepository
+	                        .findByVerificationCaseCaseIdAndDocTypeId(verificationCase.getCaseId(), docRule.getDocumentTypeId());
+	                
+	                for (IdentityProof identityProof : identityProofs) {
+	                    processIdentityProofSelection(verificationCase, identityProof, rule, isAddon);
+	                }
+	            }
+	        }
+	    } 
+	    // Case 2: ANY_1 or ANY_2 rule
+	    else {
+	        List<CandidatePackageRuleDocument> selectedDocTypes = candidatePackageRuleDocumentRepository.findByRule(rule);
+	        
+	        int maxBaseSelections = ruleType.getMaxCount() != null ? ruleType.getMaxCount() : 1;
+	        int currentSelectionCount = 0;
+	        
+	        for (CandidatePackageRuleDocument docRule : selectedDocTypes) {
+	            Long documentTypeId = docRule.getDocumentTypeId();
+	            boolean shouldBeAddon = isAddon || (currentSelectionCount >= maxBaseSelections);
+	            
+	            // Find identity proofs of this document type
+	            List<IdentityProof> identityProofs = identityProofRepository
+	                    .findByVerificationCaseCaseIdAndDocTypeId(verificationCase.getCaseId(), documentTypeId);
+	            
+	            for (IdentityProof identityProof : identityProofs) {
+	                processIdentityProofSelection(verificationCase, identityProof, rule, shouldBeAddon);
+	            }
+	            
+	            // Only increment count if we actually processed this document type and it's base
+	            if (!shouldBeAddon && !identityProofs.isEmpty()) {
+	                currentSelectionCount++;
+	            }
+	        }
+	    }
+	}
+
+	private void processIdentityProofSelection(VerificationCase verificationCase, IdentityProof identityProof,
+	                                           CandidatePackageRule rule, boolean isAddon) {
+	    // Use identityProof.getId() as referenceId (consistent with education/work)
+	    VerificationCaseSelection existingSelection = verificationCaseSelectionRepository
+	            .findByVerificationCaseAndTypeAndReferenceId(verificationCase, CheckCategoryEnum.IDENTITY, identityProof.getId())
+	            .orElse(null);
+	    
+	    if (existingSelection != null) {
+	        // Selection already exists
+	        if (!isAddon && existingSelection.getIncludedInBase() == null) {
+	            // Base rule updating - ensure it's marked as base
+	            existingSelection.setIncludedInBase(true);
+	            existingSelection.setUnitPrice(BigDecimal.ZERO);
+	            verificationCaseSelectionRepository.save(existingSelection);
+	        }
+	        // If add-on rule finds existing selection, we DO NOT modify (preserve base pricing)
+	        return;
+	    }
+	    
+	    // Create new selection with identityProof ID as reference
+	    VerificationCaseSelection selection = createSelection(verificationCase, CheckCategoryEnum.IDENTITY, identityProof.getId());
+	    
+	    if (isAddon) {
+	        selection.setIncludedInBase(false);
+	        selection.setUnitPrice(rule.getUnitPrice() != null ? rule.getUnitPrice() : BigDecimal.ZERO);
+	    } else {
+	        selection.setIncludedInBase(true);
+	        selection.setUnitPrice(BigDecimal.ZERO);
+	    }
+	    verificationCaseSelectionRepository.save(selection);
+	    
+	    // Link documents to this selection
+	    CheckCategory identityCategory = checkCategoryRepository.findByName(CheckCategoryEnum.IDENTITY.getName()).orElseGet(null);
+	    
+	    List<Document> docs = documentRepository.findByCategory_CategoryIdAndObjectId(
+	            identityCategory.getCategoryId(), identityProof.getId());
+	    
+	    for (Document doc : docs) {
+	        if (doc.getSelection() == null) {
+	            doc.setSelection(selection);
+	            documentRepository.save(doc);
+	        }
+	    }
+	    
+	    updateSelectionStatus(selection);
+	}
+
+
+
+	private void processEducationRules(VerificationCase verificationCase, CandidatePackageRule rule) {
+	    RuleTypes ruleType = ruleTypesRepository.findById(rule.getRuleTypeId()).orElse(null);
+	    if (ruleType == null) return;
+
+	    CheckCategory checkCategory = checkCategoryRepository.findByCategoryId(rule.getCheckCategoryId());
+	    
+	    int maxCount = rule.getSelectedCount() != null ? rule.getSelectedCount() : 1;
+	    List<EducationHistory> selectedEducation = new ArrayList<>();
+	    boolean isAddon = rule.getIncludedInPackage() != null && !rule.getIncludedInPackage();
+
+	    // HIGHEST_ONLY LOGIC
+	    if ("HIGHEST_EDUCATION".equalsIgnoreCase(ruleType.getCode())) {
+	        selectedEducation.addAll(selectLatestEducation(verificationCase.getCaseId(), 1));
+	    }
+	    // ALL EDUCATION
+	    else if ("ALL".equalsIgnoreCase(ruleType.getCode())) {
+	        selectedEducation.addAll(educationHistoryRepository.findByVerificationCaseCaseId(verificationCase.getCaseId()));
+	    }
+	    // COUNT BASED (e.g. last N records)
+	    else if ("LAST_N".equalsIgnoreCase(ruleType.getCode())) {
+	        selectedEducation.addAll(selectLatestEducation(verificationCase.getCaseId(), maxCount));
+	    }
+
+	    for (EducationHistory edu : selectedEducation) {
+	        VerificationCaseSelection existingSelection = verificationCaseSelectionRepository
+	                .findByVerificationCaseAndTypeAndReferenceId(verificationCase, CheckCategoryEnum.EDUCATION, edu.getId())
+	                .orElse(null);
+	        
+	        // Only create if selection doesn't exist
+	        if (existingSelection == null) {
+	            VerificationCaseSelection selection = createSelection(verificationCase, CheckCategoryEnum.EDUCATION, edu.getId());
+	            
+	            // Set pricing info from the rule
+	            if (isAddon) {
+	                selection.setIncludedInBase(false);
+	                selection.setUnitPrice(rule.getUnitPrice() != null ? rule.getUnitPrice() : BigDecimal.ZERO);
+	            } else {
+	                selection.setIncludedInBase(true);
+	                selection.setUnitPrice(BigDecimal.ZERO);
+	            }
+	            
+	            verificationCaseSelectionRepository.save(selection);
+	            
+	            edu.setVerificationCase(verificationCase);
+	            educationHistoryRepository.save(edu);
+	            
+	            attachDocumentsToSelection(selection, edu.getId(), checkCategory.getCategoryId());
+	            updateSelectionStatus(selection);
+	        }
+	        // REMOVED the else-if block that was converting base to add-on!
+	        // If selection already exists, we DO NOT modify it - it's already handled by base rule
+	    }
+	    
+	    // Special handling: For ALL add-on, ensure ALL education records are selected
+	    // but only those NOT already selected by base rules
+	    if ("ALL".equalsIgnoreCase(ruleType.getCode()) && isAddon) {
+	        List<EducationHistory> allEducation = educationHistoryRepository.findByVerificationCaseCaseId(verificationCase.getCaseId());
+	        for (EducationHistory edu : allEducation) {
+	            boolean alreadySelected = verificationCaseSelectionRepository
+	                    .findByVerificationCaseAndTypeAndReferenceId(verificationCase, CheckCategoryEnum.EDUCATION, edu.getId())
+	                    .isPresent();
+	            
+	            if (!alreadySelected) {
+	                // This education record was NOT selected by base rule
+	                VerificationCaseSelection selection = createSelection(verificationCase, CheckCategoryEnum.EDUCATION, edu.getId());
+	                selection.setIncludedInBase(false);
+	                selection.setUnitPrice(rule.getUnitPrice() != null ? rule.getUnitPrice() : BigDecimal.ZERO);
+	                verificationCaseSelectionRepository.save(selection);
+	                
+	                edu.setVerificationCase(verificationCase);
+	                educationHistoryRepository.save(edu);
+	                
+	                attachDocumentsToSelection(selection, edu.getId(), checkCategory.getCategoryId());
+	                updateSelectionStatus(selection);
+	            }
+	        }
+	    }
+	}
+
+	private void processWorkRules(VerificationCase verificationCase, CandidatePackageRule rule) {
+	    RuleTypes ruleType = ruleTypesRepository.findById(rule.getRuleTypeId()).orElse(null);
+	    if (ruleType == null) return;
+
+	    CheckCategory checkCategory = checkCategoryRepository.findByCategoryId(rule.getCheckCategoryId());
+	    
+	    List<WorkExperience> selectedWork = new ArrayList<>();
+	    String ruleCode = ruleType.getCode();
+	    int maxCount = rule.getSelectedCount() != null ? rule.getSelectedCount() : 2;
+	    boolean isAddon = rule.getIncludedInPackage() != null && !rule.getIncludedInPackage();
+
+	    // LAST N COMPANIES
+	    if ("LAST_N".equalsIgnoreCase(ruleCode)) {
+	        selectedWork.addAll(selectLatestWork(verificationCase.getCaseId(), maxCount));
+	    }
+	    // ALL COMPANIES
+	    else if ("ALL".equalsIgnoreCase(ruleCode)) {
+	        selectedWork.addAll(workExperienceRepository.findByVerificationCaseCaseId(verificationCase.getCaseId()));
+	    }
+
+	    for (WorkExperience work : selectedWork) {
+	        VerificationCaseSelection existingSelection = verificationCaseSelectionRepository
+	                .findByVerificationCaseAndTypeAndReferenceId(verificationCase, CheckCategoryEnum.WORK, work.getExperienceId())
+	                .orElse(null);
+	        
+	        if (existingSelection == null) {
+	            // Create new selection only if it doesn't exist
+	            VerificationCaseSelection selection = createSelection(verificationCase, CheckCategoryEnum.WORK, work.getExperienceId());
+	            
+	            if (isAddon) {
+	                selection.setIncludedInBase(false);
+	                selection.setUnitPrice(rule.getUnitPrice() != null ? rule.getUnitPrice() : BigDecimal.ZERO);
+	            } else {
+	                selection.setIncludedInBase(true);
+	                selection.setUnitPrice(BigDecimal.ZERO);
+	            }
+	            
+	            verificationCaseSelectionRepository.save(selection);
+	            
+	            work.setVerificationCase(verificationCase);
+	            workExperienceRepository.save(work);
+	            
+	            attachDocumentsToSelection(selection, work.getExperienceId(), checkCategory.getCategoryId());
+	            updateSelectionStatus(selection);
+	        }
+	        // REMOVED the else-if block that was converting base to add-on!
+	        // If selection already exists, we DO NOT modify it - it's already handled by base rule
+	    }
+	    
+	    // Special handling: For ALL add-on, ensure ALL experiences are selected
+	    // but only those NOT already selected by base rules
+	    if ("ALL".equalsIgnoreCase(ruleCode) && isAddon) {
+	        List<WorkExperience> allWork = workExperienceRepository.findByVerificationCaseCaseId(verificationCase.getCaseId());
+	        for (WorkExperience work : allWork) {
+	            boolean alreadySelected = verificationCaseSelectionRepository
+	                    .findByVerificationCaseAndTypeAndReferenceId(verificationCase, CheckCategoryEnum.WORK, work.getExperienceId())
+	                    .isPresent();
+	            
+	            if (!alreadySelected) {
+	                // This work experience was NOT selected by base rule (e.g., candidate has 3+ experiences
+	                // but base rule only selected last 2)
+	                VerificationCaseSelection selection = createSelection(verificationCase, CheckCategoryEnum.WORK, work.getExperienceId());
+	                selection.setIncludedInBase(false);
+	                selection.setUnitPrice(rule.getUnitPrice() != null ? rule.getUnitPrice() : BigDecimal.ZERO);
+	                verificationCaseSelectionRepository.save(selection);
+	                
+	                work.setVerificationCase(verificationCase);
+	                workExperienceRepository.save(work);
+	                
+	                attachDocumentsToSelection(selection, work.getExperienceId(), checkCategory.getCategoryId());
+	                updateSelectionStatus(selection);
+	            }
+	        }
+	    }
+	}
+
+	private void processAddressRules(VerificationCase verificationCase, CandidatePackageRule rule) {
+	    RuleTypes ruleType = ruleTypesRepository.findById(rule.getRuleTypeId()).orElse(null);
+	    if (ruleType == null) return;
+
+	    CheckCategory checkCategory = checkCategoryRepository.findByCategoryId(rule.getCheckCategoryId());
+	    
+	    List<Address> selectedAddresses = new ArrayList<>();
+	    String ruleCode = ruleType.getCode();
+	    int value = rule.getSelectedCount() != null ? rule.getSelectedCount() : 1;
+	    boolean isAddon = rule.getIncludedInPackage() != null && !rule.getIncludedInPackage();
+
+	    // LAST N ADDRESSES
+	    if ("LAST_N".equalsIgnoreCase(ruleCode)) {
+	        selectedAddresses.addAll(selectLatestAddresses(verificationCase.getCaseId(), value));
+	    }
+	    // ADDRESS DURATION (X YEARS)
+	    else if ("ADDRESS_DURATION".equalsIgnoreCase(ruleCode)) {
+	        selectedAddresses.addAll(selectAddressByDuration(verificationCase.getCaseId(), value));
+	    }
+
+	    for (Address addr : selectedAddresses) {
+	        VerificationCaseSelection existingSelection = verificationCaseSelectionRepository
+	                .findByVerificationCaseAndTypeAndReferenceId(verificationCase, CheckCategoryEnum.ADDRESS, addr.getId())
+	                .orElse(null);
+	        
+	        if (existingSelection == null) {
+	            VerificationCaseSelection selection = createSelection(verificationCase, CheckCategoryEnum.ADDRESS, addr.getId());
+	            
+	            if (isAddon) {
+	                selection.setIncludedInBase(false);
+	                selection.setUnitPrice(rule.getUnitPrice() != null ? rule.getUnitPrice() : BigDecimal.ZERO);
+	            } else {
+	                selection.setIncludedInBase(true);
+	                selection.setUnitPrice(BigDecimal.ZERO);
+	            }
+	            
+	            verificationCaseSelectionRepository.save(selection);
+	            
+	            addr.setVerificationCase(verificationCase);
+	            addressRepository.save(addr);
+	            
+	            attachDocumentsToSelection(selection, addr.getId(), checkCategory.getCategoryId());
+	            updateSelectionStatus(selection);
+	        }
+	        // REMOVED the else-if block that was converting base to add-on!
+	    }
+	}
+
+	// Helper methods remain the same as before
 	private VerificationCaseSelection createSelection(VerificationCase caseObj, CheckCategoryEnum type, Long referenceId) {
+	    Optional<VerificationCaseSelection> existing = verificationCaseSelectionRepository
+	            .findByVerificationCaseAndTypeAndReferenceId(caseObj, type, referenceId);
 
-		Optional<VerificationCaseSelection> existing = verificationCaseSelectionRepository
-				.findByVerificationCaseAndTypeAndReferenceId(caseObj, type, referenceId);
+	    if (existing.isPresent()) {
+	        return existing.get();
+	    }
 
-		if (existing.isPresent()) {
-			return existing.get();
-		}
+	    VerificationCaseSelection selection = VerificationCaseSelection.builder()
+	            .verificationCase(caseObj)
+	            .type(type)
+	            .referenceId(referenceId)
+	            .status(CaseCheckStatus.PENDING.name())
+	            .build();
 
-		VerificationCaseSelection selection = VerificationCaseSelection.builder().verificationCase(caseObj).type(type)
-				.referenceId(referenceId)
-				.status(CaseCheckStatus.PENDING.name())
-				.build();
-
-		return verificationCaseSelectionRepository.save(selection);
+	    return verificationCaseSelectionRepository.save(selection);
 	}
 
-	private void attachDocumentsToSelection(VerificationCaseSelection selection, Long objectId,
-			Long checkCategoryId) {
+	private void attachDocumentsToSelection(VerificationCaseSelection selection, Long objectId, Long checkCategoryId) {
+	    List<Document> docs = documentRepository.findByCategory_CategoryIdAndObjectId(checkCategoryId, objectId);
 
-		List<Document> docs = documentRepository.findByCategory_CategoryIdAndObjectId(checkCategoryId,objectId);
-
-		for (Document doc : docs) {
-
-			if (doc.getSelection() == null) {
-				doc.setSelection(selection);
-				documentRepository.save(doc);
-			}
-		}
+	    for (Document doc : docs) {
+	        if (doc.getSelection() == null) {
+	            doc.setSelection(selection);
+	            documentRepository.save(doc);
+	        }
+	    }
 	}
-	
-	
+
 	private void updateSelectionStatus(VerificationCaseSelection selection) {
-
 	    List<Document> docs = documentRepository.findBySelection(selection);
 
 	    if (docs.isEmpty()) {
@@ -370,89 +554,71 @@ public class VerificationCaseSelectionService {
 
 	    verificationCaseSelectionRepository.save(selection);
 	}
-	
-	private List<EducationHistory> selectLatestEducation(Long caseId, int limit) {
 
+	private List<EducationHistory> selectLatestEducation(Long caseId, int limit) {
 	    return educationHistoryRepository.findByVerificationCaseCaseId(caseId)
 	            .stream()
-	            .sorted(
-	                Comparator.<EducationHistory, LocalDate>comparing(e -> {
-	                    if (e.getToDate() != null) {
-	                        return e.getToDate();
-	                    } else if (e.getYearOfPassing() != null) {
-	                        return LocalDate.of(e.getYearOfPassing(), 12, 31);
-	                    } else {
-	                        return LocalDate.MIN;
-	                    }
-	                }).reversed()
-	            )
+	            .sorted(Comparator.<EducationHistory, LocalDate>comparing(e -> {
+	                if (e.getToDate() != null) {
+	                    return e.getToDate();
+	                } else if (e.getYearOfPassing() != null) {
+	                    return LocalDate.of(e.getYearOfPassing(), 12, 31);
+	                } else {
+	                    return LocalDate.MIN;
+	                }
+	            }).reversed())
 	            .limit(limit)
 	            .toList();
 	}
-	
-	private List<WorkExperience> selectLatestWork(Long caseId, int limit) {
 
+	private List<WorkExperience> selectLatestWork(Long caseId, int limit) {
 	    return workExperienceRepository.findByVerificationCaseCaseId(caseId)
 	            .stream()
-	            .sorted(
-	                Comparator.<WorkExperience, LocalDate>comparing(w -> {
-	                    if (w.getEnd_date() != null) {
-	                        return w.getEnd_date();
-	                    } else {
-	                        return LocalDate.now(); // current job
-	                    }
-	                }).reversed()
-	            )
+	            .sorted(Comparator.<WorkExperience, LocalDate>comparing(w -> {
+	                if (w.getEnd_date() != null) {
+	                    return w.getEnd_date();
+	                } else {
+	                    return LocalDate.now();
+	                }
+	            }).reversed())
 	            .limit(limit)
 	            .toList();
 	}
-	
-	private List<Address> selectLatestAddresses(Long caseId, int limit) {
 
+	private List<Address> selectLatestAddresses(Long caseId, int limit) {
 	    return addressRepository.findByVerificationCaseCaseId(caseId)
 	            .stream()
-	            .sorted(
-	                Comparator.<Address, LocalDate>comparing(a -> {
-	                    if (a.getToDate() != null) {
-	                        return a.getToDate();
-	                    } else {
-	                        return LocalDate.now(); // current address
-	                    }
-	                }).reversed()
-	            )
+	            .sorted(Comparator.<Address, LocalDate>comparing(a -> {
+	                if (a.getToDate() != null) {
+	                    return a.getToDate();
+	                } else {
+	                    return LocalDate.now();
+	                }
+	            }).reversed())
 	            .limit(limit)
 	            .toList();
 	}
-	
-	private List<Address> selectAddressByDuration(Long caseId, int years) {
 
+	private List<Address> selectAddressByDuration(Long caseId, int years) {
 	    List<Address> addresses = addressRepository
 	            .findByVerificationCaseCaseId(caseId)
 	            .stream()
-	            .sorted(
-	                Comparator.<Address, LocalDate>comparing(a -> {
-	                    if (a.getFromDate() != null) {
-	                        return a.getFromDate();
-	                    } else {
-	                        return LocalDate.MIN;
-	                    }
-	                }).reversed()
-	            )
+	            .sorted(Comparator.<Address, LocalDate>comparing(a -> {
+	                if (a.getFromDate() != null) {
+	                    return a.getFromDate();
+	                } else {
+	                    return LocalDate.MIN;
+	                }
+	            }).reversed())
 	            .toList();
 
 	    List<Address> result = new ArrayList<>();
-
 	    LocalDate cutoffDate = LocalDate.now().minusYears(years);
 
 	    for (Address addr : addresses) {
-
 	        result.add(addr);
+	        LocalDate toDate = addr.getToDate() != null ? addr.getToDate() : LocalDate.now();
 
-	        LocalDate toDate = addr.getToDate() != null
-	                ? addr.getToDate()
-	                : LocalDate.now();
-
-	        // 🔥 stop when coverage reaches required duration
 	        if (toDate.isBefore(cutoffDate)) {
 	            break;
 	        }

@@ -61,4 +61,12 @@ public class EmployerPackageSelectedRule {     // saving the rules configured by
 
     @Column(name = "requires_count")
     private Boolean requiresCount;
+    
+    
+ // 🔥 PARENT RULE (ANY_2)
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "package_rule_id", nullable = false)
+    private EmployerPackageRule packageRule;
+    
+    
 }

@@ -58,7 +58,12 @@ public class CandidatePackageRule {
     
     @Column(name = "is_addon")
     private Boolean addon = false;
-
+    
+	/*
+	 * // 🔥 NEW FIELD (IMPORTANT) // 🔹 RESOLVED RULE (AADHAR, PAN, etc.)
+	 * 
+	 * @Column(name = "resolved_rule_type_id") private Long resolvedRuleTypeId;
+	 */
     
  // 🔹 Pricing snapshot (VERY IMPORTANT)
     @Column(name = "unit_price")
@@ -69,5 +74,8 @@ public class CandidatePackageRule {
 
     @Column(name = "total_price")
     private BigDecimal totalPrice;
+    
+    @Column(name = "actual_count")  // candidate submitted count
+    private Integer actualCount;
     
 }

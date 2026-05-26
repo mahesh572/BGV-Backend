@@ -97,7 +97,7 @@ public class RuleTypeSeeder implements CommandLineRunner {
                 .code("ANY_1")
                 .label("Select Any One Document")
                 .category(identity)
-                .ruleGroup(RuleGroup.DOCUMENT_SELECTION)
+                .ruleGroup(RuleGroup.RULE)
                 .requiresCount(false)
                 .minCount(1)
                 .maxCount(1)

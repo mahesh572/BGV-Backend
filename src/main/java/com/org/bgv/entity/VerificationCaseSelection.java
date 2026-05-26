@@ -1,5 +1,7 @@
 package com.org.bgv.entity;
 
+import java.math.BigDecimal;
+
 import com.org.bgv.dto.CheckCategoryEnum;
 import com.org.bgv.entity.VerificationCase;
 
@@ -40,4 +42,8 @@ public class VerificationCaseSelection {
     private String status; // PENDING / VERIFIED / REJECTED
 
     private String remarks;
+    
+    private Boolean includedInBase;
+    
+    private BigDecimal unitPrice;
 }

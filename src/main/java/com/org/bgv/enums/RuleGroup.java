@@ -8,6 +8,7 @@ import com.org.bgv.dto.CheckCategoryEnum;
 
 public enum RuleGroup {
 
+	RULE(Set.of(CheckCategoryEnum.IDENTITY.getName())),
     DOCUMENT_SELECTION(Set.of(CheckCategoryEnum.IDENTITY.getName())),
     RECORD_COUNT(Set.of( CheckCategoryEnum.WORK.getName())),
     ADD_ON(Set.of( CheckCategoryEnum.WORK.getName())),

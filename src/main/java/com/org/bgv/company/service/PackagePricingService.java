@@ -1,5 +1,6 @@
 package com.org.bgv.company.service;
 
+import java.math.BigDecimal;
 import java.util.Optional;
 
 import org.springframework.stereotype.Service;
@@ -23,148 +24,142 @@ import lombok.extern.slf4j.Slf4j;
 @AllArgsConstructor
 @Slf4j
 public class PackagePricingService {
-	
-	    private final PlatformDocumentPricingRepository platformDocumentPricingRepository;
-	    private final EmployerDocumentPricingRepository employerDocumentPricingRepository;
-	    private final PlatformCheckPricingRepository platformCheckPricingRepository;
-	    private final EmployerCheckPricingRepository employerCheckPricingRepository;
 
-	
-	 public PricingInfo resolvePricing(
-	            Long companyId,
-	            Long categoryId,
-	            RuleTypes ruleType
-	    ) {
+	private final PlatformDocumentPricingRepository platformDocumentPricingRepository;
+	private final EmployerDocumentPricingRepository employerDocumentPricingRepository;
+	private final PlatformCheckPricingRepository platformCheckPricingRepository;
+	private final EmployerCheckPricingRepository employerCheckPricingRepository;
 
-	        log.info("Resolving pricing → companyId={}, categoryId={}, ruleTypeId={}, ruleCode={}, ruleGroup={}",
-	                companyId,
-	                categoryId,
-	                ruleType.getRuleTypeId(),
-	                ruleType.getCode(),
-	                ruleType.getRuleGroup()
-	        );
+	public PricingInfo resolvePricing(Long companyId, Long categoryId, RuleTypes ruleType) {
 
-	        // ✅ 1. DOCUMENT_SELECTION → use DOCUMENT pricing
-	        if (RuleGroup.DOCUMENT_SELECTION.equals(ruleType.getRuleGroup())) {
+		log.info("Resolving pricing → companyId={}, categoryId={}, ruleTypeId={}, ruleCode={}, ruleGroup={}", companyId,
+				categoryId, ruleType.getRuleTypeId(), ruleType.getCode(), ruleType.getRuleGroup());
 
-	            Long documentTypeId = ruleType.getDocumentTypeId();
+		// ✅ 1. DOCUMENT_SELECTION → use DOCUMENT pricing
+		if (RuleGroup.DOCUMENT_SELECTION.equals(ruleType.getRuleGroup())) {
 
-	            log.info("DOCUMENT_SELECTION detected → documentTypeId={}", documentTypeId);
+			Long documentTypeId = ruleType.getDocumentTypeId();
 
-	            if (documentTypeId != null) {
+			log.info("DOCUMENT_SELECTION detected → documentTypeId={}", documentTypeId);
 
-	                // 🔹 Employer Document Pricing
-	                Optional<EmployerDocumentPricing> employerDocPricing =
-	                        employerDocumentPricingRepository
-	                                .findByCompany_IdAndCheckCategory_CategoryIdAndDocumentType_docTypeId(
-	                                        companyId,
-	                                        categoryId,
-	                                        documentTypeId
-	                                );
+			if (documentTypeId != null) {
 
-	                if (employerDocPricing.isPresent()) {
-	                    EmployerDocumentPricing pricing = employerDocPricing.get();
+				// 🔹 Employer Document Pricing
+				Optional<EmployerDocumentPricing> employerDocPricing = employerDocumentPricingRepository
+						.findByCompany_IdAndCheckCategory_CategoryIdAndDocumentType_docTypeId(companyId, categoryId,
+								documentTypeId);
 
-	                    log.info("EmployerDocumentPricing FOUND → pricingType={}, unitPrice={}",
-	                            pricing.getPricingType(),
-	                            pricing.getUnitPrice()
-	                    );
+				if (employerDocPricing.isPresent()) {
+					EmployerDocumentPricing pricing = employerDocPricing.get();
 
-	                    return new PricingInfo(
-	                            pricing.getPricingType(),
-	                            pricing.getUnitPrice(),
-	                            pricing.getMinCharge(),
-	                            pricing.getMaxCharge()
-	                    );
-	                } else {
-	                    log.warn("EmployerDocumentPricing NOT FOUND → fallback to platform pricing");
-	                }
+					log.info("EmployerDocumentPricing FOUND → pricingType={}, unitPrice={}", pricing.getPricingType(),
+							pricing.getUnitPrice());
+					
+					
+					return PricingInfo.builder()
+					
+					.pricingType(pricing.getPricingType())
+					.unitPrice(pricing.getUnitPrice())
+					.minCharge(pricing.getMinCharge())
+					.maxCharge(pricing.getMaxCharge())
+					.build();
 
-	                // 🔹 Platform Document Pricing
-	                Optional<PlatformDocumentPricing> platformDocPricing =
-	                        platformDocumentPricingRepository
-	                                .findByCheckCategory_CategoryIdAndDocumentType_DocTypeIdAndActiveTrue(
-	                                        categoryId,
-	                                        documentTypeId
-	                                );
+					
+				} else {
+					log.warn("EmployerDocumentPricing NOT FOUND → fallback to platform pricing");
+				}
 
-	                if (platformDocPricing.isPresent()) {
-	                    PlatformDocumentPricing pricing = platformDocPricing.get();
+				// 🔹 Platform Document Pricing
+				Optional<PlatformDocumentPricing> platformDocPricing = platformDocumentPricingRepository
+						.findByCheckCategory_CategoryIdAndDocumentType_DocTypeIdAndActiveTrue(categoryId,
+								documentTypeId);
 
-	                    log.info("PlatformDocumentPricing FOUND → pricingType={}, unitPrice={}",
-	                            pricing.getPricingType(),
-	                            pricing.getUnitPrice()
-	                    );
+				if (platformDocPricing.isPresent()) {
+					PlatformDocumentPricing pricing = platformDocPricing.get();
 
-	                    return new PricingInfo(
-	                            pricing.getPricingType(),
-	                            pricing.getUnitPrice(),
-	                            null,
-	                            null
-	                    );
-	                } else {
-	                    log.warn("PlatformDocumentPricing NOT FOUND → returning empty pricing");
-	                }
-	            } else {
-	                log.error("DocumentTypeId is NULL for ruleTypeId={}", ruleType.getRuleTypeId());
-	            }
+					log.info("PlatformDocumentPricing FOUND → pricingType={}, unitPrice={}", pricing.getPricingType(),
+							pricing.getUnitPrice());
+					return PricingInfo.builder()
+					.pricingType(pricing.getPricingType())
+					.unitPrice(pricing.getUnitPrice())
+					.build();
+					
+				} else {
+					log.warn("PlatformDocumentPricing NOT FOUND → returning empty pricing");
+				}
+			} else {
+				log.error("DocumentTypeId is NULL for ruleTypeId={}", ruleType.getRuleTypeId());
+			}
 
-	            return new PricingInfo(null, null, null, null);
-	        }
+			return PricingInfo.builder().build();
+		}
 
-	        // ✅ 2. NON-DOCUMENT rules → rule-based pricing
-	        log.info("NON-DOCUMENT rule → using rule-based pricing");
+		// ✅ 2. NON-DOCUMENT rules → rule-based pricing
+		log.info("NON-DOCUMENT rule → using rule-based pricing");
 
-	        Optional<EmployerCheckPricing> employerPricing =
-	                employerCheckPricingRepository
-	                        .findByCompany_IdAndCheckCategory_CategoryIdAndRuleType_RuleTypeIdAndActiveTrue(
-	                                companyId,
-	                                categoryId,
-	                                ruleType.getRuleTypeId()
-	                        );
+		Optional<EmployerCheckPricing> employerPricing = employerCheckPricingRepository
+				.findByCompany_IdAndCheckCategory_CategoryIdAndRuleType_RuleTypeIdAndActiveTrue(companyId, categoryId,
+						ruleType.getRuleTypeId());
 
-	        if (employerPricing.isPresent()) {
-	            EmployerCheckPricing pricing = employerPricing.get();
+		if (employerPricing.isPresent()) {
+			EmployerCheckPricing pricing = employerPricing.get();
 
-	            log.info("EmployerCheckPricing FOUND → pricingType={}, unitPrice={}",
-	                    pricing.getPricingType(),
-	                    pricing.getUnitPrice()
-	            );
+			log.info("EmployerCheckPricing FOUND → pricingType={}, unitPrice={}", pricing.getPricingType(),
+					pricing.getUnitPrice());
 
-	            return new PricingInfo(
-	                    pricing.getPricingType(),
-	                    pricing.getUnitPrice(),
-	                    pricing.getMinCharge(),
-	                    pricing.getMaxCharge()
-	            );
-	        } else {
-	            log.warn("EmployerCheckPricing NOT FOUND → fallback to platform pricing");
-	        }
+                      return PricingInfo.builder()
+					
+					.pricingType(pricing.getPricingType())
+					.unitPrice(pricing.getUnitPrice())
+					.minCharge(pricing.getMinCharge())
+					.maxCharge(pricing.getMaxCharge())
+					.build();
+		} else {
+			log.warn("EmployerCheckPricing NOT FOUND → fallback to platform pricing");
+		}
 
-	        PlatformCheckPricing platformPricing =
-	                platformCheckPricingRepository
-	                        .findByCheckCategory_CategoryIdAndRuleType_RuleTypeIdAndActiveTrue(
-	                                categoryId,
-	                                ruleType.getRuleTypeId()
-	                        )
-	                        .orElse(null);
+		PlatformCheckPricing platformPricing = platformCheckPricingRepository
+				.findByCheckCategory_CategoryIdAndRuleType_RuleTypeIdAndActiveTrue(categoryId, ruleType.getRuleTypeId())
+				.orElse(null);
 
-	        if (platformPricing != null) {
-	            log.info("PlatformCheckPricing FOUND → pricingType={}, unitPrice={}",
-	                    platformPricing.getPricingType(),
-	                    platformPricing.getUnitPrice()
-	            );
-	        } else {
-	            log.warn("PlatformCheckPricing NOT FOUND → returning empty pricing");
-	        }
+		if (platformPricing != null) {
+			log.info("PlatformCheckPricing FOUND → pricingType={}, unitPrice={}", platformPricing.getPricingType(),
+					platformPricing.getUnitPrice());
+		} else {
+			log.warn("PlatformCheckPricing NOT FOUND → returning empty pricing");
+		}
 
-	        return new PricingInfo(
-	                platformPricing != null ? platformPricing.getPricingType() : null,
-	                platformPricing != null ? platformPricing.getUnitPrice() : null,
-	                null,
-	                null
-	        );
-	    }
-	
-	
+		
+		return PricingInfo.builder()
+				
+				.pricingType(platformPricing != null ? platformPricing.getPricingType() : null)
+				.unitPrice(platformPricing != null ? platformPricing.getUnitPrice() : null)
+				
+				.build();
+		
+		
+	}
+
+	public PricingInfo getDocumentPrice(Long companyId, Long categoryId, Long documentTypeId) {
+
+		// 🔹 1. Try Employer-specific pricing
+		Optional<EmployerDocumentPricing> employerPricing = employerDocumentPricingRepository
+				.findByCompany_IdAndCheckCategory_CategoryIdAndDocumentType_docTypeId(companyId,
+						categoryId, documentTypeId);
+
+		if (employerPricing.isPresent()) {
+			return PricingInfo.builder().unitPrice(employerPricing.get().getUnitPrice()).source("EMPLOYER").build();
+		}
+
+		// 🔹 2. Fallback to Platform pricing
+		Optional<PlatformDocumentPricing> platformPricing = platformDocumentPricingRepository
+				.findByCheckCategory_CategoryIdAndDocumentType_DocTypeIdAndActiveTrue(categoryId, documentTypeId);
+
+		if (platformPricing.isPresent()) {
+			return PricingInfo.builder().unitPrice(platformPricing.get().getUnitPrice()).source("PLATFORM").build();
+		}
+
+		// 🔹 3. Default fallback
+		return PricingInfo.builder().unitPrice(BigDecimal.ZERO).source("DEFAULT").build();
+	}
 }
