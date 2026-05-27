@@ -37,5 +37,11 @@ public class NotificationLog {
     private String failureReason;
 
     private Instant sentAt;
+
+    
+private Long checkId;
+private Long caseId;
+private Long candidateId;
+
 }
 
