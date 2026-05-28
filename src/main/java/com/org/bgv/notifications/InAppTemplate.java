@@ -38,4 +38,9 @@ public class InAppTemplate {
     private PolicySource source;
 
     private boolean active;
+
+    
+@Enumerated(EnumType.STRING)
+private PolicySource source;
+
 }
