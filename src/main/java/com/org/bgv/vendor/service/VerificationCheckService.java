@@ -1060,12 +1060,11 @@ public class VerificationCheckService {
 	
 	private List<ActionDTO> resolveDocumentActions(String documentTypeStatus,CaseCheckStatus checkStatus) {
 
-	    boolean restricted =
-	            "REQUEST_INFO".equals(documentTypeStatus) ||
-	            "INSUFFICIENT".equals(documentTypeStatus) ||
-	            checkStatus == CaseCheckStatus.ACTION_REQUIRED;
-
-	    if (!restricted) {
+		boolean restricted =
+		        Set.of("REQUEST_INFO", "INSUFFICIENT").contains(documentTypeStatus)
+		        || CaseCheckStatus.ACTION_REQUIRED.equals(checkStatus);
+	    
+		if (!restricted) {
 	        return VendorActionCatalog.documentActions();
 	    }
 
@@ -1096,8 +1095,8 @@ public class VerificationCheckService {
 		        status == DocumentStatus.INSUFFICIENT ||
 		        status == DocumentStatus.REJECTED ||
 		        status == DocumentStatus.VERIFIED ||
-		        check.getStatus() == CaseCheckStatus.REJECTED ||
-		        check.getStatus() == CaseCheckStatus.ACTION_REQUIRED;
+		        check.getStatus() == CaseCheckStatus.REJECTED ;
+		      //  || check.getStatus() == CaseCheckStatus.ACTION_REQUIRED;
 		
 		
 		log.info("resolveFileActions::::::::::::::::::restricted::::::::::::{}",restricted);

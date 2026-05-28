@@ -144,7 +144,7 @@ public class WorkExperienceService {
                         	
                         	List<DocumentType> documentTypes =
                                     documentTypeRepository
-                                            .findByCategoryCategoryId(category.getCategoryId());
+                                            .findByCategoryCategoryIdAndIsRequired(category.getCategoryId(),Boolean.TRUE);
                         	
                         	List<DocumentTypeDto> documentTypesDto = documentService.buildCompanyDocumentTypes(candidateId,category,documentTypes,experience.getExperienceId());
                            

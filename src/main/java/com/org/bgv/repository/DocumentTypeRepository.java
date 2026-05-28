@@ -20,6 +20,11 @@ public interface DocumentTypeRepository extends JpaRepository<DocumentType, Long
     // Find all document types by category ID
     List<DocumentType> findByCategoryCategoryId(Long categoryId);
     
+    List<DocumentType> findByCategoryCategoryIdAndIsRequired(
+            Long categoryId,
+            boolean isRequired
+    );
+    
     // Find all document types by category name
     List<DocumentType> findByCategoryName(String categoryName);
     
