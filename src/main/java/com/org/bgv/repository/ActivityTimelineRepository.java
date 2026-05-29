@@ -27,4 +27,9 @@ public interface ActivityTimelineRepository extends JpaRepository<ActivityTimeli
             @Param("candidateId") Long candidateId,
             @Param("startDate") LocalDateTime startDate,
             @Param("endDate") LocalDateTime endDate);
+    
+    
+    List<ActivityTimeline> findByCaseIdOrderByTimestampAsc(Long caseId);
+
+    List<ActivityTimeline> findByCandidateCandidateIdOrderByTimestampAsc(Long candidateId);
 }

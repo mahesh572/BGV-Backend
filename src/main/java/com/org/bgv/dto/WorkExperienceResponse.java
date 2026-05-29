@@ -12,8 +12,10 @@ import lombok.NoArgsConstructor;
 @NoArgsConstructor
 @AllArgsConstructor
 public class WorkExperienceResponse {
-    private Long profileId;
-    private String profileName;
+	private Long checkId;
+	private Long caseId;
+	private Long categoryId;
+	private String status;
     private List<WorkExperienceDTO> workExperiences;
-    private DocumentSummary summary;
+   
 }

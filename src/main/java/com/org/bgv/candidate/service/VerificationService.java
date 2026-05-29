@@ -5,6 +5,7 @@ package com.org.bgv.candidate.service;
 import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.org.bgv.candidate.dto.CandidateVerificationDTO;
+import com.org.bgv.candidate.dto.SectionStatusUpdateRequest;
 import com.org.bgv.candidate.dto.VerificationSectionDTO;
 import com.org.bgv.candidate.entity.CandidateVerification;
 import com.org.bgv.candidate.repository.CandidateVerificationRepository;
@@ -15,6 +16,7 @@ import com.org.bgv.constants.SectionConstants;
 import com.org.bgv.constants.SectionStatus;
 import com.org.bgv.constants.VerificationStatus;
 import com.org.bgv.entity.VerificationCase;
+import com.org.bgv.entity.VerificationCaseCheck;
 import com.org.bgv.entity.VerificationCaseDocument;
 import com.org.bgv.repository.VerificationCaseCheckRepository;
 import com.org.bgv.repository.VerificationCaseDocumentRepository;
@@ -25,7 +27,9 @@ import com.org.bgv.service.IdentityProofService;
 import com.org.bgv.service.ProfileAddressService;
 import com.org.bgv.service.ProfileService;
 import com.org.bgv.service.WorkExperienceService;
+import com.org.bgv.vendor.dto.ActionStatus;
 import com.org.bgv.vendor.dto.BaseCheckDTO;
+import com.org.bgv.vendor.entity.VerificationAction;
 
 import ch.qos.logback.classic.Logger;
 import jakarta.persistence.EntityNotFoundException;
@@ -61,6 +65,8 @@ public class VerificationService {
     private final VerificationCaseRepository verificationCaseRepository;
     private final VerificationCaseCheckRepository verificationCaseCheckRepository;
     private final VerificationCaseDocumentRepository verificationCaseDocumentRepository;
+    private final VerificationHelperService verificationHelperService;
+    
    
     
     @Cacheable(value = "verification", key = "#candidateId")
@@ -85,139 +91,79 @@ public class VerificationService {
     
     @Transactional
     @CacheEvict(value = "verification", key = "#candidateId")
-    public CandidateVerificationDTO updateSectionStatus(Long candidateId, String section, 
-                                                        String status) throws ValidationException {
-        log.info("Updating section {} status to {} for candidate: {}", section, status, candidateId);
+    public CandidateVerificationDTO updateSectionStatus(SectionStatusUpdateRequest sectionStatusUpdateRequest) throws ValidationException {
+        log.info("Updating section {} status to {} for candidate: {}", sectionStatusUpdateRequest.getSection(), sectionStatusUpdateRequest.getStatus(), sectionStatusUpdateRequest.getCandidateId());
         
-        CandidateVerification verification = candidateVerificationRepository.findByCandidateId(candidateId)
+        CandidateVerification candidateVerification = candidateVerificationRepository.findByCandidateIdAndVerificationCaseCaseId(sectionStatusUpdateRequest.getCandidateId(),sectionStatusUpdateRequest.getCaseId())
             .orElseThrow(() -> new EntityNotFoundException("Verification not found"));
         
         // Update section status in JSON field
-        Map<String, Map<String, Object>> sectionStatusMap = getSectionStatusMap(verification);
-        Map<String, Object> sectionData = sectionStatusMap.getOrDefault(section, new HashMap<>());
+        Map<String, Map<String, Object>> sectionStatusMap = verificationHelperService.getSectionStatusMap(candidateVerification);
+        Map<String, Object> sectionData = sectionStatusMap.getOrDefault(sectionStatusUpdateRequest.getSection(), new HashMap<>());
         
-        sectionData.put("status", status.toString());
+        
+        log.info("sectionData.get(\"status\"):::::sectionData.get(\"status\").equals(VerificationStatus.ACTION_REQUIRED)::{}{}",sectionData.get("status"),sectionData.get("status").equals(VerificationStatus.ACTION_REQUIRED.name()));
+        
+        if(sectionStatusUpdateRequest.getStatus()!=null && sectionStatusUpdateRequest.getStatus().equalsIgnoreCase(VerificationStatus.SUBMITTED.name()) && sectionData.get("status").equals(VerificationStatus.ACTION_REQUIRED.name())) {
+        	
+        	
+        	Object countObj = sectionData.get("resubmissionCount");
+
+            int resubmissionCount = 0;
+            
+            if (countObj instanceof Number) {
+                resubmissionCount = ((Number) countObj).intValue();
+            } else if (countObj instanceof String) {
+                try {
+                    resubmissionCount = Integer.parseInt((String) countObj);
+                } catch (NumberFormatException ignored) {}
+            }
+            
+            resubmissionCount++;
+        	
+        	sectionData.put("resubmissionCount", resubmissionCount);
+        	 sectionData.put("resubmitted", Boolean.TRUE);
+        }
+        
+        sectionData.put("status", sectionStatusUpdateRequest.getStatus().toString());
         sectionData.put("lastUpdated", LocalDateTime.now().toString());
         
         
-        sectionStatusMap.put(section, sectionData);
+        sectionStatusMap.put(sectionStatusUpdateRequest.getSection(), sectionData);
         
         try {
-            verification.setSectionStatus(objectMapper.writeValueAsString(sectionStatusMap));
-            verification.setUpdatedAt(LocalDateTime.now());
-            verification = candidateVerificationRepository.save(verification);
+        	candidateVerification.setSectionStatus(objectMapper.writeValueAsString(sectionStatusMap));
+        	candidateVerification.setUpdatedAt(LocalDateTime.now());
+        	candidateVerification = candidateVerificationRepository.save(candidateVerification);
         } catch (Exception e) {
             log.error("Error updating section status: {}", e.getMessage());
             throw new ValidationException("Failed to update section status");
         }
         
         // Update overall progress
-        int progress = calculateProgress(verification);
-        verification.setProgressPercentage(progress);
+      //  int progress = calculateProgress(candidateVerification);
+      //  candidateVerification.setProgressPercentage(progress);
         
         // Update verification status if all required sections are completed
-        if (progress == 100 && verification.getStatus() == VerificationStatus.IN_PROGRESS) {
-            verification.setStatus(VerificationStatus.SUBMITTED);
-            verification.setSubmittedAt(LocalDateTime.now());
+        /*
+        if (progress == 100 && candidateVerification.getStatus() == VerificationStatus.IN_PROGRESS) {
+        	candidateVerification.setStatus(VerificationStatus.SUBMITTED);
+        	candidateVerification.setSubmittedAt(LocalDateTime.now());
+        }
+        */
+        if (candidateVerification.getStatus() == VerificationStatus.IN_PROGRESS) {
+        	candidateVerification.setStatus(VerificationStatus.SUBMITTED);
+        	candidateVerification.setSubmittedAt(LocalDateTime.now());
         }
         
-        verification = candidateVerificationRepository.save(verification);
+        candidateVerification = candidateVerificationRepository.save(candidateVerification);
         
-        return convertToDTO(verification);
+        
+        
+        
+        return convertToDTO(candidateVerification);
     }
     
-    @Transactional
-    @CacheEvict(value = "verification", key = "#candidateId")
-    public CandidateVerificationDTO submitForVerification(Long candidateId, Long caseId)
-            throws ValidationException {
-
-        log.info("Submitting verification for candidate: {}, case: {}", candidateId, caseId);
-
-        CandidateVerification candidateverification =
-        		candidateVerificationRepository.findByCandidateId(candidateId)
-                        .orElseThrow(() -> new EntityNotFoundException("Verification not found"));
-
-        VerificationCase verificationCase =
-                verificationCaseRepository.findById(caseId)
-                        .orElseThrow(() -> new EntityNotFoundException("Verification case not found"));
-
-        // 🔐 Ownership validation
-        if (!verificationCase.getCandidateId().equals(candidateId)) {
-            throw new ValidationException("Candidate does not own this case");
-        }
-
-        // ✅ Progress validation
-        int progress = calculateProgress(candidateverification);
-        if (progress < 100) {
-            throw new ValidationException(
-                    "Cannot submit verification. Complete all required sections. Progress: " + progress + "%"
-            );
-        }
-
-        // -----------------------------
-        // 1️⃣ Candidate Verification
-        // -----------------------------
-        candidateverification.setStatus(VerificationStatus.SUBMITTED);
-        candidateverification.setSubmittedAt(LocalDateTime.now());
-        candidateverification.setUpdatedAt(LocalDateTime.now());
-        candidateVerificationRepository.save(candidateverification);
-        // -----------------------------
-        // 2️⃣ Verification Case
-        // -----------------------------
-        verificationCase.setStatus(CaseStatus.SUBMITTED);
-        verificationCase.setUpdatedAt(LocalDateTime.now());
-        verificationCaseRepository.save(verificationCase);
-
-        // -----------------------------
-        // 3️⃣ Checks + Documents
-        // -----------------------------
-        verificationCase.getCaseChecks().forEach(check -> {
-
-            // Candidate side submit → vendor pending
-            if (check.getStatus() == CaseCheckStatus.AWAITING_CANDIDATE
-                    || check.getStatus() == CaseCheckStatus.INSUFFICIENT
-                    || check.getStatus() == CaseCheckStatus.PENDING_CANDIDATE) {
-
-                check.setStatus(CaseCheckStatus.PENDING);
-                check.setUpdatedAt(LocalDateTime.now());
-            }
-            verificationCaseCheckRepository.save(check);
-
-         //   List<VerificationCaseDocument> findByVerificationCase_CaseIdAndVerificationCaseCheck_CaseCheckId(caseId,check.get);
-            
-            // Documents
-            check.getDocuments().forEach(document -> {
-                if (document.getVerificationStatus() == DocumentStatus.UPLOADED
-                        || document.getVerificationStatus() == DocumentStatus.IN_PROGRESS
-                        || document.getVerificationStatus() == DocumentStatus.INSUFFICIENT
-                        || document.getVerificationStatus() == DocumentStatus.NONE) {
-
-                    document.setVerificationStatus(DocumentStatus.PENDING);
-                    document.setUpdatedAt(LocalDateTime.now());
-                    verificationCaseDocumentRepository.save(document);
-                }
-            });
-           
-        });
-       
-        
-       // before submitting check any pending from candidate like action required, 
-        // get all documents irrespective of category update the status to Submitted from upload , re upload && active!=false && status!=verified
-
-        // -----------------------------
-        // 4️⃣ Persist (cascade)
-        // -----------------------------
-        
-       
-
-        // -----------------------------
-        // 5️⃣ Notify vendor / system
-        // -----------------------------
-        sendVerificationSubmittedNotification(candidateverification);
-
-        return convertToDTO(candidateverification);
-    }
-
     
     @Transactional
     @CacheEvict(value = "verification", key = "#candidateId")
@@ -237,7 +183,7 @@ public class VerificationService {
      //   verification.setEmployerId(request.getEmployerId());
     //    verification.setDueDate(request.getDueDate());
         verification.setStartDate(LocalDateTime.now());
-        verification.setStatus(VerificationStatus.IN_PROGRESS);
+        verification.setStatus(VerificationStatus.PENDING);
         verification.setProgressPercentage(0);
         verification.setInstructions(request.getInstructions());
         verification.setSupportEmail(request.getSupportEmail());
@@ -252,7 +198,7 @@ public class VerificationService {
     
     private int calculateProgress(CandidateVerification verification) {
         try {
-            Map<String, Map<String, Object>> sectionStatusMap = getSectionStatusMap(verification);
+            Map<String, Map<String, Object>> sectionStatusMap = verificationHelperService.getSectionStatusMap(verification);
             Map<String, Map<String, Object>> requirementsMap = getRequirementsMap(verification);
             
             int totalRequired = 0;
@@ -294,13 +240,15 @@ public class VerificationService {
         }
     }
     
+    
+    /*
     private Map<String, VerificationSectionDTO> getSectionsWithStatus(Long candidateId, CandidateVerification verification) {
         
     	Map<String, VerificationSectionDTO> sections = new LinkedHashMap();
         
         try {
             Map<String, Map<String, Object>> requirementsMap = getRequirementsMap(verification);
-            Map<String, Map<String, Object>> statusMap = getSectionStatusMap(verification);
+            Map<String, Map<String, Object>> statusMap = verificationHelperService.getSectionStatusMap(verification);
             
             // Basic Details
           //  addSection(sections, SectionConstants.BASIC_DETAILS.getValue(), "Basic Details", requirementsMap, statusMap, 
@@ -317,18 +265,16 @@ public class VerificationService {
             addSection(sections, SectionConstants.WORK_EXPERIENCE.getValue(), "Work Experience", requirementsMap, statusMap, 
                       () -> workExperienceService.getExperiences(candidateId));
          // Documents
-            addSection(sections, SectionConstants.DOCUMENTS.getValue(), "Documents", requirementsMap, statusMap, 
-                      null);
+          //  addSection(sections, SectionConstants.DOCUMENTS.getValue(), "Documents", requirementsMap, statusMap,null);
            
-           /* 
+          
             // Addresses
-            addSection(sections, "addresses", "Address History", requirementsMap, statusMap, 
-                      () -> addressService.getAddresses(candidateId));
-            
+            addSection(sections, SectionConstants.ADDRESS.getValue(), "Address History", requirementsMap, statusMap, 
+                      () -> null);
+             
             // Documents
-            addSection(sections, "documents", "Documents", requirementsMap, statusMap, 
-                      () -> documentsService.getDocumentsByCandidate(candidateId));
-              */        
+           // addSection(sections, "documents", "Documents", requirementsMap, statusMap,() -> documentsService.getDocumentsByCandidate(candidateId));
+                      
             
             sections = sections.entrySet()
             	    .stream()
@@ -347,6 +293,99 @@ public class VerificationService {
             log.error("Error getting sections with status: {}", e.getMessage());
         }
         
+        return sections;
+    }
+    
+    */
+    
+    private Map<String, VerificationSectionDTO> getSectionsWithStatus(
+            Long candidateId,
+            CandidateVerification verification) {
+
+        Map<String, VerificationSectionDTO> sections = new LinkedHashMap<>();
+
+        try {
+            Map<String, Map<String, Object>> requirementsMap = getRequirementsMap(verification);
+            Map<String, Map<String, Object>> statusMap =
+                    verificationHelperService.getSectionStatusMap(verification);
+
+            for (String sectionKey : requirementsMap.keySet()) {
+            	
+            	SectionConstants section = SectionConstants.fromNameOrValue(sectionKey);
+            	
+            	// 🔥 NEW: filter based on verification status
+                if (verification.getStatus() == VerificationStatus.ACTION_REQUIRED) {
+
+                    Map<String, Object> sectionStatusMap = statusMap.get(sectionKey);
+
+                    String sectionStatus = sectionStatusMap != null
+                            ? (String) sectionStatusMap.get("status")
+                            : null;
+
+                    // 👉 Only include sections which are ACTION_REQUIRED
+                    if (!"ACTION_REQUIRED".equalsIgnoreCase(sectionStatus)) {
+                        continue;
+                    }
+                }
+
+                switch (section) {
+
+                    case IDENTITY -> addSection(
+                            sections,
+                            SectionConstants.IDENTITY.getValue(),
+                            "Identity",
+                            requirementsMap,
+                            statusMap,
+                            () -> identityService.getIdentityInfo(candidateId)
+                    );
+
+                    case EDUCATION -> addSection(
+                            sections,
+                            SectionConstants.EDUCATION.getValue(),
+                            "Education",
+                            requirementsMap,
+                            statusMap,
+                            () -> educationService.getEducations(candidateId)
+                    );
+
+                    case WORK_EXPERIENCE -> addSection(
+                            sections,
+                            SectionConstants.WORK_EXPERIENCE.getValue(),
+                            "Work Experience",
+                            requirementsMap,
+                            statusMap,
+                            () -> workExperienceService.getExperiences(candidateId)
+                    );
+
+                    case ADDRESS -> addSection(
+                            sections,
+                            SectionConstants.ADDRESS.getValue(),
+                            "Address History",
+                            requirementsMap,
+                            statusMap,
+                            () -> null
+                    );
+
+                    default -> log.warn("Unknown section in requirementsMap: {}", sectionKey);
+                }
+            }
+
+            // ✅ Sorting remains same
+            sections = sections.entrySet()
+                    .stream()
+                    .sorted(Map.Entry.comparingByValue(
+                            Comparator.comparingInt(VerificationSectionDTO::getOrder)
+                    ))
+                    .collect(
+                            LinkedHashMap::new,
+                            (m, e) -> m.put(e.getKey(), e.getValue()),
+                            LinkedHashMap::putAll
+                    );
+
+        } catch (Exception e) {
+            log.error("Error getting sections with status: {}", e.getMessage(), e);
+        }
+
         return sections;
     }
     
@@ -429,19 +468,7 @@ public class VerificationService {
     
     
     
-    @SuppressWarnings("unchecked")
-    private Map<String, Map<String, Object>> getSectionStatusMap(CandidateVerification verification) {
-        try {
-        	log.info("getSectionStatusMap::::::verification.getSectionStatus():::::::::::::{}",verification.getSectionStatus());
-            if (verification.getSectionStatus() != null) {
-                return objectMapper.readValue(verification.getSectionStatus(), 
-                    new TypeReference<Map<String, Map<String, Object>>>() {});
-            }
-        } catch (Exception e) {
-            log.error("Error parsing section status: {}", e.getMessage());
-        }
-        return new HashMap<>();
-    }
+    
     
     private void setSectionRequirements(CandidateVerification verification, Long packageId) {
         // This would typically fetch from a package configuration service
@@ -485,11 +512,7 @@ public class VerificationService {
         }
     }
     
-    @Async
-    protected void sendVerificationSubmittedNotification(CandidateVerification verification) {
-        // Implement notification logic (email, push, etc.)
-        log.info("Sending verification submitted notification for candidate: {}", verification.getCandidateId());
-    }
+    
     
     private CandidateVerificationDTO convertToDTO(CandidateVerification verification) {
         CandidateVerificationDTO dto = new CandidateVerificationDTO();
@@ -511,6 +534,7 @@ public class VerificationService {
         return dto;
     }
     
+   
     
     
 }

@@ -19,6 +19,8 @@ public interface CandidateVerificationRepository extends JpaRepository<Candidate
     
     Optional<CandidateVerification> findByCandidateIdAndVerificationCaseCaseId(Long candidateId,Long caseId);
     
+    boolean existsByCandidateIdAndVerificationCaseCaseId(Long candidateId, Long caseId);
+    
   //  List<CandidateVerification> findByEmployerId(String employerId);
     
     List<CandidateVerification> findByStatus(VerificationStatus status);
@@ -58,5 +60,7 @@ public interface CandidateVerificationRepository extends JpaRepository<Candidate
            "AND cv.dueDate < CURRENT_TIMESTAMP " +
            "AND cv.status NOT IN ('COMPLETED', 'CANCELLED')")
     List<CandidateVerification> findOverdueVerifications(@Param("candidateId") Long candidateId);
+    
+    void deleteByVerificationCaseCaseId(Long caseId);
 
 }

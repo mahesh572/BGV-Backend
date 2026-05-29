@@ -2,10 +2,13 @@ package com.org.bgv.entity;
 
 import jakarta.persistence.*;
 import lombok.*;
+
+import java.math.BigDecimal;
 import java.time.LocalDateTime;
 import java.util.ArrayList;
 import java.util.List;
 
+import com.org.bgv.candidate.entity.Candidate;
 import com.org.bgv.constants.CaseStatus;
 
 @Entity
@@ -27,7 +30,12 @@ public class VerificationCase {
 
     @Column(name = "candidate_id", nullable = false)
     private Long candidateId;
-
+    
+   /*
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "candidate_id", insertable = false, updatable = false)
+    private Candidate candidate;
+*/
     @Column(name = "company_id", nullable = false)
     private Long companyId;
 
@@ -35,15 +43,14 @@ public class VerificationCase {
     @JoinColumn(name = "employer_package_id", nullable = false)
     private EmployerPackage employerPackage;
 
-    @Column(name = "base_price", nullable = false)
-    private Double basePrice;
+    @Column(name = "base_price")
+    private BigDecimal basePrice;
     
     @Column(name = "addon_price")
-    @Builder.Default
-    private Double addonPrice = 0.0;
+    private BigDecimal addonPrice;
     
-    @Column(name = "total_price", nullable = false)
-    private Double totalPrice;
+    @Column(name = "total_price")
+    private BigDecimal totalPrice;
     
     @Enumerated(EnumType.STRING)
     private CaseStatus status = CaseStatus.INITIATED;
@@ -69,6 +76,20 @@ public class VerificationCase {
     @Column(name = "vendor_id")
     private Long vendorId;
    */
+    
+    @Column(name = "pricing_confirmed")
+    private Boolean pricingConfirmed = false;
+
+    @Column(name = "pricing_confirmed_at")
+    private LocalDateTime pricingConfirmedAt;
+
+    @Column(name = "invoice_generated")
+    private Boolean invoiceGenerated = false;
+
+    @Column(name = "invoice_generated_at")
+    private LocalDateTime invoiceGeneratedAt;
+    
+    
     @PreUpdate
     protected void onUpdate() {
         updatedAt = LocalDateTime.now();

@@ -1,5 +1,6 @@
 package com.org.bgv.common;
 
+import java.math.BigDecimal;
 import java.time.LocalDateTime;
 import java.util.List;
 
@@ -19,9 +20,9 @@ public class EmployerPackageResponse {
     private Long id;
     private Long companyId;  
     private PackageInfo bgvPackage;
-    private Double basePrice;
-    private Double addonPrice;
-    private Double totalPrice;
+    private BigDecimal basePrice;
+    private BigDecimal addonPrice;
+    private BigDecimal totalPrice;
     private String status;
     private LocalDateTime createdAt;
     private List<EmployerPackageDocumentResponse> documents;

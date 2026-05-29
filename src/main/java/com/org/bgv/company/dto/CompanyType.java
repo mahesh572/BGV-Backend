@@ -5,7 +5,8 @@ public enum CompanyType {
 	EMPLOYER("Employer"),
     VENDOR("Vendor"),
     UNIVERSITY("University"),
-    OTHER("Other");
+    OTHER("Other"),
+	DEFAULT("default");
 	
 	
     private final String displayName;

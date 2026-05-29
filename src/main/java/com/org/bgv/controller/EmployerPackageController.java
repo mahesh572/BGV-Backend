@@ -6,6 +6,12 @@ import com.org.bgv.common.EmployerPackageRequest;
 import com.org.bgv.common.EmployerPackageResponse;
 import com.org.bgv.common.PackageDTO;
 import com.org.bgv.common.PackageRequest;
+import com.org.bgv.company.dto.AssignCasePreviewResponseDTO;
+import com.org.bgv.company.dto.EmployerPackageConfigPreviewResponseDTO;
+import com.org.bgv.company.dto.EmployerPackageConfigurationRequestDTO;
+import com.org.bgv.company.service.AssignCaseService;
+import com.org.bgv.company.service.EmployerPackageConfigurationService;
+import com.org.bgv.config.SecurityUtils;
 import com.org.bgv.constants.EmployerPackageStatus;
 import com.org.bgv.service.EmployerPackageService;
 import jakarta.validation.Valid;
@@ -27,6 +33,8 @@ import java.util.List;
 public class EmployerPackageController {
     
     private final EmployerPackageService employerPackageService;
+    private final AssignCaseService assignCaseService;
+    private final EmployerPackageConfigurationService employerPackageConfigurationService;
     
     @PostMapping
     public ResponseEntity<CustomApiResponse<EmployerPackageResponse>> createEmployerPackage(
@@ -201,6 +209,9 @@ public class EmployerPackageController {
         }
     }
     
+    
+    // below code is going to be decommissioned for case creation
+    /*
     @GetMapping("/{employerpackageId}/documents")
     public ResponseEntity<CustomApiResponse<List<CategoryDocumentsDto>>> getPackageDocuments(
             @PathVariable Long employerpackageId) {
@@ -227,4 +238,107 @@ public class EmployerPackageController {
                     ));
         }
     }
+    */
+    
+    @GetMapping("/{employerpackageId}/preview")
+    public ResponseEntity<CustomApiResponse<AssignCasePreviewResponseDTO>> getPackageDocuments(
+            @PathVariable Long employerpackageId) {
+        
+        try {
+            log.info("Getting documents for employerpackageId: {}", employerpackageId);
+            
+            
+            Long companyId = SecurityUtils.getCurrentUserCompanyId();
+            
+            AssignCasePreviewResponseDTO result = assignCaseService
+                    .buildPreview(employerpackageId,companyId);
+            
+            return ResponseEntity.ok(
+                    CustomApiResponse.<AssignCasePreviewResponseDTO>success(
+                            "Package documents retrieved successfully",
+                            result,
+                            HttpStatus.OK
+                    )
+            );
+        } catch (Exception e) {
+            log.error("Failed to get documents for packageId: {}", employerpackageId, e);
+            
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
+                    .body(CustomApiResponse.<AssignCasePreviewResponseDTO>failure(
+                            "Failed to retrieve package documents: " + e.getMessage(),
+                            HttpStatus.INTERNAL_SERVER_ERROR
+                    ));
+        }
+    }
+    
+    @GetMapping("/{employerPackageId}/configuration")
+    public ResponseEntity<CustomApiResponse<?>> getPackageForConfiguration(
+            @PathVariable Long employerPackageId) {
+
+        try {
+            log.info("Getting configuration for employerPackageId: {}", employerPackageId);
+
+            Long companyId = SecurityUtils.getCurrentUserCompanyId();
+
+            // You can reuse same service OR create separate method if logic differs
+            EmployerPackageConfigPreviewResponseDTO result =
+            		employerPackageConfigurationService.buildPreview(employerPackageId, companyId);
+
+            return ResponseEntity.ok(
+                    CustomApiResponse.<EmployerPackageConfigPreviewResponseDTO>success(
+                            "Package configuration retrieved successfully",
+                            result,
+                            HttpStatus.OK
+                    )
+            );
+
+        } catch (Exception e) {
+            log.error("Failed to get configuration for packageId: {}", employerPackageId, e);
+
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
+                    .body(CustomApiResponse.<EmployerPackageConfigPreviewResponseDTO>failure(
+                            "Failed to retrieve package configuration: " + e.getMessage(),
+                            HttpStatus.INTERNAL_SERVER_ERROR
+                    ));
+        }
+    }
+    
+    
+    @PutMapping("/{employerPackageId}/configuration")
+    public ResponseEntity<CustomApiResponse<Void>> updateEmployerPackageConfiguration(
+            @PathVariable Long employerPackageId,
+            @RequestBody EmployerPackageConfigurationRequestDTO request) {
+
+        try {
+            log.info("Updating configuration for employerPackageId: {}", employerPackageId);
+
+            Long companyId = SecurityUtils.getCurrentUserCompanyId();
+
+            employerPackageConfigurationService.updateEmployerPackageConfiguration(
+                    employerPackageId,
+                    companyId,
+                    request
+            );
+
+            return ResponseEntity.ok(
+                    CustomApiResponse.success(
+                            "Employer package configuration updated successfully",
+                            null,
+                            HttpStatus.OK
+                    )
+            );
+
+        } catch (Exception e) {
+            log.error("Failed to update configuration for employerPackageId: {}", employerPackageId, e);
+
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
+                    .body(CustomApiResponse.failure(
+                            "Failed to update configuration: " + e.getMessage(),
+                            HttpStatus.INTERNAL_SERVER_ERROR
+                    ));
+        }
+    }
+    
+    
+    
 }

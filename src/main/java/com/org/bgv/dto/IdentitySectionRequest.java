@@ -15,6 +15,8 @@ public class IdentitySectionRequest {
     private String label;   //  Identity
     private Long checkId;
     private String checkRef;
+  	private Long caseId;
+	private Long categoryId;
     private List<DocumentUploadRequest> documents;
 	
 }

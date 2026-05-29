@@ -20,6 +20,7 @@ import com.org.bgv.candidate.dto.VerificationCaseDTO;
 import com.org.bgv.candidate.dto.VerificationCaseFilterDTO;
 import com.org.bgv.candidate.dto.VerificationCaseResponseDTO;
 import com.org.bgv.candidate.dto.VerificationSectionDTO;
+import com.org.bgv.candidate.service.CandidateSubmissionService;
 import com.org.bgv.candidate.service.VerificationService;
 import com.org.bgv.constants.CaseStatus;
 import com.org.bgv.constants.SectionStatus;
@@ -42,6 +43,7 @@ public class CandidateVerificationController {
     
     private final VerificationService verificationService;
     private final VerificationCaseService verificationCaseService;
+    private final CandidateSubmissionService candidateSubmissionService;
     
     @Operation(summary = "Get candidate verification details")
     @GetMapping("/case/{caseId}")
@@ -62,11 +64,11 @@ public class CandidateVerificationController {
             @RequestBody SectionStatusUpdateRequest sectionStatusUpdateRequest
             ) throws ValidationException {
         
-        log.info("PUT /api/verification/section/status?candidateId={}&section={}&status={} by {}", 
-        		sectionStatusUpdateRequest.getCandidateId(), sectionStatusUpdateRequest.getSection(), sectionStatusUpdateRequest.getStatus());
+        log.info("PUT /api/verification/section/status?candidateId={}&section={}&status={} by {}{}", 
+        		sectionStatusUpdateRequest.getCandidateId(), sectionStatusUpdateRequest.getSection(), sectionStatusUpdateRequest.getStatus(),sectionStatusUpdateRequest.getCaseId());
         
         CandidateVerificationDTO verification = verificationService.updateSectionStatus(
-        		sectionStatusUpdateRequest.getCandidateId(), sectionStatusUpdateRequest.getSection(), sectionStatusUpdateRequest.getStatus());
+        		sectionStatusUpdateRequest);
         
         return ResponseEntity.ok(verification);
     }
@@ -80,7 +82,7 @@ public class CandidateVerificationController {
         
         log.info("POST /api/verification/submit?candidateId={} by {}", candidateId);
         
-        CandidateVerificationDTO verification = verificationService.submitForVerification(candidateId,caseId);
+        CandidateVerificationDTO verification = candidateSubmissionService.submitVerification(candidateId,caseId);
         return ResponseEntity.ok(verification);
     }
     

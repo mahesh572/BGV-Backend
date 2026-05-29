@@ -2,6 +2,8 @@ package com.org.bgv.vendor.dto;
 
 import java.time.LocalDateTime;
 
+import com.org.bgv.enums.VendorNoteType;
+
 import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Data;
@@ -12,10 +14,20 @@ import lombok.NoArgsConstructor;
 @NoArgsConstructor
 @AllArgsConstructor
 public class VendorNoteDTO {
-    private String id;
+
+    private Long noteId;
+
     private String content;
+
     private String createdBy;
+
     private LocalDateTime createdAt;
-    private String type; // internal, verification, insufficiency
-    private boolean isInternal;
+
+    private VendorNoteType type;
+
+    private Boolean visibleToEmployer;
+
+    private Boolean visibleToCandidate;
+
+    private boolean internal;
 }

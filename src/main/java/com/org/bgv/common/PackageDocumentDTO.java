@@ -17,5 +17,6 @@ public class PackageDocumentDTO {
     private Boolean required;
     private Integer priorityOrder;
     private Boolean selected;
+    private Boolean includedInBase;
 }
 

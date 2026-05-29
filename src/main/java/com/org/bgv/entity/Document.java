@@ -144,5 +144,9 @@ public class Document implements BaseDocument {
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "last_action_id")
     private VerificationAction lastAction;
+    
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "selection_id")
+    private VerificationCaseSelection selection;
 	
 }

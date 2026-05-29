@@ -12,6 +12,7 @@ import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
 import jakarta.persistence.EnumType;
 import jakarta.persistence.Enumerated;
+import jakarta.persistence.FetchType;
 import jakarta.persistence.GeneratedValue;
 import jakarta.persistence.GenerationType;
 import jakarta.persistence.Id;
@@ -48,6 +49,14 @@ public class Address {
     private String zipCode;
     private boolean isDefault;
     
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "case_check_id")
+    private VerificationCaseCheck verificationCaseCheck;
+    
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "case_id")
+    private VerificationCase verificationCase;
+    
     @Enumerated(EnumType.STRING)
     private AddressType addressType;
     
@@ -56,6 +65,12 @@ public class Address {
     
     @Column(name = "currently_residing_at_this_address", nullable = false)
     private Boolean currentlyResidingAtThisAddress = false;
+    
+    @Column(name = "to_date")
+    private LocalDate toDate;
+    
+    @Column(name = "from_date")
+    private LocalDate fromDate;
     
 
     @ManyToOne

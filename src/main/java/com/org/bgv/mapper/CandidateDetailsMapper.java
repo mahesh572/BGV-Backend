@@ -46,18 +46,19 @@ public class CandidateDetailsMapper {
     
     public CandidateDetailsDTO toDTO(Candidate candidate) {
         
-    	Profile profile = candidate.getProfile();
+    	// Profile profile = candidate.getProfile();
         
         return CandidateDetailsDTO.builder()
                 .id(candidate.getCandidateId())
                 .candidateId(candidate.getCandidateId()) // Using UUID as candidateId
-                .name(getFullName(profile))
+                .name(getFullName(candidate))
+                .email(candidate.getEmailAddress())
                // .email(profile != null ? profile.getEmailAddress() : null)
-                .phone(profile != null ? profile.getPhoneNumber() : null)
-                .dateOfBirth(formatDate(profile != null ? profile.getDateOfBirth() : null))
-                .gender(profile != null ? profile.getGender() : null)
-                .pan("ABC04-11-14") // Mock PAN - you can map from actual entity
-                .initials(getInitials(profile))
+                .phone(candidate != null ? candidate.getPhoneNumber() : null)
+                .dateOfBirth(formatDate(candidate != null ? candidate.getDateOfBirth() : null))
+                .gender(candidate != null ? candidate.getGender() : null)
+               // .pan("ABC04-11-14") // Mock PAN - you can map from actual entity
+               // .initials(getInitials(profile))
                // .uuid(candidate.getUuid())
                // .isActive(candidate.getIsActive())
               //  .isVerified(candidate.getIsVerified())
@@ -66,23 +67,23 @@ public class CandidateDetailsMapper {
               //  .isConsentProvided(candidate.getIsConsentProvided())
               //  .createdAt(candidate.getCreatedAt())
               //  .lastActiveAt(candidate.getLastActiveAt())
-                .firstName(profile != null ? profile.getFirstName() : null)
-                .lastName(profile != null ? profile.getLastName() : null)
-                .nationality(profile != null ? profile.getNationality() : null)
-                .maritalStatus(profile != null ? profile.getMaritalStatus() : null)
+                .firstName(candidate != null ? candidate.getFirstName() : null)
+                .lastName(candidate != null ? candidate.getLastName() : null)
+                .nationality(candidate != null ? candidate.getNationality() : null)
+                .maritalStatus(candidate != null ? candidate.getMaritalStatus() : null)
                // .hasWorkExperience(profile != null ? profile.getHasWorkExperience() : null)
-                .linkedinUrl(profile != null ? profile.getLinkedinUrl() : null)
+              //  .linkedinUrl(candidate != null ? candidate.getLinkedinUrl() : null)
              //   .company(mapCompany(candidate.getCompany()))
-                .vpackage(getMockPackage()) // Mock data - replace with actual
+              //  .vpackage(getMockPackage()) // Mock data - replace with actual
                 .verificationChecks(getVerificationChecks(candidate)) 
                 .activityTimeline(mapActivityTimeline(candidate.getActivityTimeline()))
                 .build();
     }
     
-    private String getFullName(Profile profile) {
-        if (profile == null) return null;
-        return (profile.getFirstName() != null ? profile.getFirstName() + " " : "") +
-               (profile.getLastName() != null ? profile.getLastName() : "");
+    private String getFullName(Candidate candidate) {
+        if (candidate == null) return null;
+        return (candidate.getFirstName() != null ? candidate.getFirstName() + " " : "") +
+               (candidate.getLastName() != null ? candidate.getLastName() : "");
     }
     
     private String getInitials(Profile profile) {
@@ -132,7 +133,7 @@ public class CandidateDetailsMapper {
                 .description(activity.getDescription())
                 .timestamp(activity.getTimestamp().format(TIMESTAMP_FORMATTER))
                 .icon(getIconForActivity(activity.getType()))
-                .status(activity.getStatus().getValue())
+                .status(activity.getStatus())
                 .type(activity.getType())
              //   .createdAt(activity.getCreatedAt())
                 .build();
@@ -151,6 +152,7 @@ public class CandidateDetailsMapper {
     }
     
     // Mock data methods (replace with actual data from your entities)
+   /*
     private VPackageDTO getMockPackage() {
         return VPackageDTO.builder()
                 .name("Standard Background Check")
@@ -161,6 +163,7 @@ public class CandidateDetailsMapper {
                 .assignedDate("15 Jan 2024")
                 .build();
     }
+    */
     
     private List<VerificationCheckDTO> getVerificationChecks(Candidate candidate) {
         // Using IconService to get icons

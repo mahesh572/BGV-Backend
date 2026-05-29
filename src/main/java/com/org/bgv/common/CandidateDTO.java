@@ -9,10 +9,11 @@ import com.fasterxml.jackson.annotation.JsonAlias;
 import com.fasterxml.jackson.annotation.JsonInclude;
 import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
 import com.fasterxml.jackson.annotation.JsonProperty;
+import com.org.bgv.candidate.dto.CandidateStatus;
 
 @Data
 @Builder
-@JsonInclude(JsonInclude.Include.NON_NULL)
+@JsonInclude(JsonInclude.Include.ALWAYS)
 @JsonIgnoreProperties(ignoreUnknown = true)
 public class CandidateDTO {
 
@@ -29,11 +30,11 @@ public class CandidateDTO {
     // Accept multiple formats of mobile/phone
     @JsonProperty("mobileNo")
     @JsonAlias({"phoneNumber", "phone_number", "mobile", "mobile_no"})
-    private String mobileNo;
+    private String phoneNumber;
 
     private String gender;
     private String role;
-    private String status;
+   
     private String name;
 
     private String sourceType;
@@ -52,4 +53,6 @@ public class CandidateDTO {
     private Boolean isConsentProvided;
 
     private String companyName;
+    
+    private String status;
 }

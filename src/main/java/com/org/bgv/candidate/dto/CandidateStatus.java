@@ -7,6 +7,7 @@ public enum CandidateStatus {
     REGISTERED,   // user accepted invite
     CONSENTED,    // consent given
     IN_PROGRESS,  // checks running
-    COMPLETED
+    COMPLETED,
+    ACTIVE
 }
 

@@ -3,17 +3,32 @@ package com.org.bgv.candidate.service;
 import java.time.LocalDate;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Set;
 import java.util.stream.Collectors;
 
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import com.org.bgv.candidate.dto.AddressResponse;
+import com.org.bgv.candidate.dto.CandidateActionCatalog;
+import com.org.bgv.candidate.dto.VerificationSectionDTO;
 import com.org.bgv.candidate.entity.Candidate;
 import com.org.bgv.candidate.repository.AddressRepository;
 import com.org.bgv.candidate.repository.CandidateRepository;
+import com.org.bgv.constants.SectionStatus;
 import com.org.bgv.dto.AddressDTO;
+import com.org.bgv.dto.CheckCategoryEnum;
 import com.org.bgv.entity.Address;
 import com.org.bgv.entity.AddressType;
+import com.org.bgv.entity.CheckCategory;
+import com.org.bgv.entity.VerificationCase;
+import com.org.bgv.entity.VerificationCaseCheck;
+import com.org.bgv.repository.CheckCategoryRepository;
+import com.org.bgv.repository.VerificationCaseCheckRepository;
+import com.org.bgv.repository.VerificationCaseRepository;
+import com.org.bgv.vendor.action.dto.ActionDTO;
+import com.org.bgv.vendor.dto.ActionLevel;
+import com.org.bgv.vendor.dto.ActionType;
 
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -25,7 +40,12 @@ public class AddressService {
     
     private final CandidateRepository candidateRepository;
     private final AddressRepository addressRepository;
-
+    private final VerificationCaseRepository verificationCaseRepository;
+    private final CheckCategoryRepository checkCategoryRepository;
+    private final VerificationCaseCheckRepository verificationCaseCheckRepository;
+    private final VerificationHelperService verificationHelperService;
+    
+    /*
     public AddressDTO createAddress(AddressDTO addressDTO, Long candidateId) {
         Candidate candidate = candidateRepository.findById(candidateId)
                 .orElseThrow(() -> new RuntimeException("Candidate not found: " + candidateId));
@@ -34,12 +54,48 @@ public class AddressService {
         Address savedAddress = addressRepository.save(address);
         return mapToDTO(savedAddress);
     }
+*/
+    public AddressResponse getAddressesByCandidate(Long candidateId,Long caseId) {
+        List<Address> addresses = addressRepository.findByCandidateIdAndVerificationCaseCaseId(candidateId,caseId);
+        
+        List<AddressDTO> addressesDto = addresses.stream()
+        									.map(this::mapToDTO)
+        											.collect(Collectors.toList());
+        
+        
+       
+        final String CATEGORY_NAME = CheckCategoryEnum.ADDRESS.getName();
 
-    public List<AddressDTO> getAddressesByCandidate(Long candidateId) {
-        List<Address> addresses = addressRepository.findByCandidateId(candidateId);
-        return addresses.stream()
-                .map(this::mapToDTO)
-                .collect(Collectors.toList());
+        // Fetch category
+        CheckCategory category = checkCategoryRepository
+                .findByNameIgnoreCase(CATEGORY_NAME)
+                .orElseThrow(() -> new RuntimeException("Category not found"));
+
+        // Fetch case
+        VerificationCase verificationCase = verificationCaseRepository.findById(caseId)
+                .orElseThrow(() -> new RuntimeException("Verification case not found"));
+
+        // Fetch case check
+        VerificationCaseCheck addressCheck = verificationCaseCheckRepository
+                .findByVerificationCaseAndCategory(verificationCase, category)
+                .orElseThrow(() -> new RuntimeException("Identity check not found"));
+        
+        VerificationSectionDTO verificationSectionDTO = verificationHelperService.getSectionStatusByCaseAndCandidate(candidateId,caseId,CATEGORY_NAME);
+        
+        SectionStatus sectionStatus = SectionStatus.fromString(
+                verificationSectionDTO.getStatus().name()
+        );
+        
+        return AddressResponse.builder()
+				        .caseId(caseId)
+				        .checkId(addressCheck.getCaseCheckId())
+				        .categoryId(category.getCategoryId())
+				        .addresses(addressesDto)
+				        .status(verificationSectionDTO.getStatus().name())
+				        .actions(VerificationHelperService.resolveSectionActions(sectionStatus)) 
+				        .build();
+        
+       
     }
 
     public AddressDTO getAddressById(Long id) {
@@ -55,9 +111,29 @@ public class AddressService {
                 .collect(Collectors.toList());
     }
 
-    public AddressDTO updateAddress(AddressDTO addressDTO, Long candidateId) {
+    public AddressDTO updateAddress(AddressDTO addressDTO, Long candidateId,Long caseId) {
         Candidate candidate = candidateRepository.findById(candidateId)
                 .orElseThrow(() -> new RuntimeException("Candidate not found: " + candidateId));
+        
+        
+        final String CATEGORY_NAME = CheckCategoryEnum.ADDRESS.getName();
+
+        // Fetch category
+        CheckCategory category = checkCategoryRepository
+                .findByNameIgnoreCase(CATEGORY_NAME)
+                .orElseThrow(() -> new RuntimeException("Category not found"));
+
+        // Fetch case
+        VerificationCase verificationCase = verificationCaseRepository.findById(caseId)
+                .orElseThrow(() -> new RuntimeException("Verification case not found"));
+
+        // Fetch case check
+        VerificationCaseCheck addressCheck = verificationCaseCheckRepository
+                .findByVerificationCaseAndCategory(verificationCase, category)
+                .orElseThrow(() -> new RuntimeException("Identity check not found"));
+        
+        
+        
         
         Address existingAddress;
         if (addressDTO.getId() == null || addressDTO.getId() == 0) {
@@ -101,17 +177,19 @@ public class AddressService {
             addressRepository.saveAll(candidateAddresses);
         }
         existingAddress.setIsMyPermanentAddress(addressDTO.getIsMyPermanentAddress());
+        
+        existingAddress.setVerificationCase(verificationCase);
 
         Address updatedAddress = addressRepository.save(existingAddress);
         return mapToDTO(updatedAddress);
     }
     
     @Transactional
-    public List<AddressDTO> updateAddresses(List<AddressDTO> addressDTOs, Long candidateId) {
+    public List<AddressDTO> updateAddresses(List<AddressDTO> addressDTOs, Long candidateId,Long caseId) {
         List<AddressDTO> updatedAddresses = new ArrayList<>();
         
         for (AddressDTO addressDTO : addressDTOs) {
-            AddressDTO updatedAddress = updateAddress(addressDTO, candidateId);
+            AddressDTO updatedAddress = updateAddress(addressDTO, candidateId,caseId);
             updatedAddresses.add(updatedAddress);
         }
         
@@ -131,15 +209,18 @@ public class AddressService {
     }
 
     @Transactional
-    public List<AddressDTO> saveAddresses(List<AddressDTO> addressDTOs, Long candidateId) {
+    public List<AddressDTO> saveAddresses(List<AddressDTO> addressDTOs, Long candidateId,Long caseId) {
         
     	log.info("Adress service :::::::::::::{}",addressDTOs);
     	
     	Candidate candidate = candidateRepository.findById(candidateId)
                 .orElseThrow(() -> new RuntimeException("Candidate not found: " + candidateId));
+    	
+    	VerificationCase verificationCase = verificationCaseRepository.findById(caseId)
+                .orElseThrow(() -> new RuntimeException("Verification case not found"));
 
         List<Address> addresses = addressDTOs.stream()
-                .map(dto -> mapToEntity(dto, candidate))
+                .map(dto -> mapToEntity(dto, candidate,verificationCase))
                 .collect(Collectors.toList());
 
         List<Address> savedAddresses = addressRepository.saveAll(addresses);
@@ -189,7 +270,7 @@ public class AddressService {
         addressRepository.save(newCurrentAddress);
     }
 
-    private Address mapToEntity(AddressDTO dto, Candidate candidate) {
+    private Address mapToEntity(AddressDTO dto, Candidate candidate,VerificationCase verificationCase) {
        
     	Address address = new Address();
         address.setCandidateId(candidate.getCandidateId());
@@ -222,6 +303,8 @@ public class AddressService {
             dto.getCurrentlyResidingAtThisAddress()) {
             address.setDurationOfStayMonths(address.calculateDurationOfStay());
         }
+        address.setVerificationCase(verificationCase);
+        
         
         log.info("address DTO:::::::::::::::::{}",dto);
         return address;
@@ -263,4 +346,6 @@ public class AddressService {
                 .map(this::mapToDTO)
                 .collect(Collectors.toList());
     }
+    
+   
 }

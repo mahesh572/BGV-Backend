@@ -48,6 +48,7 @@ import com.org.bgv.company.dto.EmployeeDTO;
 import com.org.bgv.company.dto.EmployerDTO;
 import com.org.bgv.company.dto.EnumOptionDTO;
 import com.org.bgv.company.dto.PersonDTO;
+import com.org.bgv.dto.document.CompanyDto;
 import com.org.bgv.entity.Company;
 import com.org.bgv.entity.CompanyUser;
 import com.org.bgv.entity.Profile;
@@ -952,6 +953,19 @@ public class CompanyService {
 	        );
 
 	        return response;
+	    }
+	    
+	    public List<CompanyDto> getAllCompanies() {
+
+	        List<Company> companies = companyRepository.findAll();
+
+	        return companies.stream()
+	                .map(company -> CompanyDto.builder()
+	                        .companyId(company.getId())
+	                        .companyName(company.getCompanyName())
+	                        .build()
+	                )
+	                .toList();
 	    }
 	    
 	    

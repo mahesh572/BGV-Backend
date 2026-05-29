@@ -18,7 +18,7 @@ public interface RuleTypesRepository extends JpaRepository<RuleTypes, Long> {
     
     List<RuleTypes> findByCategoryCategoryId(Long categoryId);
     
-
+    Optional<RuleTypes> findByRuleTypeId(Long ruleTypeId);
     
     Optional<RuleTypes> findByCode(String code);
     
@@ -33,5 +33,10 @@ public interface RuleTypesRepository extends JpaRepository<RuleTypes, Long> {
     
     // Additional useful methods
     boolean existsByNameAndCategoryCategoryId(String name, Long categoryId);
+    
+    Optional<RuleTypes> findByCategoryAndCode(CheckCategory category, String code);
+
+    List<RuleTypes> findAllByCategoryAndCodeIgnoreCase(CheckCategory category, String code);
+    
     
 }

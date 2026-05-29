@@ -19,4 +19,5 @@ public class PackageCategoryDTO {
     private String rulesData;
     private List<PackageRuleTypeDTO> ruleTypes;
     private List<PackageDocumentDTO> allowedDocuments;
+    private List<PackageRuleTypeDTO> allowedRules;
 }

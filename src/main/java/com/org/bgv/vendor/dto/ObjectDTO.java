@@ -35,6 +35,8 @@ public class ObjectDTO {
     @JsonProperty("data")
     private Map<String, Object> data;
     
+    private List<ObjectFieldDTO> fields;
+    
     
     @JsonProperty("documentTypes")
     private List<DocumentTypeVerificationDTO> documentTypes;

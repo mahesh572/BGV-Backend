@@ -1,24 +1,32 @@
 package com.org.bgv.service;
 
+import com.org.bgv.candidate.dto.VerificationSectionDTO;
 import com.org.bgv.candidate.entity.Candidate;
 import com.org.bgv.candidate.entity.WorkExperience;
 import com.org.bgv.candidate.repository.CandidateRepository;
 import com.org.bgv.candidate.repository.WorkExperienceRepository;
+import com.org.bgv.candidate.service.VerificationHelperService;
 import com.org.bgv.controller.ProfileController;
+import com.org.bgv.dto.CheckCategoryEnum;
 import com.org.bgv.dto.DocumentResponse;
 import com.org.bgv.dto.DocumentStats;
 import com.org.bgv.dto.DocumentSummary;
+import com.org.bgv.dto.EducationHistoryDTO;
 import com.org.bgv.dto.WorkExperienceDTO;
 import com.org.bgv.dto.WorkExperienceResponse;
+import com.org.bgv.dto.document.DocumentTypeDto;
 import com.org.bgv.entity.BaseDocument;
 import com.org.bgv.entity.CheckCategory;
+import com.org.bgv.entity.DocumentType;
 //import com.org.bgv.entity.ProfessionalDocuments;
 import com.org.bgv.entity.Profile;
 import com.org.bgv.entity.VerificationCase;
 import com.org.bgv.entity.VerificationCaseCheck;
 import com.org.bgv.repository.CheckCategoryRepository;
+import com.org.bgv.repository.DocumentTypeRepository;
 //import com.org.bgv.repository.ProfessionalDocumentsRepository;
 import com.org.bgv.repository.ProfileRepository;
+import com.org.bgv.repository.VerificationCaseCheckRepository;
 import com.org.bgv.repository.VerificationCaseRepository;
 import com.org.bgv.s3.S3StorageService;
 
@@ -50,6 +58,10 @@ public class WorkExperienceService {
 	 private final CandidateRepository candidateRepository;
 	 private final VerificationCaseRepository verificationCaseRepository;
 	 private final CheckCategoryRepository checkCategoryRepository;
+	 private final VerificationCaseCheckRepository verificationCaseCheckRepository;
+	 private final DocumentTypeRepository documentTypeRepository;
+	 private final DocumentService documentService;
+	 private final VerificationHelperService verificationHelperService;
 	
 	private static final Logger logger = LoggerFactory.getLogger(WorkExperienceService.class);
 
@@ -77,7 +89,7 @@ public class WorkExperienceService {
 		return savedExperiences.stream().map(this::mapToDTO).collect(Collectors.toList());
 	}
 
-	public List<WorkExperienceDTO> getWorkExperiencesByProfile(Long candidateId, Long caseId) {
+	public WorkExperienceResponse getWorkExperiencesByProfile(Long candidateId, Long caseId) {
 
 	    List<WorkExperience> experiences;
 
@@ -99,53 +111,66 @@ public class WorkExperienceService {
 	                                caseId
 	                        );
 	    }
+	    
+	   // final String CATEGORY_NAME = "Work Experience";
+	    final String CATEGORY_NAME = CheckCategoryEnum.WORK.getName();
+	    
+	    CheckCategory category = checkCategoryRepository
+                .findByNameIgnoreCase(CATEGORY_NAME)
+                .orElseThrow(() ->
+                        new RuntimeException("Category not found: " + CATEGORY_NAME));
+	    Long checkId = null;
+	 // Resolve Case Check only in CASE MODE
+        if (caseId != null && caseId > 0) {
+            Optional<VerificationCaseCheck> caseCheckOpt =
+                    verificationCaseCheckRepository
+                            .findByVerificationCase_CaseIdAndCategory_CategoryId(
+                                    caseId,
+                                    category.getCategoryId());
 
-	    return experiences.stream()
-	            .map(this::mapToDTO)
-	            .collect(Collectors.toList());
+            if (caseCheckOpt.isPresent()) {
+                checkId = caseCheckOpt.get().getCaseCheckId();
+            }
+        }
+        
+     // 3️⃣ Map each Work Experience → DTO + attach documentTypes
+        
+        
+        List<WorkExperienceDTO> experienceDTOList =
+        		experiences.stream()
+                        .map(experience -> {
+
+                        	WorkExperienceDTO dto =  mapToDTO(experience);
+                        	
+                        	List<DocumentType> documentTypes =
+                                    documentTypeRepository
+                                            .findByCategoryCategoryIdAndIsRequired(category.getCategoryId(),Boolean.TRUE);
+                        	
+                        	List<DocumentTypeDto> documentTypesDto = documentService.buildCompanyDocumentTypes(candidateId,category,documentTypes,experience.getExperienceId());
+                           
+
+                            dto.setDocumentTypes(documentTypesDto);
+
+                            return dto;
+                        })
+                        .collect(Collectors.toList());
+        
+        
+        VerificationSectionDTO verificationSectionDTO = verificationHelperService.getSectionStatusByCaseAndCandidate(candidateId,caseId,CATEGORY_NAME);
+        
+        
+        return WorkExperienceResponse.builder()
+                .caseId(caseId)
+                .categoryId(category.getCategoryId())
+                .checkId(checkId)
+                .status(verificationSectionDTO.getStatus().name())
+                .workExperiences(experienceDTOList)
+                .build();
+
+	   
 	}
 
-/*
-	public WorkExperienceResponse getWorkExperiencesWithDocuments(Long profileId) {
-		// Verify profile exists
-		logger.info("IN WORKEXPERIENCE SERVICE::::::::::::START");
-		Profile profile = profileRepository.findById(profileId)
-				.orElseThrow(() -> new EntityNotFoundException("Profile not found with ID: " + profileId));
 
-		// Get all work experiences for the profile
-		List<WorkExperience> workExperiences = workExperienceRepository.findByProfile_ProfileId(profileId);
-
-		if (workExperiences.isEmpty()) {
-			return WorkExperienceResponse.builder().profileId(profileId)
-					// .profileName(profile.getFirstName() + " " + profile.getLastName())
-					.workExperiences(Collections.emptyList()).summary(new DocumentSummary(0, 0, 0, 0, 0, 0)).build();
-		}
-
-		// Get all professional documents for these experiences
-		List<Long> experienceIds = workExperiences.stream().map(WorkExperience::getExperienceId)
-				.collect(Collectors.toList());
-
-		List<ProfessionalDocuments> allDocuments = professionalDocumentsRepository
-				.findByProfile_ProfileIdAndObjectIdIn(profileId, experienceIds);
-
-		logger.info("allDocuments:::::::::::size::{}", allDocuments == null ? 0 : allDocuments);
-		logger.info("allDocuments:::::::::::::{}", allDocuments);
-
-		// Create response
-		List<WorkExperienceDTO> experienceDetails = workExperiences.stream()
-				.map(experience -> convertToWorkExperienceDetail(experience, allDocuments))
-				.collect(Collectors.toList());
-
-		// Calculate summary
-	//	DocumentSummary summary = calculateSummary(experienceDetails);
-
-		return WorkExperienceResponse.builder().profileId(profileId)
-				// .profileName(profile.getFirstName() + " " + profile.getLastName())
-				.workExperiences(experienceDetails)
-				// .summary(summary)
-				.build();
-	}
-	*/
 
 	private WorkExperience mapToEntity(WorkExperienceDTO dto, Candidate candidate,Long caseId) {
 		

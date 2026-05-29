@@ -18,11 +18,19 @@ public class CorsConfig {
         CorsConfiguration configuration = new CorsConfiguration();
         
         // Allow specific origins (use your frontend URL)
+        
+        /*
         configuration.setAllowedOriginPatterns(List.of(
             "http://localhost:5173", 
             "http://localhost:3000",
             "http://127.0.0.1:5173"
         ));
+        */
+        
+        configuration.setAllowedOriginPatterns(List.of(
+        	    "http://*",
+        	    "https://*"
+        	));
         
         // Allow all methods
         configuration.setAllowedMethods(Arrays.asList(

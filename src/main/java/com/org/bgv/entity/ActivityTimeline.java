@@ -1,6 +1,7 @@
 package com.org.bgv.entity;
 
 import lombok.AllArgsConstructor;
+import lombok.Builder;
 import lombok.Data;
 import lombok.NoArgsConstructor;
 
@@ -23,6 +24,7 @@ import jakarta.persistence.PrePersist;
 import jakarta.persistence.PreUpdate;
 import jakarta.persistence.Table;
 
+@Builder
 @Entity
 @Table(name = "activity_timeline")
 @Data
@@ -46,12 +48,20 @@ public class ActivityTimeline {
     @Column(name = "icon")
     private String icon;
     
-    @Column(name = "type")
-    private String type;
+    private Long caseId;
     
-    @Column(name = "status", nullable = false)
-    @Enumerated(EnumType.STRING)
-    private ActivityStatus status;
+  //  private Long candidateId;
+    
+    private Long checkId;
+    
+    
+    @Column(name = "type")
+    private String type;   // CASE_EVENT, CHECK_EVENT, USER_ACTION
+    
+    @Column(name = "status")
+    private String status;   // COMPLETED, PENDING, FAILED
+    
+    private String action;   // CASE_CREATED, DOC_UPLOADED, etc
     
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "candidate_id", nullable = false)

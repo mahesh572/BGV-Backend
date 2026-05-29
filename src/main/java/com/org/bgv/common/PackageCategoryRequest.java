@@ -7,6 +7,8 @@ import lombok.NoArgsConstructor;
 
 import java.util.List;
 
+import com.org.bgv.bgvpackage.dto.PackageRuleTypeRequest;
+
 @Data
 @Builder
 @NoArgsConstructor
@@ -16,5 +18,6 @@ public class PackageCategoryRequest {
     private String rulesData;
     private List<Long> ruleTypeIds;
     private List<PackageDocumentRequest> allowedDocuments;
+    private List<PackageRuleTypeRequest> allowedRules;
     private List<RuleTypesDTO> ruleTypes;
 }

@@ -14,7 +14,9 @@ import com.org.bgv.common.DocumentStatus;
 import com.org.bgv.common.DocumentTypeInfo;
 import com.org.bgv.constants.CaseCheckStatus;
 import com.org.bgv.constants.CaseStatus;
+import com.org.bgv.dto.CheckCategoryEnum;
 import com.org.bgv.entity.*;
+import com.org.bgv.enums.VendorNoteType;
 import com.org.bgv.repository.*;
 import com.org.bgv.vendor.action.dto.ActionDTO;
 import com.org.bgv.vendor.action.dto.VendorActionCatalog;
@@ -94,6 +96,7 @@ public class VerificationCheckService {
 	private final CheckCategoryRepository checkCategoryRepository;
 	private final WorkExperienceRepository workExperienceRepository;
 	private final ObjectFieldBuilderRegistry fieldBuilderRegistry;
+	private final VerificationCaseSelectionRepository verificationCaseSelectionRepository;
 
 	/**
 	 * Get verification check details by type
@@ -186,6 +189,7 @@ public class VerificationCheckService {
 				.checkName(check.getCategory().getName())
 				.status(check.getStatus().name())
 				.candidate(mapCandidateInfo(candidate))
+				.sendNotification(check.getStatus().name().equalsIgnoreCase(CaseCheckStatus.ACTION_REQUIRED.name()))
 				// .audit(buildAudit(check))
 				 .actions(resolveCheckActions(check.getStatus())) 
 				 
@@ -260,30 +264,11 @@ public class VerificationCheckService {
 		return documentType.getLabel();
 
 	}
-/*
-	private Map<String, Object> buildIdentityData(IdentityProof identity) {
-
-		Map<String, Object> data = new HashMap<>();
-		data.put("documentNumber", identity.getDocumentNumber());
-		data.put("issueDate", identity.getIssueDate());
-		data.put("expiryDate", identity.getExpiryDate());
-		data.put("verified", identity.getVerified());
-		data.put("verificationStatus", identity.getVerificationStatus());
-		data.put("verifiedBy", identity.getVerifiedBy());
-		data.put("verifiedAt", identity.getVerifiedAt());
-		data.put("expired", identity.isExpired());
-		data.put("daysUntilExpiry", identity.getDaysUntilExpiry());
-
-		return data;
-	}
 	
-	List<ObjectFieldDTO> fields =
-	                         fieldBuilderRegistry.resolveFields(
-	                                 CheckObjectType.IDENTITY,
-	                                 identity
-	                         );
-	                         
-*/
+	
+
+	
+	
 	private List<ObjectDTO> buildEducationObjects(VerificationCaseCheck check) {
 
 	    List<EducationHistory> educations = educationHistoryRepository
@@ -299,8 +284,10 @@ public class VerificationCheckService {
 	                        );
 
 	                // Compute document types once
-	                List<DocumentTypeVerificationDTO> documentTypes =
-	                        buildDocumentTypes(education.getId(), check, fields);
+	              //  List<DocumentTypeVerificationDTO> documentTypes = buildDocumentTypes(education.getId(), check, fields);
+	                
+	                List<DocumentTypeVerificationDTO> documentTypes = buildDocumentTypes(education.getId(), check, null);
+
 
 	                // Compute object status from document types
 	                DocumentStatus objectStatus =
@@ -315,6 +302,7 @@ public class VerificationCheckService {
 	                        .documentTypes(documentTypes)
 	                        .evidence(Collections.emptyList())
 	                        .actions(VendorActionCatalog.objectActions())
+	                        .fields(fields)
 	                        .build();
 	            })
 	            .toList();
@@ -369,10 +357,27 @@ public class VerificationCheckService {
 		return data;
 	}
 
-	private List<ObjectDTO> buildWorkExperienceObjects(VerificationCaseCheck check) {
+	private List<ObjectDTO> buildWorkExperienceObjects(
+	        VerificationCaseCheck check) {
 
-	    List<WorkExperience> experiences = workExperienceRepository
-	            .findByVerificationCaseCheck_CaseCheckId(check.getCaseCheckId());
+	    Long caseId =
+	            check.getVerificationCase().getCaseId();
+	                 
+
+	    List<VerificationCaseSelection> selections =
+	            verificationCaseSelectionRepository
+	                    .findByVerificationCase_CaseIdAndType(
+	                            caseId,
+	                            CheckCategoryEnum.WORK
+	                    );
+
+	    List<Long> experienceIds =
+	            selections.stream()
+	                    .map(VerificationCaseSelection::getReferenceId)
+	                    .toList();
+
+	    List<WorkExperience> experiences =
+	            workExperienceRepository.findAllById(experienceIds);
 
 	    return experiences.stream()
 	            .map(experience -> {
@@ -383,15 +388,13 @@ public class VerificationCheckService {
 	                                experience
 	                        );
 
-	                // Compute document types once
 	                List<DocumentTypeVerificationDTO> documentTypes =
 	                        buildDocumentTypes(
 	                                experience.getExperienceId(),
 	                                check,
-	                                fields
+	                                null
 	                        );
 
-	                // Compute object status from document types
 	                DocumentStatus objectStatus =
 	                        resolveObjectStatus(documentTypes);
 
@@ -399,11 +402,9 @@ public class VerificationCheckService {
 	                        .objectId(experience.getExperienceId())
 	                        .objectType(CheckObjectType.WORK_EXPERIENCE.name())
 	                        .displayName(resolveWorkExperienceName(experience))
-	                        // .data(buildWorkExperienceData(experience)) // deprecated
 	                        .status(objectStatus.name())
 	                        .documentTypes(documentTypes)
-	                        .actions(VendorActionCatalog.objectActions())
-	                        .evidence(Collections.emptyList())
+	                        .fields(fields)
 	                        .build();
 	            })
 	            .toList();
@@ -481,9 +482,9 @@ public class VerificationCheckService {
 					.documentTypeId(String.valueOf(docType.getDocTypeId()))
 					.type(docType.getLabel())
 					.status(resolveDocumentTypeStatus(entry.getValue()))
-					 .actions(VendorActionCatalog.documentActions())
+					// .actions(VendorActionCatalog.documentActions())
 					 .fields(fields)
-					// .actions(resolveDocumentActions(resolveDocumentTypeStatus(entry.getValue())))
+					 .actions(resolveDocumentActions(resolveDocumentTypeStatus(entry.getValue()),check.getStatus()))
 					.files(buildVerificationFiles(entry.getValue(),check)).build();
 		}).toList();
 
@@ -567,178 +568,9 @@ public class VerificationCheckService {
 				.build();
 	}
 
-	/**
-	 * Get type-specific verification check
-	 */
-	@Transactional(readOnly = true)
-	public Object getTypeSpecificCheck(Long checkId, Long vendorId) {
-		VerificationCaseCheck check = verificationCaseCheckRepository.findById(checkId)
-				.orElseThrow(() -> new RuntimeException("Verification check not found"));
+	
 
-		if (!check.getVendorId().equals(vendorId)) {
-			throw new RuntimeException("Vendor not authorized");
-		}
-
-		String checkType = check.getCategory().getCode().toLowerCase();
-
-		switch (checkType) {
-		case "education":
-			return getEducationCheck(check, vendorId);
-		case "employment":
-			return getEmploymentCheck(check, vendorId);
-		case "identity":
-			return getIdentityCheck(check, vendorId);
-		// case "criminal":
-		// return getCriminalCheck(check, vendorId);
-		// case "reference":
-		// return getReferenceCheck(check, vendorId);
-		default:
-			throw new RuntimeException("Unsupported check type: " + checkType);
-		}
-	}
-
-	private EducationCheckDTO getEducationCheck(VerificationCaseCheck check, Long vendorId) {
-		VerificationCase verificationCase = check.getVerificationCase();
-		Candidate candidate = candidateRepository.findById(verificationCase.getCandidateId())
-				.orElseThrow(() -> new RuntimeException("Candidate not found"));
-
-		// Get candidate's declared education info (from candidate_education table)
-		// For now, mock data
-		DeclaredEducationInfoDTO declaredInfo = DeclaredEducationInfoDTO.builder().degree("Bachelor of Technology")
-				.institution("XYZ University").specialization("Computer Science").yearOfPassing("2020")
-				.percentage("78.5%").rollNumber("CS2017001").duration("2016-2020").location("Delhi, India")
-				.declaredOn(LocalDateTime.now().minusDays(2)).build();
-
-		EducationContextDTO context = EducationContextDTO.builder().verificationStage("university_contact")
-				.universityContactDetails("registrar@xyzuniversity.edu.in")
-				.portalUrl("https://xyzuniversity.edu.in/verification")
-				.verificationChannels(Arrays.asList("email", "portal")).difficultyLevel("medium").isInternational(false)
-				.build();
-
-		return EducationCheckDTO.builder().declaredInfo(declaredInfo).context(context)
-				.checkId("CHK-EDU-" + check.getCaseCheckId()).caseId(String.valueOf(verificationCase.getCaseId()))
-				.checkType("education").status(mapCheckStatus(check.getStatus())).candidate(mapCandidateInfo(candidate))
-				.documents(getDocuments(check)).timeline(getTimeline(check)).requirements(getRequirements(check))
-				.slas(getSlaInfo(check)).vendorNotes(getVendorNotes(check))
-				//.evidence(getEvidence(check))
-				.verificationHistory(getVerificationHistory(check)).build();
-	}
-
-	private EmploymentCheckDTO getEmploymentCheck(VerificationCaseCheck check, Long vendorId) {
-		VerificationCase verificationCase = check.getVerificationCase();
-		Candidate candidate = candidateRepository.findById(verificationCase.getCandidateId())
-				.orElseThrow(() -> new RuntimeException("Candidate not found"));
-
-		// Get candidate's declared employment info (from candidate_employment table)
-		DeclaredEmploymentInfoDTO declaredInfo = DeclaredEmploymentInfoDTO.builder().companyName("ABC Technologies")
-				.designation("Senior Software Engineer").employmentType("full_time")
-				.startDate(LocalDateTime.now().minusYears(2)).endDate(LocalDateTime.now().minusMonths(1))
-				.isCurrentEmployment(false).location("Bangalore, India").employeeId("EMP12345")
-				.declaredOn(LocalDateTime.now().minusDays(3)).verificationMethod("email").build();
-
-		EmploymentContextDTO context = EmploymentContextDTO.builder().verificationStage("hr_contact")
-				.hrContactDetails("hr@abctech.com").companyWebsite("https://abctech.com").isCompanyActive(true)
-				.verificationMethod("email").requiresReferenceCheck(true).companySize("1000-5000")
-				.industryType("IT Services").build();
-
-		return EmploymentCheckDTO.builder().declaredInfo(declaredInfo).context(context)
-				.checkId("CHK-EMP-" + check.getCaseCheckId()).caseId(String.valueOf(verificationCase.getCaseId()))
-				.checkType("employment").status(mapCheckStatus(check.getStatus()))
-				.candidate(mapCandidateInfo(candidate)).documents(getDocuments(check)).timeline(getTimeline(check))
-				.requirements(getRequirements(check)).slas(getSlaInfo(check)).vendorNotes(getVendorNotes(check))
-				//.evidence(getEvidence(check))
-				.verificationHistory(getVerificationHistory(check)).build();
-	}
-
-	private IdentityCheckDTO getIdentityCheck(VerificationCaseCheck check, Long vendorId) {
-		VerificationCase verificationCase = check.getVerificationCase();
-		Candidate candidate = candidateRepository.findById(verificationCase.getCandidateId())
-				.orElseThrow(() -> new RuntimeException("Candidate not found"));
-
-		DeclaredIdentityInfoDTO declaredInfo = DeclaredIdentityInfoDTO.builder().documentType("aadhaar")
-				.documentNumber("XXXX-XXXX-1234")
-				.name(candidate.getProfile().getFirstName() + " " + candidate.getProfile().getLastName())
-				.dateOfBirth(candidate.getProfile().getDateOfBirth()).gender(candidate.getProfile().getGender())
-				// .address(candidate.getProfile().getAddress())
-				.declaredOn(LocalDateTime.now().minusDays(1)).build();
-
-		IdentityContextDTO context = IdentityContextDTO.builder().verificationStage("document_authentication")
-				.verificationAuthority("UIDAI").isDigitalVerificationPossible(true)
-				.acceptedDocuments(Arrays.asList("aadhaar", "passport", "driving_license"))
-				.requiresPhysicalVerification(false).governmentPortalUrl("https://myaadhaar.uidai.gov.in").build();
-
-		return IdentityCheckDTO.builder().declaredInfo(declaredInfo).context(context)
-				.checkId("CHK-ID-" + check.getCaseCheckId()).caseId(String.valueOf(verificationCase.getCaseId()))
-				.checkType("identity").status(mapCheckStatus(check.getStatus())).candidate(mapCandidateInfo(candidate))
-				.documents(getDocuments(check)).timeline(getTimeline(check)).requirements(getRequirements(check))
-				.slas(getSlaInfo(check))
-				.vendorNotes(getVendorNotes(check))
-				// .evidence(getEvidence(check))
-				.verificationHistory(getVerificationHistory(check)).build();
-	}
-
-	// Helper methods
-	private VendorVerificationCheckDTO buildCommonCheckDTO(VerificationCaseCheck check,
-			VerificationCase verificationCase, Candidate candidate, Company company) {
-		return VendorVerificationCheckDTO.builder().checkId(check.getCaseCheckId()).checkRef(check.getCheckRef())
-				.caseId(String.valueOf(verificationCase.getCaseId())).caseRef(getCaseReference(verificationCase))
-				.checkType(check.getCategory().getCode().toLowerCase()).status(mapCheckStatus(check.getStatus()))
-				.categoryName(check.getCategory().getName()).categoryCode(check.getCategory().getCode())
-				.candidate(mapCandidateInfo(candidate)).employer(mapEmployerInfo(company))
-				.documents(getDocuments(check)).timeline(getTimeline(check)).requirements(getRequirements(check))
-				.slas(getSlaInfo(check)).vendorNotes(getVendorNotes(check))
-				//.evidence(getEvidence(check))
-				.verificationHistory(getVerificationHistory(check)).build();
-	}
-
-	private Map<String, Object> getDeclaredInfo(VerificationCaseCheck check, Candidate candidate) {
-		String checkType = check.getCategory().getCode().toLowerCase();
-		Map<String, Object> declaredInfo = new HashMap<>();
-
-		switch (checkType) {
-		case "education":
-			declaredInfo.put("degree", "Bachelor of Technology");
-			declaredInfo.put("institution", "XYZ University");
-			declaredInfo.put("year", "2020");
-			break;
-		case "employment":
-			declaredInfo.put("company", "ABC Technologies");
-			declaredInfo.put("designation", "Senior Software Engineer");
-			declaredInfo.put("duration", "2 years");
-			break;
-		case "identity":
-			declaredInfo.put("documentType", "Aadhaar");
-			declaredInfo.put("documentNumber", "XXXX-XXXX-1234");
-			declaredInfo.put("name", candidate.getProfile().getFirstName());
-			break;
-		}
-
-		return declaredInfo;
-	}
-
-	private Map<String, Object> getCheckContext(VerificationCaseCheck check, String checkType) {
-		Map<String, Object> context = new HashMap<>();
-		context.put("verificationStage", "in_progress");
-		context.put("assignedTo", "Vendor Agent");
-		context.put("lastUpdated", check.getUpdatedAt());
-
-		switch (checkType) {
-		case "education":
-			context.put("universityContact", "registrar@xyzuniversity.edu.in");
-			context.put("verificationMethod", "portal");
-			break;
-		case "employment":
-			context.put("hrContact", "hr@company.com");
-			context.put("verificationMethod", "email");
-			break;
-		case "identity":
-			context.put("verificationMethod", "document_authentication");
-			context.put("requiresBiometric", false);
-			break;
-		}
-
-		return context;
-	}
+	
 
 	// Common operations for all check types
 	@Transactional
@@ -764,7 +596,7 @@ public class VerificationCheckService {
 	}
 
 	@Transactional
-	public void addNote(Long checkId, Long vendorId, String content, String noteType) {
+	public void addNote(Long checkId, Long vendorId, String content, VendorNoteType noteType) {
 		VerificationCaseCheck check = verificationCaseCheckRepository.findById(checkId)
 				.orElseThrow(() -> new RuntimeException("Verification check not found"));
 
@@ -819,7 +651,7 @@ public class VerificationCheckService {
 		check.setUpdatedAt(LocalDateTime.now());
 
 		addNote(checkId, vendorId, String.format("Check completed. Status: %s. Summary: %s", finalStatus, summary),
-				"verification");
+				VendorNoteType .VERIFICATION);
 
 		String eventDescription = String.format("%s verification completed: %s", check.getCategory().getCode(),
 				finalStatus);
@@ -1028,13 +860,38 @@ public class VerificationCheckService {
 				.daysRemaining(daysRemaining > 0 ? daysRemaining : 0).status(slaStatus)
 				.completedAt(check.getStatus() == CaseCheckStatus.COMPLETED ? check.getUpdatedAt() : null).build();
 	}
-
+/*
 	private List<VendorNoteDTO> getVendorNotes(VerificationCaseCheck check) {
 		return vendorNoteRepository.findByVerificationCaseCheck(check).stream()
 				.map(note -> VendorNoteDTO.builder().id("NOTE-" + note.getNoteId()).content(note.getContent())
 						.createdBy(note.getCreatedBy()).createdAt(note.getCreatedAt()).type(note.getType())
 						.isInternal(note.isInternal()).build())
 				.collect(Collectors.toList());
+	}
+	
+	*/
+	@Transactional(readOnly = true)
+	public List<VendorNoteDTO> getVendorNotes(
+	        Long checkId,
+	        Long vendorId) {
+
+	    VerificationCaseCheck check =
+	            verificationCaseCheckRepository
+	                    .findById(checkId)
+	                    .orElseThrow(() ->
+	                            new RuntimeException("Verification check not found"));
+
+	    // Optional ownership validation
+	    if (!check.getVendorId().equals(vendorId)) {
+	        throw new RuntimeException(
+	                "Vendor not authorized for this verification check");
+	    }
+
+	    return vendorNoteRepository
+	            .findByVerificationCaseCheck_CaseCheckIdOrderByCreatedAtDesc(checkId)
+	            .stream()
+	            .map(this::toDto)
+	            .toList();
 	}
 
 	private String getIconForAction(String action) {
@@ -1146,7 +1003,7 @@ public class VerificationCheckService {
 	}
 
 	@Transactional
-	public void addVendorNote(Long checkId, Long vendorId, String content, String noteType) {
+	public void addVendorNote(Long checkId, Long vendorId, String content, VendorNoteType  noteType) {
 		log.info("Adding note to check {} by vendor {}", checkId, vendorId);
 
 		VerificationCaseCheck check = verificationCaseCheckRepository.findById(checkId)
@@ -1157,14 +1014,14 @@ public class VerificationCheckService {
 			throw new RuntimeException("Vendor not authorized to add notes");
 		}
 
-		VendorNote note = VendorNote.builder().verificationCaseCheck(check).content(content).createdBy("Vendor Agent") // In
-																														// real
-																														// app,
-																														// get
-																														// from
-																														// vendor
-																														// details
-				.createdAt(LocalDateTime.now()).type(noteType).isInternal(noteType.equals("internal")).build();
+		VendorNote note = VendorNote.builder()
+				.verificationCaseCheck(check)
+				.content(content)
+				.createdBy("Vendor Agent") 
+				.createdAt(LocalDateTime.now())
+				.type(noteType)
+				.isInternal(noteType.equals("internal"))
+				.build();
 
 		vendorNoteRepository.save(note);
 
@@ -1192,7 +1049,7 @@ public class VerificationCheckService {
 
 		// Add a note about requirement update
 		addVendorNote(checkId, vendorId,
-				String.format("Requirement %s marked as %s. Notes: %s", requirementId, status, notes), "verification");
+				String.format("Requirement %s marked as %s. Notes: %s", requirementId, status, notes), VendorNoteType .VERIFICATION);
 
 		// Add timeline event
 		saveTimelineEvent(check, "requirement_updated",
@@ -1224,7 +1081,7 @@ public class VerificationCheckService {
 		// Add final note
 		addVendorNote(checkId, vendorId,
 				String.format("Verification completed. Final status: %s. Summary: %s", finalStatus, summary),
-				"verification");
+				VendorNoteType .VERIFICATION);
 
 		// Add timeline event
 		saveTimelineEvent(check, "verification_completed",
@@ -1237,13 +1094,13 @@ public class VerificationCheckService {
 	}
 
 	
-	private List<ActionDTO> resolveDocumentActions(String documentTypeStatus) {
+	private List<ActionDTO> resolveDocumentActions(String documentTypeStatus,CaseCheckStatus checkStatus) {
 
-	    boolean restricted =
-	            "REQUEST_INFO".equals(documentTypeStatus) ||
-	            "INSUFFICIENT".equals(documentTypeStatus);
-
-	    if (!restricted) {
+		boolean restricted =
+		        Set.of("REQUEST_INFO", "INSUFFICIENT").contains(documentTypeStatus)
+		        || CaseCheckStatus.ACTION_REQUIRED.equals(checkStatus);
+	    
+		if (!restricted) {
 	        return VendorActionCatalog.documentActions();
 	    }
 
@@ -1274,7 +1131,8 @@ public class VerificationCheckService {
 		        status == DocumentStatus.INSUFFICIENT ||
 		        status == DocumentStatus.REJECTED ||
 		        status == DocumentStatus.VERIFIED ||
-		        check.getStatus() == CaseCheckStatus.REJECTED;
+		        check.getStatus() == CaseCheckStatus.REJECTED ;
+		      //  || check.getStatus() == CaseCheckStatus.ACTION_REQUIRED;
 		
 		
 		log.info("resolveFileActions::::::::::::::::::restricted::::::::::::{}",restricted);
@@ -1329,7 +1187,8 @@ public class VerificationCheckService {
 	             VERIFIED,
 	             REJECTED,
 	             FAILED,
-	             ESCALATED -> true;
+	             ESCALATED,
+	             ACTION_REQUIRED -> true;
 	        default -> false;
 	    };
 
@@ -1357,59 +1216,55 @@ public class VerificationCheckService {
 	
 	
 	
-	/*
+	private List<ActionDTO> resolveObjectActions(CaseCheckStatus checkStatus) {
 
-	private List<ObjectFieldDTO> buildObjectFields(
-	        String objectType,
-	        Object entity
-	) {
-	    return switch (objectType) {
-	        case "IDENTITY"   -> buildIdentityFields((IdentityProof) entity);
-	      //  case "ADDRESS"    -> buildAddressFields((Address) entity);
-	     //   case "EMPLOYMENT" -> buildEmploymentFields((Employment) entity);
-	     //   case "EDUCATION"  -> buildEducationFields((Education) entity);
-	        default -> List.of();
-	    };
-	}
-	
-	private List<ObjectFieldDTO> buildIdentityFields(IdentityProof identity) {
+	    boolean restricted = checkStatus == CaseCheckStatus.ACTION_REQUIRED
+	            || checkStatus == CaseCheckStatus.VERIFIED
+	            || checkStatus == CaseCheckStatus.REJECTED;
 
-	    List<ObjectFieldDTO> fields = new ArrayList<>();
+	    if (!restricted) {
+	        return VendorActionCatalog.objectActions();
+	    }
 
-	    // 1️⃣ Document Number
-	    fields.add(FieldsUtil.text(
-	            "DOCUMENT_NUMBER",
-	            "Aadhaar Number",
-	            identity.getDocumentNumber(),
-	            true
-	    ));
+	    return VendorActionCatalog.objectActions().stream()
+	            .map(action -> {
+	                if (action.getCode() == ActionType.VIEW ||
+	                    action.getCode() == ActionType.DOWNLOAD) {
+	                    return action;
+	                }
 
-	    // 2️⃣ Issue Date
-	    fields.add(FieldsUtil.date(
-	            "ISSUE_DATE",
-	            "Issue Date",
-	            identity.getIssueDate(),
-	            false
-	    ));
-
-	    // 3️⃣ Expiry Date
-	    fields.add(FieldsUtil.date(
-	            "EXPIRY_DATE",
-	            "Expiry Date",
-	            identity.getExpiryDate(),
-	            false
-	    ));
-
-	    
-
-	    return fields;
+	                return ActionDTO.builder()
+	                        .code(action.getCode())
+	                        .label(action.getLabel())
+	                        .level(action.getLevel())
+	                        .enabled(false)
+	                        .build();
+	            })
+	            .toList();
 	}
 
 	
-	*/
+	private VendorNoteDTO toDto(VendorNote entity) {
 
-	
+	    if (entity == null) {
+	        return null;
+	    }
 
+	    VendorNoteDTO dto = new VendorNoteDTO();
+
+	    dto.setNoteId(entity.getNoteId());
+	    dto.setContent(entity.getContent());
+	    dto.setCreatedBy(entity.getCreatedBy());
+	    dto.setCreatedAt(entity.getCreatedAt());
+	    dto.setType(entity.getType());
+
+	    dto.setVisibleToEmployer(entity.getVisibleToEmployer());
+	    dto.setVisibleToCandidate(entity.getVisibleToCandidate());
+
+	    dto.setInternal(entity.isInternal());
+
+	    return dto;
+	}
 	
 
 }

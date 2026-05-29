@@ -116,8 +116,17 @@ public class BGVController {
     
     @GetMapping("/check/categories/with-ruletypes")
     public ResponseEntity<CustomApiResponse<List<CheckCategoryResponse>>> getCategoryWithRuleTypes(
+    	
            ) throws Exception {
     	List<CheckCategoryResponse> categoryResponse =  bgvServices.getAllCategoriesWithRuleTypes();
+        return ResponseEntity.ok(CustomApiResponse.success(null, categoryResponse, HttpStatus.OK));
+    }
+    
+    @GetMapping("/check/categories/with-ruletypes-pricing")
+    public ResponseEntity<CustomApiResponse<List<CheckCategoryResponse>>> getCategoryWithRuleTypesWithPricing(
+    	
+           ) throws Exception {
+    	List<CheckCategoryResponse> categoryResponse =  bgvServices.getAllCategoriesWithRuleTypesWithPricing();
         return ResponseEntity.ok(CustomApiResponse.success(null, categoryResponse, HttpStatus.OK));
     }
     
@@ -140,7 +149,24 @@ public class BGVController {
         }
     }
     
-    
+    @GetMapping("/rule-types/by-category")
+    public ResponseEntity<CustomApiResponse<Map<Long, List<Map<String, Object>>>>> getRuleTypesByCategoryMap() {
+        try {
+            Map<Long, List<Map<String, Object>>> documentTypes = bgvServices.getRuleTypesByCategoryMap();
+            log.info("getRuleTypesByCategory:::::::{}",documentTypes);
+            return ResponseEntity.ok(CustomApiResponse.success(
+                "Rule types retrieved successfully", 
+                documentTypes, 
+                HttpStatus.OK
+            ));
+        } catch (Exception e) {
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
+                .body(CustomApiResponse.failure(
+                    "Failed to retrieve rule types: " + e.getMessage(), 
+                    HttpStatus.INTERNAL_SERVER_ERROR
+                ));
+        }
+    }
     
     
 /*

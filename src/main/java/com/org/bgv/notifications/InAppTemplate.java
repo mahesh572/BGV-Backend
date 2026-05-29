@@ -1,5 +1,6 @@
 package com.org.bgv.notifications;
 
+import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
 import jakarta.persistence.EnumType;
 import jakarta.persistence.Enumerated;
@@ -25,17 +26,28 @@ public class InAppTemplate {
     private Long id;
 
     private String templateCode;
+    
+    private String template_name;
 
     private Long companyId;
 
     private String title;
 
     private String message;
+    
+    @Column(name = "type", length = 50)
+    private String type; // e.g., "account_creation", "password_reset"
 
     private String deepLink;
+    
+    private NotificationPriority priority;
 
     @Enumerated(EnumType.STRING)
     private PolicySource source;
 
     private boolean active;
+
+    
+
+
 }

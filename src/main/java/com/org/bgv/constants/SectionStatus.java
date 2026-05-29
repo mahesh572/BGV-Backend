@@ -8,7 +8,8 @@ public enum SectionStatus {
     NOT_STARTED("not-started"),
     FAILED("failed"),
     VERIFIED("verified"),
-	ACTION_REQUIRED("Action Required");
+	ACTION_REQUIRED("Action Required"),
+	SUBMITTED("Submitted");
     
     private final String displayName;
     

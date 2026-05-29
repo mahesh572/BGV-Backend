@@ -24,7 +24,7 @@ public class VerificationCaseRequest {
     @NotNull
     private Long employerPackageId;
     
-    @NotNull
+   // @NotNull
     private BigDecimal totalPrice;
     
     private List<CategoryCase> categories;

@@ -1,5 +1,7 @@
 package com.org.bgv.common;
 
+import java.math.BigDecimal;
+
 import com.org.bgv.constants.SelectionType;
 
 import jakarta.validation.constraints.NotNull;
@@ -20,7 +22,7 @@ public class EmployerPackageDocumentRequest {
     @NotNull
     private Long documentTypeId;
     
-    private Double addonPrice;
+    private BigDecimal addonPrice;
     
     private Boolean includedInBase;
     

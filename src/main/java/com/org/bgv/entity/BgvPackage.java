@@ -1,5 +1,6 @@
 package com.org.bgv.entity;
 
+import java.math.BigDecimal;
 import java.util.ArrayList;
 import java.util.List;
 
@@ -44,12 +45,12 @@ public class BgvPackage {
     private Boolean customizable;
     
     @Column(name = "base_price")
-    private Double basePrice;
+    private BigDecimal basePrice;
     
     @Column(name = "isactive")
     private Boolean isActive;
     
-    private Double price;
+    private BigDecimal price;
     
     @OneToMany(mappedBy = "bgvPackage", cascade = CascadeType.ALL, fetch = FetchType.LAZY)
     @Builder.Default

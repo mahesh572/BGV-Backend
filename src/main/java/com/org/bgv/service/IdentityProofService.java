@@ -1,10 +1,18 @@
 package com.org.bgv.service;
 
+import com.org.bgv.candidate.dto.CandidateActionCatalog;
+import com.org.bgv.candidate.dto.IdentityObjectResponse;
+import com.org.bgv.candidate.dto.IdentityResponse;
+import com.org.bgv.candidate.dto.VerificationSectionDTO;
 import com.org.bgv.candidate.entity.Candidate;
 import com.org.bgv.candidate.entity.IdentityProof;
 import com.org.bgv.candidate.repository.CandidateRepository;
 import com.org.bgv.candidate.repository.IdentityProofRepository;
+import com.org.bgv.candidate.service.VerificationHelperService;
+import com.org.bgv.candidate.service.VerificationService;
 import com.org.bgv.common.DocumentStatus;
+import com.org.bgv.constants.SectionStatus;
+import com.org.bgv.dto.CheckCategoryEnum;
 import com.org.bgv.dto.DocumentResponse;
 import com.org.bgv.dto.DocumentStats;
 import com.org.bgv.dto.DocumentUploadRequest;
@@ -13,19 +21,25 @@ import com.org.bgv.dto.IdentityProofDTO;
 import com.org.bgv.dto.IdentityProofResponse;
 import com.org.bgv.dto.IdentitySectionRequest;
 import com.org.bgv.dto.UploadRuleDTO;
+import com.org.bgv.dto.document.DocumentTypeDto;
+import com.org.bgv.dto.document.FileDTO;
+import com.org.bgv.entity.BaseDocument;
 import com.org.bgv.entity.CheckCategory;
+import com.org.bgv.entity.Document;
 import com.org.bgv.entity.DocumentType;
 import com.org.bgv.entity.IdentityDocuments;
 import com.org.bgv.entity.Profile;
 import com.org.bgv.entity.VerificationCase;
 import com.org.bgv.entity.VerificationCaseCheck;
 import com.org.bgv.repository.CheckCategoryRepository;
+import com.org.bgv.repository.DocumentRepository;
 import com.org.bgv.repository.DocumentTypeRepository;
 import com.org.bgv.repository.IdentityDocumentsRepository;
 import com.org.bgv.repository.ProfileRepository;
 import com.org.bgv.repository.VerificationCaseCheckRepository;
 import com.org.bgv.repository.VerificationCaseRepository;
 import com.org.bgv.s3.S3StorageService;
+import com.org.bgv.vendor.entity.VerificationAction;
 
 import jakarta.persistence.EntityNotFoundException;
 import lombok.RequiredArgsConstructor;
@@ -61,6 +75,8 @@ public class IdentityProofService {
     private final DocumentTypeRepository documentTypeRepository;
     private final VerificationCaseRepository verificationCaseRepository;
     private final VerificationCaseCheckRepository verificationCaseCheckRepository;
+    private final DocumentRepository documentRepository ;
+    private final VerificationHelperService verificationHelperService;
     /**
      * Fetch all identity proofs with their related documents for a given profile.
      */
@@ -189,9 +205,9 @@ public class IdentityProofService {
     
     
     
-    public IdentitySectionRequest createIdentitySectionResponse(Long candidateId, Long caseId) {
+    public IdentityResponse createIdentitySectionResponse(Long candidateId, Long caseId) {
 
-        final String CATEGORY_NAME = "Identity";
+        final String CATEGORY_NAME = CheckCategoryEnum.IDENTITY.getName();
 
         // Fetch category
         CheckCategory category = checkCategoryRepository
@@ -206,14 +222,16 @@ public class IdentityProofService {
         VerificationCaseCheck identityCheck = verificationCaseCheckRepository
                 .findByVerificationCaseAndCategory(verificationCase, category)
                 .orElseThrow(() -> new RuntimeException("Identity check not created"));
+        
+        VerificationSectionDTO verificationSectionDTO = verificationHelperService.getSectionStatusByCaseAndCandidate(candidateId,caseId,CATEGORY_NAME);
+        IdentityResponse identityResponse = buildIdentityResponse(candidateId, caseId);
+        identityResponse.setStatus(verificationSectionDTO.getStatus().name());
+        SectionStatus sectionStatus = SectionStatus.fromString(verificationSectionDTO.getStatus().name());
+        identityResponse.setActions(VerificationHelperService.resolveSectionActions(sectionStatus));
+        
+        return identityResponse;
 
-        return IdentitySectionRequest.builder()
-                .section(category.getName())
-                .label(category.getName())
-                .checkId(identityCheck.getCaseCheckId())   // ✅ FIXED
-                .checkRef(identityCheck.getCheckRef())     // ✅ FIXED
-                .documents(createIdentityDocuments(candidateId, verificationCase, identityCheck))
-                .build();
+       
     }
     
     private List<DocumentUploadRequest> createIdentityDocuments(
@@ -274,14 +292,16 @@ public class IdentityProofService {
         }
     }
     
-    private static DocumentUploadRequest createAadharDocument(DocumentType documentType, IdentityProof identityProof) {
+    private DocumentUploadRequest createAadharDocument(DocumentType documentType, IdentityProof identityProof) {
         return DocumentUploadRequest.builder()
                 .id(identityProof!=null?identityProof.getId():null)
         		.type("AADHAR")
                 .label("Aadhar Card")
+                .typeLabel("Aadhar Card")
                 .typeId(documentType.getDocTypeId())
                 .fields(createAadharFields(identityProof))
-              
+                .files(createIdentityDocuments(documentType,identityProof)) 
+                .maxfiles(2)
                 .build();
     }
     
@@ -304,13 +324,16 @@ public class IdentityProofService {
         );
     }
     
-    private static DocumentUploadRequest createPanCardDocument(DocumentType documentType, IdentityProof identityProof) {
+    private DocumentUploadRequest createPanCardDocument(DocumentType documentType, IdentityProof identityProof) {
         return DocumentUploadRequest.builder()
+        		.id(identityProof!=null?identityProof.getId():null)
                 .type("PAN")
                 .label("PAN Card")
+                .typeLabel("PAN Card")
                 .typeId(documentType.getDocTypeId())
                 .fields(createPanFields(identityProof))
-               
+                .files(createIdentityDocuments(documentType,identityProof)) 
+                .maxfiles(2)
                 .build();
     }
     
@@ -333,13 +356,15 @@ public class IdentityProofService {
         );
     }
     
-    private static DocumentUploadRequest createPassportDocument(DocumentType documentType, IdentityProof identityProof) {
+    private DocumentUploadRequest createPassportDocument(DocumentType documentType, IdentityProof identityProof) {
         return DocumentUploadRequest.builder()
+        		.id(identityProof!=null?identityProof.getId():null)
                 .type("PASSPORT")
                 .label("Passport")
                 .typeId(documentType.getDocTypeId())
                 .fields(createPassportFields(identityProof))
-                
+                .files(createIdentityDocuments(documentType,identityProof)) 
+                .maxfiles(2)
                 .build();
     }
     
@@ -375,6 +400,40 @@ public class IdentityProofService {
         return date.format(java.time.format.DateTimeFormatter.ISO_LOCAL_DATE);
     }
     
+    
+    private List<FileDTO> createIdentityDocuments(DocumentType documentType, IdentityProof identityProof) {
+    	
+    	if (identityProof == null) {
+            return Collections.emptyList(); // ✅ safe fallback
+        }
+    	
+    	List<Document> documents = documentRepository.findByCandidate_CandidateIdAndCategory_CategoryIdAndDocTypeId_DocTypeIdAndObjectId(
+    			identityProof.getCandidate().getCandidateId(), documentType.getCategory().getCategoryId(), documentType.getDocTypeId(), identityProof.getId());
+    	return documents.stream()
+                .filter(doc -> doc.getStatus() != DocumentStatus.DELETED)
+                .filter(doc -> !Boolean.FALSE.equals(doc.getActive()))
+                .map(this::convertToFileDTO)
+                .collect(Collectors.toList());
+    }
+    
+    private FileDTO convertToFileDTO(BaseDocument document) {
+
+        VerificationAction action = document.getLastAction();
+
+        return FileDTO.builder()
+                .fileId(document.getDocId())
+                .fileName(extractFileName(document.getFileUrl()))
+                .fileSize(document.getFileSize())
+                .fileUrl(document.getFileUrl())
+                .uploadedAt(document.getUploadedAt())
+                .status(document.getStatus())
+                .actionRemarks(
+                        action != null ? action.getRemarks() : null
+                )
+                .fileType(extractFileType(document.getFileUrl()))
+                .actions(CandidateActionCatalog.documentActions(document.getStatus()))
+                .build();
+    }
     
     @Transactional
     public void updateIdentityFields(
@@ -532,5 +591,79 @@ public class IdentityProofService {
     }
     
    
+    public IdentityResponse buildIdentityResponse(Long candidateId, Long caseId) {
+
+        final String CATEGORY_NAME = "Identity";
+
+        // Fetch category
+        CheckCategory category = checkCategoryRepository
+                .findByNameIgnoreCase(CATEGORY_NAME)
+                .orElseThrow(() -> new RuntimeException("Category not found"));
+
+        // Fetch case
+        VerificationCase verificationCase = verificationCaseRepository.findById(caseId)
+                .orElseThrow(() -> new RuntimeException("Verification case not found"));
+
+        // Fetch case check
+        VerificationCaseCheck identityCheck = verificationCaseCheckRepository
+                .findByVerificationCaseAndCategory(verificationCase, category)
+                .orElseThrow(() -> new RuntimeException("Identity check not found"));
+
+        // Get documents (existing logic)
+        List<DocumentUploadRequest> documents =
+                createIdentityDocuments(candidateId, verificationCase, identityCheck);
+
+        // Convert to IdentityObjectResponse
+        List<IdentityObjectResponse> identityObjects = documents.stream()
+                .map(this::mapToIdentityObjectResponse)
+                .collect(Collectors.toList());
+
+        return IdentityResponse.builder()
+                .caseId(caseId)
+                .categoryId(category.getCategoryId())
+                .checkId(identityCheck.getCaseCheckId())
+                .identityhistory(identityObjects)
+                .build();
+    }
     
+    private IdentityObjectResponse mapToIdentityObjectResponse(DocumentUploadRequest request) {
+
+        return IdentityObjectResponse.builder()
+                .id(request.getId())
+                .type(request.getType())
+                .label(request.getLabel())
+                .typeId(request.getTypeId())
+
+                // ✅ KEEP fields as it is
+                .fields(request.getFields())
+
+                // Convert files → DocumentTypeDto
+                .documentTypes(
+                        List.of(mapToDocumentTypeDto(request))
+                )
+                .build();
+    }
+    
+    private DocumentTypeDto mapToDocumentTypeDto(DocumentUploadRequest request) {
+
+        return DocumentTypeDto.builder()
+                .id(request.getId())
+                .typeId(request.getTypeId())
+                .typeName(request.getType())
+                .typeLabel(request.getTypeLabel())
+                .description(request.getLabel())
+                .isRequired(true) // you can adjust if needed
+                .enabled(true)
+                .maxFiles(request.getMaxfiles())
+
+                // ✅ files mapping
+                .files(request.getFiles() != null ? request.getFiles() : new ArrayList<>())
+
+                // ✅ KEEP fields same (important requirement)
+                .fields(request.getFields())
+
+                .error(false)
+                .errorMessage(null)
+                .build();
+    }
 }

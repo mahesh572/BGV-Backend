@@ -71,6 +71,8 @@ public class VerificationCheckResponseDTO {
     // Current check-specific context (different for each check type)
     private Map<String, Object> context;
     
+    private Boolean sendNotification;
+    
     @JsonProperty("audit")
     private AuditDTO audit;
 }

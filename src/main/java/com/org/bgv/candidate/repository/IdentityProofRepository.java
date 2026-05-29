@@ -108,6 +108,8 @@ public interface IdentityProofRepository extends JpaRepository<IdentityProof, Lo
     
     List<IdentityProof> findByVerificationCaseCheckCaseCheckId(Long checkId);
     
+    void deleteByVerificationCaseCaseId(Long caseId);
     
+    List<IdentityProof> findByVerificationCaseCaseIdAndDocTypeId(Long caseId, Long docTypeId);
 }
 

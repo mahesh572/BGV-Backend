@@ -3,6 +3,8 @@ package com.org.bgv.entity;
 import jakarta.persistence.*;
 import lombok.*;
 import java.time.LocalDateTime;
+import java.util.ArrayList;
+import java.util.List;
 
 import com.org.bgv.common.DocumentStatus;
 import com.org.bgv.constants.VerificationStatus;
@@ -49,6 +51,8 @@ public class VerificationCaseDocument {
     @Enumerated(EnumType.STRING)
     @Column(name = "verification_status", nullable = false)
     private DocumentStatus verificationStatus;
+    
+    
 
     @Builder.Default
     private LocalDateTime createdAt = LocalDateTime.now();

@@ -17,6 +17,7 @@ import org.springframework.web.bind.annotation.RestController;
 import com.org.bgv.api.response.CustomApiResponse;
 import com.org.bgv.controller.IdentityController;
 import com.org.bgv.dto.EducationHistoryDTO;
+import com.org.bgv.dto.EducationResponse;
 import com.org.bgv.service.EducationService;
 import com.org.bgv.service.IdentityProofService;
 
@@ -70,9 +71,10 @@ public class EducationController {
     }
     
     @GetMapping
-    public ResponseEntity<CustomApiResponse<List<EducationHistoryDTO>>> getEducationHistory(@PathVariable Long candidateId,@RequestParam(required = false) Long caseId) {
+    public ResponseEntity<CustomApiResponse<?>> getEducationHistory(@PathVariable Long candidateId,@RequestParam(required = false) Long caseId) {
         try {
-            List<EducationHistoryDTO> educationHistory = educationHistoryService.getEducationByProfile(candidateId,caseId);
+        	EducationResponse educationHistory = educationHistoryService.getEducationByProfile(candidateId,caseId);
+            
             return ResponseEntity.ok(CustomApiResponse.success("Education history retrieved successfully", educationHistory, HttpStatus.OK));
         } catch (RuntimeException e) {
             return ResponseEntity.status(HttpStatus.NOT_FOUND)

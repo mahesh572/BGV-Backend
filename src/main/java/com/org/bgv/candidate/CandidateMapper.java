@@ -45,7 +45,7 @@ public class CandidateMapper {
 
 		            .firstName(profile != null ? profile.getFirstName() : null)
 		            .lastName(profile != null ? profile.getLastName() : null)
-		            .mobileNo(profile != null ? profile.getPhoneNumber() : null)
+		            .phoneNumber(profile != null ? profile.getPhoneNumber() : null)
 		            .gender(profile != null ? profile.getGender() : null)
 
 		            .name(getFullName(candidate, profile))
@@ -62,7 +62,7 @@ public class CandidateMapper {
 
 		            .companyId(company != null ? company.getId() : null)
 		            .companyName(company != null ? company.getCompanyName() : null)
-
+                    .status(candidate.getStatus()!=null ?candidate.getStatus().name():null)
 		            .build();
 		}
 

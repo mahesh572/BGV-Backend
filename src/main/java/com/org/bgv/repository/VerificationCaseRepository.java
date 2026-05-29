@@ -1,5 +1,6 @@
 package com.org.bgv.repository;
 
+import com.org.bgv.candidate.entity.Candidate;
 import com.org.bgv.constants.CaseStatus;
 import com.org.bgv.entity.EmployerPackage;
 import com.org.bgv.entity.VerificationCase;
@@ -7,6 +8,7 @@ import com.org.bgv.entity.VerificationCase;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.repository.JpaRepository;
+import org.springframework.data.jpa.repository.JpaSpecificationExecutor;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 import org.springframework.stereotype.Repository;
@@ -16,7 +18,9 @@ import java.util.List;
 import java.util.Optional;
 
 @Repository
-public interface VerificationCaseRepository extends JpaRepository<VerificationCase, Long> {
+public interface VerificationCaseRepository extends JpaRepository<VerificationCase, Long>, JpaSpecificationExecutor<VerificationCase> {
+	
+	
     
     List<VerificationCase> findByCandidateId(Long candidateId);
     List<VerificationCase> findByCandidateId(Long candidateId,Pageable page);

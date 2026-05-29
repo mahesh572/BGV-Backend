@@ -562,7 +562,7 @@ try {
         user.setPasswordResetrequired(Boolean.FALSE);
 
         userRepository.save(user);
-        emailService.sendEmailResetPasswordSuccessfull(user);
+       // emailService.sendEmailResetPasswordSuccessfull(user);
         
         logger.info("Password reset successfully for user: {}", user.getEmail());
     }

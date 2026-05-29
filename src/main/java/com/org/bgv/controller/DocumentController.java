@@ -54,6 +54,8 @@ public class DocumentController {
                     .body(CustomApiResponse.failure("Failed to retrieve documents: " + e.getMessage(), HttpStatus.INTERNAL_SERVER_ERROR));
         }
     }
+    
+    
  // Upload multiple documents endpoint
     @PostMapping(value = "/candidate/{candidateId}/upload-multiple", consumes = "multipart/form-data")
     public ResponseEntity<CustomApiResponse<DocumentCategoryDto>> uploadMultipleDocuments(

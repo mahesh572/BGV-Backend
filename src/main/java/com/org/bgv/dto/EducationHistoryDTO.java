@@ -10,6 +10,8 @@ import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.util.List;
 
+import com.org.bgv.dto.document.DocumentTypeDto;
+
 import jakarta.validation.constraints.NotNull;
 
 @Getter
@@ -55,5 +57,8 @@ public class EducationHistoryDTO {
     private String verificationStatus;
     private String verifiedBy;
     
-    private List<DocumentResponse> documents;
+   // private List<DocumentResponse> documents;
+    
+    private List<DocumentTypeDto> documentTypes;
+    
 }

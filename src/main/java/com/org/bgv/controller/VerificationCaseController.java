@@ -3,8 +3,13 @@ package com.org.bgv.controller;
 import com.org.bgv.api.response.CustomApiResponse;
 import com.org.bgv.candidate.dto.SectionNamesDisplayDTO;
 import com.org.bgv.common.VerificationCaseResponse;
+import com.org.bgv.company.dto.PricingConfirmationDTO;
+import com.org.bgv.company.dto.PricingSummaryDTO;
 import com.org.bgv.common.VerificationCaseRequest;
 import com.org.bgv.constants.CaseStatus;
+import com.org.bgv.invoice.dto.InvoiceDTO;
+import com.org.bgv.invoice.service.InvoiceGenerationService;
+import com.org.bgv.service.VerificationCaseSelectionService;
 import com.org.bgv.service.VerificationCaseService;
 
 import jakarta.validation.Valid;
@@ -24,6 +29,8 @@ import java.util.List;
 public class VerificationCaseController {
     
     private final VerificationCaseService verificationCaseService;
+    private final VerificationCaseSelectionService verificationCaseSelectionService;
+    private final InvoiceGenerationService invoiceGenerationService;
     
     @PostMapping
     public ResponseEntity<CustomApiResponse<VerificationCaseResponse>> createVerificationCase(
@@ -173,6 +180,59 @@ public class VerificationCaseController {
     }
 
     
+    @DeleteMapping("/{caseId}")
+    public ResponseEntity<CustomApiResponse<Void>> removeVerificationCase(
+            @PathVariable Long caseId) {
+
+        verificationCaseService.removeVerificationCase(caseId);
+        return ResponseEntity.ok(
+                CustomApiResponse.success(
+                        "Verification document sections retrieved successfully",
+                        null,
+                        HttpStatus.OK
+                )
+        );
+    }
     
+    @GetMapping("/{caseId}")
+    public ResponseEntity<CustomApiResponse<Void>> populateVerificationCaseDocuments(
+            @PathVariable Long caseId) {
+
+    	verificationCaseSelectionService.populateSelections(caseId);
+        return ResponseEntity.ok(
+                CustomApiResponse.success(
+                        "Verification document sections retrieved successfully",
+                        null,
+                        HttpStatus.OK
+                )
+        );
+    }
     
+ // Add to VerificationCaseController.java
+
+    @GetMapping("/{caseId}/pricing")
+    public ResponseEntity<CustomApiResponse<PricingSummaryDTO>> getCasePricing(
+            @PathVariable Long caseId) {
+        PricingSummaryDTO pricing = verificationCaseSelectionService.getCasePricingSummary(caseId);
+        return ResponseEntity.ok(
+            CustomApiResponse.success("Pricing fetched successfully", pricing, HttpStatus.OK)
+        );
+    }
+
+    @PostMapping("/{caseId}/confirm-pricing")
+    public ResponseEntity<CustomApiResponse<PricingConfirmationDTO>> confirmPricing(
+            @PathVariable Long caseId) {
+        PricingConfirmationDTO confirmation = verificationCaseSelectionService.confirmPricing(caseId);
+        return ResponseEntity.ok(
+            CustomApiResponse.success("Pricing confirmed successfully", confirmation, HttpStatus.OK)
+        );
+    }
+
+    @PostMapping("/{caseId}/generate-invoice")
+    public ResponseEntity<CustomApiResponse<InvoiceDTO>> generateInvoice(
+            @PathVariable Long caseId) {
+        InvoiceDTO invoice = invoiceGenerationService.generateInvoice(caseId);
+        return ResponseEntity.status(HttpStatus.CREATED)
+            .body(CustomApiResponse.success("Invoice generated successfully", invoice, HttpStatus.CREATED));
+    }
 }

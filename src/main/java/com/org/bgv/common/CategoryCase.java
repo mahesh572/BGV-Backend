@@ -16,6 +16,11 @@ public class CategoryCase {
 	@NotNull
     private Long categoryId;
     
-    @NotNull
+	private List<Long> selectedRuleIds;  // going to be removed
+	
+	private List<SelectedRuleRequest> selectedRules;
+	
+	private List<Long> selectedDocumentIds;
+   
     private List<CaseDocumentSelection> documents;
 }

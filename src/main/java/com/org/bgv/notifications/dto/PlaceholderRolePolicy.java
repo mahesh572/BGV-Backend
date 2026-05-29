@@ -95,7 +95,15 @@ public enum PlaceholderRolePolicy {
 
     INTERNAL_REMARKS(EnumSet.of(
             TemplateUserRole.ADMINISTRATOR
-    ));
+    )),
+    VERIFICATION_LINK(EnumSet.of(TemplateUserRole.ADMINISTRATOR)),
+    VERIFICATION_LINK_EXPIRY_DATE(EnumSet.of(TemplateUserRole.ADMINISTRATOR)),
+    CURRENT_YEAR(EnumSet.of(TemplateUserRole.ADMINISTRATOR)),
+	PASSWORD_LINK_EXPIRY_DURATION(EnumSet.of(TemplateUserRole.ADMINISTRATOR)),
+	
+	CHECK_NAME(EnumSet.of(TemplateUserRole.ADMINISTRATOR)),
+	INSUFFICIENT_COUNT(EnumSet.of(TemplateUserRole.ADMINISTRATOR));
+	
 
     private final Set<TemplateUserRole> roles;
 

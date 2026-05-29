@@ -9,5 +9,9 @@ public interface DegreeDocumentTypeRepository
 
     List<DegreeDocumentType> 
         findByDegreeType_DegreeIdAndActiveTrue(Long degreeId);
+    
+    List<DegreeDocumentType> findByDegreeType_DegreeIdAndActiveTrueOrderByDisplayOrderAsc(
+            Long degreeId
+    );
 
 }

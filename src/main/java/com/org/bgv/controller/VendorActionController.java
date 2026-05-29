@@ -26,6 +26,7 @@ import com.org.bgv.vendor.action.dto.VerificationActionRequest;
 import com.org.bgv.vendor.dto.ActionLevel;
 import com.org.bgv.vendor.dto.ActionReasonDTO;
 import com.org.bgv.vendor.dto.ActionType;
+import com.org.bgv.vendor.dto.VendorNotificationRequest;
 import com.org.bgv.vendor.evidence.dto.EvidenceUploadRequest;
 import com.org.bgv.vendor.evidence.dto.EvidenceUploadResponse;
 import com.org.bgv.vendor.service.VerificationActionService;
@@ -257,6 +258,29 @@ public class VendorActionController {
       
     }
     
+    
+    @PostMapping("/send-notification")
+    public ResponseEntity<CustomApiResponse<?>> sendNotification(
+            @RequestBody VendorNotificationRequest request
+    ) {
+
+        log.info("SEND_NOTIFICATION initiated | caseId={} | checkId={}",
+                request.getCaseId(),
+                request.getCheckId());
+
+         verificationActionService.sendNotification(
+                request.getCaseId(),
+                request.getCheckId()
+        );
+
+        return ResponseEntity.ok(
+                CustomApiResponse.success(
+                        "Notification sent successfully",
+                       "",
+                        HttpStatus.OK
+                )
+        );
+    }
 
 }
 

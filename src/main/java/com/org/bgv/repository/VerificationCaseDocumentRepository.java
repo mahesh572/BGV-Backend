@@ -59,5 +59,5 @@ public interface VerificationCaseDocumentRepository extends JpaRepository<Verifi
             DocumentStatus status
     );
 
-    
+    boolean existsByVerificationCase_CaseIdAndDocumentType_DocTypeId(Long caseId, Long docTypeId);
 }

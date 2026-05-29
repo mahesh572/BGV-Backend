@@ -6,13 +6,20 @@ import java.util.List;
 import org.springframework.stereotype.Service;
 
 import com.fasterxml.jackson.core.JsonProcessingException;
+import com.org.bgv.candidate.entity.Candidate;
+import com.org.bgv.candidate.repository.CandidateRepository;
 import com.org.bgv.common.DocumentStatus;
 import com.org.bgv.config.SecurityUtils;
 import com.org.bgv.constants.CaseCheckStatus;
+import com.org.bgv.entity.Company;
 import com.org.bgv.entity.Document;
+import com.org.bgv.entity.User;
 import com.org.bgv.entity.VerificationCase;
 import com.org.bgv.entity.VerificationCaseCheck;
+import com.org.bgv.notifications.service.NotificationDispatcher;
+import com.org.bgv.repository.CompanyRepository;
 import com.org.bgv.repository.DocumentRepository;
+import com.org.bgv.repository.UserRepository;
 import com.org.bgv.repository.VerificationCaseCheckRepository;
 import com.org.bgv.repository.VerificationCaseRepository;
 import com.org.bgv.service.EmailService;
@@ -51,6 +58,10 @@ public class VerificationActionService {
 	private final DocumentRepository documentRepository;
 	private final CaseCheckStatusService caseCheckStatusService;
 	private final CheckSyncService checkSyncService;
+	private final CandidateRepository candidateRepository;
+	 private final UserRepository userRepository;
+	 private final NotificationDispatcher notificationDispatcher;
+	 private final CompanyRepository companyRepository;
 	
 	public List<ActionReasonDTO> getReasons(
 	        Long categoryId,
@@ -132,104 +143,169 @@ public class VerificationActionService {
         
         log.info("Evidence {} linked to action {}", evidenceId, actionId);
     }
-	/*
-	@Transactional
-	public Long createRequestInfoAction(VerificationActionRequest req) {
-
-	    VerificationAction action = verificationActionRepository.save(
-	        VerificationAction.builder()
-	            .actionType(req.getActionType())
-	            .actionLevel(req.getActionLevel())
-	            .verificationCase(
-	                verificationCaseRepository.getReferenceById(req.getCaseId())
-	            )
-	            .verificationCaseCheck(
-	                verificationCaseCheckRepository.getReferenceById(req.getCheckId())
-	            )
-	            .reason(
-	                actionReasonRepository.getReferenceById(req.getReasonId())
-	            )
-	            .remarks(req.getRemarks())
-	            .candidateId(getCandidateId(req))
-	            .status(ActionStatus.OPEN)
-	            .performedBy(SecurityUtils.getCurrentUserId())
-	            .performedAt(LocalDateTime.now())
-	            .build()
-	    );
-
-	    // 🔗 HANDLE EVIDENCE
-	    if (req.getEvidences() != null && !req.getEvidences().isEmpty()) {
-
-	        for (EvidenceLinkRequest evReq : req.getEvidences()) {
-
-	            // -------------------------------
-	            // 1️⃣ VENDOR UPLOAD (already exists)
-	            // -------------------------------
-	            if (evReq.getSource() == EvidenceSource.VENDOR_UPLOAD) {
-
-	                VerificationActionEvidence evidence =
-	                        evidenceRepository.findById(evReq.getEvidenceId())
-	                            .orElseThrow(() ->
-	                                new IllegalArgumentException(
-	                                    "Evidence not found: " + evReq.getEvidenceId()
-	                                )
-	                            );
-
-	                evidence.setAction(action);
-	            }
-
-	            // --------------------------------
-	            // 2️⃣ CANDIDATE DOCUMENT (create new)
-	            // --------------------------------
-	            else if (evReq.getSource() == EvidenceSource.CANDIDATE_DOCUMENT) {
-
-	                VerificationActionEvidence evidence =
-	                        VerificationActionEvidence.builder()
-	                            .action(action)
-	                            .source(EvidenceSource.CANDIDATE_DOCUMENT)
-	                            .documentId(evReq.getDocumentId())
-	                            .uploadedBy(SecurityUtils.getCurrentUserId())
-	                            .build();
-
-	                evidenceRepository.save(evidence);
-	            }
-	        }
-	    }
-
-	    return action.getId();
-	}
-*/
+	
 	
 	@Transactional
 	public Long createAction(VerificationActionRequest req) {
 
 	    VerificationAction action = buildBaseAction(req);
-
 	    action = verificationActionRepository.save(action);
 
 	    linkEvidences(req, action);
-	    
-	    switch (req.getActionLevel()) {
-      //  case CASE -> updateCaseStatus(req, action);
-      //  case SECTION -> updateCheckStatus(req, action);
-        case DOCUMENT -> updateDocumentStatus(req, action);
-      //  case OBJECT -> updateObjectStatus(req, action);
-      }
-	    
-	   // updateCheckStatus(req, action);
-	    
-	    recalculateAndUpdateCheckStatus(req.getCheckId(), action);
 
-	    
-	  //  emailService.sendCandidateActionRequiredEmail(req.getCaseId(), req.getCheckId(), req.getActionType(), action.getReason().getLabel(), req.getRemarks());
-	    
-	    
-	  //  applyActionSideEffects(req, action); // 👈 optional hooks
+	    boolean documentChanged = false;
+
+	    switch (req.getActionLevel()) {
+
+	        case DOCUMENT -> {
+	            updateDocumentStatus(req, action);
+	            documentChanged = true; // ✅ important
+	        }
+
+	        case SECTION -> {
+	            handleSectionAction(req, action); // only side effects
+	        }
+	    }
+
+	    // ✅ ONLY recalc when document changed
+	    if (documentChanged) {
+	        recalculateAndUpdateCheckStatus(req.getCheckId(), action);
+	    }
 
 	    return action.getId();
 	}
+	
+	private void updateDocumentStatus(
+	        VerificationActionRequest req,
+	        VerificationAction action
+	) {
+
+	    if (req.getDocumentId() == null) {
+	        throw new IllegalArgumentException(
+	                "DocumentId is required for DOCUMENT level action"
+	        );
+	    }
+
+	    Document document = documentRepository.findById(req.getDocumentId())
+	            .orElseThrow(() -> new EntityNotFoundException(
+	                    "Document not found: " + req.getDocumentId()));
+
+	    DocumentStatus newStatus = resolveDocumentStatus(
+	            document.getStatus(), // ✅ pass current state (future state machine ready)
+	            req.getActionType()
+	    );
+
+	    document.setStatus(newStatus);
+	    document.setLastAction(action);
+	    document.setUpdatedAt(LocalDateTime.now());
+	}
+	
+	private void handleSectionAction(
+	        VerificationActionRequest req,
+	        VerificationAction action
+	) {
+
+	    if (req.getActionType() == ActionType.REQUEST_INFO
+	            || req.getActionType() == ActionType.INSUFFICIENT) {
+
+	        try {
+	            Candidate candidate = candidateRepository
+	                    .findById(action.getCandidateId())
+	                    .orElseThrow();
+
+	            User user = userRepository
+	                    .findById(candidate.getUser().getUserId())
+	                    .orElseThrow();
+
+	            VerificationCaseCheck check =
+	                    verificationCaseCheckRepository.getReferenceById(req.getCheckId());
+
+	            Company company = companyRepository
+	                    .findById(check.getVerificationCase().getCompanyId())
+	                    .orElseThrow();
+
+	            int insufficientCount = (int) documentRepository
+	                    .findByVerificationCaseCheck_CaseCheckId(check.getCaseCheckId())
+	                    .stream()
+	                    .filter(doc ->
+	                            doc.getStatus() == DocumentStatus.INSUFFICIENT
+	                                    || doc.getStatus() == DocumentStatus.REQUEST_INFO)
+	                    .count();
+
+	            notificationDispatcher.dispatchVerificationCheckActionRequired(
+	                    company,
+	                    candidate,
+	                    user,
+	                    check.getCategory().getName(),
+	                    check.getVerificationCase().getCaseId(),
+	                    check.getCaseCheckId(),
+	                    insufficientCount,
+	                    action.getRemarks()
+	            );
+
+	        } catch (Exception e) {
+	            log.error("Error sending section action notification", e);
+	        }
+	    }
+	}
+	
+	
+	private void updateCheckStatus(VerificationActionRequest req,
+	        VerificationAction action) {
+		
+		if (req.getActionLevel() == ActionLevel.SECTION
+		        && (req.getActionType() == ActionType.REQUEST_INFO
+		        || req.getActionType() == ActionType.INSUFFICIENT)) {
+
+			// 🔔 SEND NOTIFICATION (ONLY ONCE PER CHECK)
+		    try {
+		        Candidate candidate = candidateRepository
+		                .findById(action.getCandidateId())
+		                .orElseThrow();
+
+		        User user = userRepository
+		                .findById(candidate.getUser().getUserId())
+		                .orElseThrow();
+		        
+		        VerificationCaseCheck check =
+			            verificationCaseCheckRepository.getReferenceById(req.getCheckId());
+		        
+		        Long companyId = check.getVerificationCase().getCompanyId();
+		        
+		        Company company = companyRepository.findById(companyId)
+		                .orElseThrow(() -> new IllegalArgumentException("Company not found"));
+
+
+		        // 🔹 Count insufficient documents
+		        int insufficientCount = (int) documentRepository
+		                .findByVerificationCaseCheck_CaseCheckId(check.getCaseCheckId())
+		                .stream()
+		                .filter(doc -> doc.getStatus() == DocumentStatus.INSUFFICIENT
+		                        || doc.getStatus() == DocumentStatus.REQUEST_INFO)
+		                .count();
+
+		        notificationDispatcher.dispatchVerificationCheckActionRequired(
+		                company,
+		                candidate,
+		                user,
+		                check.getCategory().getName(), // check name
+		                check.getVerificationCase().getCaseId(),
+		                check.getCaseCheckId(),
+		                insufficientCount,
+		                action.getRemarks()
+		        );
+		    }catch (Exception e) {
+				e.printStackTrace();
+			}
+		}
+		
+	}
 
 	private VerificationAction buildBaseAction(VerificationActionRequest req) {
+		
+		ActionStatus status = req.getActionType() == ActionType.VERIFY
+		        ? ActionStatus.RESOLVED
+		        : ActionStatus.OPEN;
 
 	    return VerificationAction.builder()
 	            .actionType(req.getActionType())
@@ -247,7 +323,7 @@ public class VerificationActionService {
 	            )
 	            .remarks(req.getRemarks())
 	            .candidateId(getCandidateId(req))
-	            .status(ActionStatus.OPEN)
+	            .status(status)
 	            .performedBy(SecurityUtils.getCurrentUserId())
 	            .performedAt(LocalDateTime.now())
 	            .documentId(req.getDocumentId())
@@ -373,26 +449,42 @@ public class VerificationActionService {
 	    check.setUpdatedAt(LocalDateTime.now());
 	}
 */
-	private void updateDocumentStatus(
-	        VerificationActionRequest req,
-	        VerificationAction action
+	private DocumentStatus resolveDocumentStatus(
+	        DocumentStatus current,
+	        ActionType actionType
 	) {
-	    if (req.getDocumentId() == null) {
-	        throw new IllegalArgumentException("DocumentId is required for DOCUMENT level action");
-	    }
 
-	    Document document = documentRepository.findById(req.getDocumentId())
-	            .orElseThrow(() ->
-	                    new EntityNotFoundException("Document not found: " + req.getDocumentId()));
+	    return switch (current) {
+/*
+	        case PENDING -> switch (actionType) {
+	            case REQUEST_INFO -> DocumentStatus.REQUEST_INFO;
+	            case INSUFFICIENT -> DocumentStatus.INSUFFICIENT;
+	            case VERIFY, APPROVE -> DocumentStatus.VERIFIED;
+	            case REJECT -> DocumentStatus.REJECTED;
+	            default -> throw invalid(actionType, current);
+	        };
+*/
+	    case UPLOADED -> switch (actionType) {
+        case REQUEST_INFO -> DocumentStatus.REQUEST_INFO;
+        case INSUFFICIENT -> DocumentStatus.INSUFFICIENT;
+        case VERIFY, APPROVE -> DocumentStatus.VERIFIED;
+        case REJECT -> DocumentStatus.REJECTED;
+        default -> throw invalid(actionType, current);
+    };
+	        case REQUEST_INFO, INSUFFICIENT -> switch (actionType) {
+	            case VERIFY -> DocumentStatus.VERIFIED;
+	            case REJECT -> DocumentStatus.REJECTED;
+	            default -> throw invalid(actionType, current);
+	        };
 
-	    DocumentStatus newStatus = resolveDocumentStatus(req.getActionType());
-
-	    document.setStatus(newStatus);
-	    document.setLastAction(action);
-	    document.setUpdatedAt(LocalDateTime.now());
-	    
-	    // updateCheckStatus(req, action)
-
+	        case VERIFIED, REJECTED -> throw new IllegalStateException("Final state reached: " + current);
+		    default -> throw new IllegalArgumentException("Unexpected value: " + current);
+	    };
+	}
+	private RuntimeException invalid(ActionType action, DocumentStatus state) {
+	    return new IllegalStateException(
+	            "Invalid action " + action + " for state " + state
+	    );
 	}
 
 	
@@ -418,45 +510,44 @@ public class VerificationActionService {
 	        Long checkId,
 	        VerificationAction action
 	) {
-		VerificationCaseCheck check =
+
+	    VerificationCaseCheck check =
 	            verificationCaseCheckRepository.getReferenceById(checkId);
-		/*
 
-	    List<Document> documents =
-	            documentRepository.findByVerificationCaseCheck_CaseCheckId(checkId);
+	    CaseCheckStatus oldStatus = check.getStatus();
 
-	    CaseCheckStatus newStatus = resolveCheckStatusFromDocuments(documents);
+	    CaseCheckStatus newStatus =
+	            caseCheckStatusService.recalculateCheckStatus(checkId);
 
 	    check.setStatus(newStatus);
 	    check.setLastAction(action);
 	    check.setUpdatedAt(LocalDateTime.now());
-	    
+
 	    verificationCaseCheckRepository.save(check);
-	    
-	    */
-		
-		CaseCheckStatus newStatus = caseCheckStatusService.recalculateCheckStatus(checkId);
-		check.setStatus(newStatus);
-	    check.setLastAction(action);
-	    check.setUpdatedAt(LocalDateTime.now());
-	    
-	    verificationCaseCheckRepository.save(check);
-	    
-	    
-	    
-	    try {
-	    	if(CaseCheckStatus.ACTION_REQUIRED.equals(newStatus)) {
-			checkSyncService.markSectionActionRequired(action.getCandidateId(),
-			        check.getVerificationCase().getCaseId(),
-			        check.getCategory().getName() // map category → section
-			);
-	    	}
-		} catch (JsonProcessingException e) {
-			// TODO Auto-generated catch block
-			e.printStackTrace();
-		}
+
+	    // ✅ trigger ONLY when status changes to ACTION_REQUIRED
+	    if (!CaseCheckStatus.ACTION_REQUIRED.equals(oldStatus)
+	            && CaseCheckStatus.ACTION_REQUIRED.equals(newStatus)) {
+
+	        triggerActionRequiredSync(check, action);
+	    }
 	}
 
+	private void triggerActionRequiredSync(
+	        VerificationCaseCheck check,
+	        VerificationAction action
+	) {
+	    try {
+	        checkSyncService.markSectionActionRequired(
+	                action.getCandidateId(),
+	                check.getVerificationCase().getCaseId(),
+	                check.getCategory().getName()
+	        );
+	    } catch (JsonProcessingException e) {
+	        log.error("Error syncing ACTION_REQUIRED state", e);
+	    }
+	}
+	
 	private CaseCheckStatus resolveCheckStatusFromDocuments(List<Document> documents) {
 
 	    if (documents.stream().anyMatch(d -> d.getStatus() == DocumentStatus.REJECTED)) {
@@ -480,6 +571,48 @@ public class VerificationActionService {
 	    }
 
 	    return CaseCheckStatus.IN_PROGRESS;
+	}
+	
+	
+	public void sendNotification(Long caseId,Long checkId) {
+		
+		VerificationActionRequest verificationActionRequest = new VerificationActionRequest();
+		verificationActionRequest.setCaseId(caseId);
+		Long candidateId = getCandidateId(verificationActionRequest);
+		
+		Candidate candidate = candidateRepository
+                .findById(candidateId)
+                .orElseThrow();
+		
+		User user = userRepository
+                .findById(candidate.getUser().getUserId())
+                .orElseThrow();
+		
+		 VerificationCaseCheck check =
+                 verificationCaseCheckRepository.getReferenceById(checkId);
+
+         Company company = companyRepository
+                 .findById(check.getVerificationCase().getCompanyId())
+                 .orElseThrow();
+
+         int insufficientCount = (int) documentRepository
+                 .findByVerificationCaseCheck_CaseCheckId(check.getCaseCheckId())
+                 .stream()
+                 .filter(doc ->
+                         doc.getStatus() == DocumentStatus.INSUFFICIENT
+                                 || doc.getStatus() == DocumentStatus.REQUEST_INFO)
+                 .count();
+		
+         notificationDispatcher.dispatchVerificationCheckActionRequired(
+                 company,
+                 candidate,
+                 user,
+                 check.getCategory().getName(),
+                 check.getVerificationCase().getCaseId(),
+                 check.getCaseCheckId(),
+                 insufficientCount,
+                 ""
+         );
 	}
 
 }

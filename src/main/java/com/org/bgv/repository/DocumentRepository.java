@@ -11,7 +11,9 @@ import org.springframework.stereotype.Repository;
 
 import com.org.bgv.common.DocumentStatus;
 import com.org.bgv.entity.Document;
+import com.org.bgv.entity.DocumentType;
 import com.org.bgv.entity.VerificationCase;
+import com.org.bgv.entity.VerificationCaseSelection;
 
 @Repository
 public interface DocumentRepository extends JpaRepository<Document, Long> {
@@ -37,8 +39,8 @@ public interface DocumentRepository extends JpaRepository<Document, Long> {
     List<Document> findByProfile_ProfileIdAndDocTypeId_DocTypeId(Long profileId, Long docTypeId);
 
     // 7. Find documents by profileId, categoryId, and objectId
-    List<Document> findByProfile_ProfileIdAndCategory_CategoryIdAndObjectId(
-            Long profileId, Long categoryId, Long objectId);
+    List<Document> findByCategory_CategoryIdAndObjectId(
+            Long categoryId, Long objectId);
 
     // 8. Find documents by profileId, categoryId, and docTypeId (fixed field name)
     List<Document> findByProfile_ProfileIdAndCategory_CategoryIdAndDocTypeId_DocTypeId(
@@ -166,7 +168,13 @@ public interface DocumentRepository extends JpaRepository<Document, Long> {
                 DocumentStatus status
         );
         
-        
         List<Document> findByCandidate_CandidateIdAndVerificationCaseCheck_CaseCheckIdAndObjectIdAndStatusNot(Long candidateId, Long caseCheckId,Long objectId,DocumentStatus status);
         
+        void deleteByVerificationCaseCaseId(Long caseId);
+        
+        
+        List<Document> findByVerificationCase_CaseIdAndDocTypeIdDocTypeId(Long caseId,Long docTypeId);
+        
+        List<Document> findBySelection(VerificationCaseSelection selection);
+
 }

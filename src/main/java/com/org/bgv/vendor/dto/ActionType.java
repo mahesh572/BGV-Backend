@@ -11,6 +11,8 @@ public enum ActionType {
     APPROVE,
     REVERIFY,
     ESCALATE,
-    RE_UPLOAD
+    RE_UPLOAD,
+    EDIT,
+    DELETE
     
 }

@@ -176,6 +176,14 @@ public class NotificationEventSeeder implements ApplicationRunner {
                 "INFO",
                 List.of("EMAIL", "IN_APP"),
                 List.of(RecipientType.EMPLOYER, RecipientType.CANDIDATE));
+        
+        create(NotificationEvent.VERIFICATION_CHECK_ACTION_REQUIRED,
+                "Verification Check Action Required",
+                "Verification",
+                "Triggered when a verification check requires candidate action (e.g., insufficient documents or additional info required)",
+                "WARNING",
+                List.of("EMAIL", "SMS", "IN_APP"),
+                List.of(RecipientType.CANDIDATE));
 
         // ================= CASE =================
         create(NotificationEvent.CASE_CREATED,

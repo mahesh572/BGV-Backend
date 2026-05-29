@@ -3,6 +3,8 @@ package com.org.bgv.common;
 import lombok.*;
 import jakarta.validation.constraints.NotNull;
 import jakarta.validation.constraints.Positive;
+
+import java.math.BigDecimal;
 import java.util.List;
 
 @Data
@@ -19,7 +21,7 @@ public class EmployerPackageRequest {
     
     @NotNull
     @Positive
-    private Double basePrice;
+    private BigDecimal basePrice;
     
     private List<EmployerPackageDocumentRequest> documents;
 }
