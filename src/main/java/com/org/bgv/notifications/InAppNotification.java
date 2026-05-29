@@ -2,15 +2,20 @@ package com.org.bgv.notifications;
 
 import java.time.Instant;
 
+import com.org.bgv.enums.NotificationStatus;
+import com.org.bgv.enums.RecipientRole;
+
 import jakarta.persistence.Entity;
 import jakarta.persistence.EnumType;
 import jakarta.persistence.Enumerated;
 import jakarta.persistence.GeneratedValue;
 import jakarta.persistence.GenerationType;
 import jakarta.persistence.Id;
+import jakarta.persistence.Lob;
 import jakarta.persistence.Table;
 import lombok.Data;
 
+@Data
 @Entity
 @Table(name = "in_app_notification")
 public class InAppNotification {

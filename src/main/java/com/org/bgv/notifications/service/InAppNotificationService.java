@@ -6,6 +6,7 @@ import java.util.Optional;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import com.org.bgv.enums.NotificationStatus;
 import com.org.bgv.notifications.InAppNotification;
 import com.org.bgv.notifications.InAppTemplate;
 import com.org.bgv.notifications.dto.NotificationContext;
@@ -87,7 +88,7 @@ public class InAppNotificationService {
                         : null
         );
         notification.setPriority(channel.getPriority());
-        notification.setRead(false);
+        notification.setStatus(NotificationStatus.UNREAD);
         notification.setCreatedAt(Instant.now());
 
         notificationRepository.save(notification);

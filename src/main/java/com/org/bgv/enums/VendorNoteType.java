@@ -1,0 +1,14 @@
+package com.org.bgv.enums;
+
+public enum VendorNoteType {
+
+    INTERNAL,
+    VERIFICATION,
+    INSUFFICIENCY,
+    NOTIFICATION,
+    ESCALATION,
+    QC_REVIEW,
+    SYSTEM,
+    EMPLOYER_COMMUNICATION,
+    CANDIDATE_COMMUNICATION
+}

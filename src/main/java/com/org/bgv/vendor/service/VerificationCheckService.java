@@ -14,7 +14,9 @@ import com.org.bgv.common.DocumentStatus;
 import com.org.bgv.common.DocumentTypeInfo;
 import com.org.bgv.constants.CaseCheckStatus;
 import com.org.bgv.constants.CaseStatus;
+import com.org.bgv.dto.CheckCategoryEnum;
 import com.org.bgv.entity.*;
+import com.org.bgv.enums.VendorNoteType;
 import com.org.bgv.repository.*;
 import com.org.bgv.vendor.action.dto.ActionDTO;
 import com.org.bgv.vendor.action.dto.VendorActionCatalog;
@@ -94,6 +96,7 @@ public class VerificationCheckService {
 	private final CheckCategoryRepository checkCategoryRepository;
 	private final WorkExperienceRepository workExperienceRepository;
 	private final ObjectFieldBuilderRegistry fieldBuilderRegistry;
+	private final VerificationCaseSelectionRepository verificationCaseSelectionRepository;
 
 	/**
 	 * Get verification check details by type
@@ -186,6 +189,7 @@ public class VerificationCheckService {
 				.checkName(check.getCategory().getName())
 				.status(check.getStatus().name())
 				.candidate(mapCandidateInfo(candidate))
+				.sendNotification(check.getStatus().name().equalsIgnoreCase(CaseCheckStatus.ACTION_REQUIRED.name()))
 				// .audit(buildAudit(check))
 				 .actions(resolveCheckActions(check.getStatus())) 
 				 
@@ -353,28 +357,37 @@ public class VerificationCheckService {
 		return data;
 	}
 
-	private List<ObjectDTO> buildWorkExperienceObjects(VerificationCaseCheck check) {
+	private List<ObjectDTO> buildWorkExperienceObjects(
+	        VerificationCaseCheck check) {
 
-	    List<WorkExperience> experiences = workExperienceRepository
-	            .findByVerificationCaseCheck_CaseCheckId(check.getCaseCheckId());
-	    
+	    Long caseId =
+	            check.getVerificationCase().getCaseId();
+	                 
+
+	    List<VerificationCaseSelection> selections =
+	            verificationCaseSelectionRepository
+	                    .findByVerificationCase_CaseIdAndType(
+	                            caseId,
+	                            CheckCategoryEnum.WORK
+	                    );
+
+	    List<Long> experienceIds =
+	            selections.stream()
+	                    .map(VerificationCaseSelection::getReferenceId)
+	                    .toList();
+
+	    List<WorkExperience> experiences =
+	            workExperienceRepository.findAllById(experienceIds);
+
 	    return experiences.stream()
-	            .map((WorkExperience experience) -> {
+	            .map(experience -> {
 
 	                List<ObjectFieldDTO> fields =
 	                        fieldBuilderRegistry.resolveFields(
 	                                CheckObjectType.WORK_EXPERIENCE,
 	                                experience
 	                        );
-	                	/*
-	                List<DocumentTypeVerificationDTO> documentTypes =
-	                        buildDocumentTypes(
-	                                experience.getExperienceId(),
-	                                check,
-	                                fields
-	                        );
-	                        */
-	                
+
 	                List<DocumentTypeVerificationDTO> documentTypes =
 	                        buildDocumentTypes(
 	                                experience.getExperienceId(),
@@ -391,8 +404,6 @@ public class VerificationCheckService {
 	                        .displayName(resolveWorkExperienceName(experience))
 	                        .status(objectStatus.name())
 	                        .documentTypes(documentTypes)
-	                        .actions(resolveObjectActions(check.getStatus()))
-	                        .evidence(Collections.emptyList())
 	                        .fields(fields)
 	                        .build();
 	            })
@@ -585,7 +596,7 @@ public class VerificationCheckService {
 	}
 
 	@Transactional
-	public void addNote(Long checkId, Long vendorId, String content, String noteType) {
+	public void addNote(Long checkId, Long vendorId, String content, VendorNoteType noteType) {
 		VerificationCaseCheck check = verificationCaseCheckRepository.findById(checkId)
 				.orElseThrow(() -> new RuntimeException("Verification check not found"));
 
@@ -640,7 +651,7 @@ public class VerificationCheckService {
 		check.setUpdatedAt(LocalDateTime.now());
 
 		addNote(checkId, vendorId, String.format("Check completed. Status: %s. Summary: %s", finalStatus, summary),
-				"verification");
+				VendorNoteType .VERIFICATION);
 
 		String eventDescription = String.format("%s verification completed: %s", check.getCategory().getCode(),
 				finalStatus);
@@ -849,13 +860,38 @@ public class VerificationCheckService {
 				.daysRemaining(daysRemaining > 0 ? daysRemaining : 0).status(slaStatus)
 				.completedAt(check.getStatus() == CaseCheckStatus.COMPLETED ? check.getUpdatedAt() : null).build();
 	}
-
+/*
 	private List<VendorNoteDTO> getVendorNotes(VerificationCaseCheck check) {
 		return vendorNoteRepository.findByVerificationCaseCheck(check).stream()
 				.map(note -> VendorNoteDTO.builder().id("NOTE-" + note.getNoteId()).content(note.getContent())
 						.createdBy(note.getCreatedBy()).createdAt(note.getCreatedAt()).type(note.getType())
 						.isInternal(note.isInternal()).build())
 				.collect(Collectors.toList());
+	}
+	
+	*/
+	@Transactional(readOnly = true)
+	public List<VendorNoteDTO> getVendorNotes(
+	        Long checkId,
+	        Long vendorId) {
+
+	    VerificationCaseCheck check =
+	            verificationCaseCheckRepository
+	                    .findById(checkId)
+	                    .orElseThrow(() ->
+	                            new RuntimeException("Verification check not found"));
+
+	    // Optional ownership validation
+	    if (!check.getVendorId().equals(vendorId)) {
+	        throw new RuntimeException(
+	                "Vendor not authorized for this verification check");
+	    }
+
+	    return vendorNoteRepository
+	            .findByVerificationCaseCheck_CaseCheckIdOrderByCreatedAtDesc(checkId)
+	            .stream()
+	            .map(this::toDto)
+	            .toList();
 	}
 
 	private String getIconForAction(String action) {
@@ -967,7 +1003,7 @@ public class VerificationCheckService {
 	}
 
 	@Transactional
-	public void addVendorNote(Long checkId, Long vendorId, String content, String noteType) {
+	public void addVendorNote(Long checkId, Long vendorId, String content, VendorNoteType  noteType) {
 		log.info("Adding note to check {} by vendor {}", checkId, vendorId);
 
 		VerificationCaseCheck check = verificationCaseCheckRepository.findById(checkId)
@@ -978,14 +1014,14 @@ public class VerificationCheckService {
 			throw new RuntimeException("Vendor not authorized to add notes");
 		}
 
-		VendorNote note = VendorNote.builder().verificationCaseCheck(check).content(content).createdBy("Vendor Agent") // In
-																														// real
-																														// app,
-																														// get
-																														// from
-																														// vendor
-																														// details
-				.createdAt(LocalDateTime.now()).type(noteType).isInternal(noteType.equals("internal")).build();
+		VendorNote note = VendorNote.builder()
+				.verificationCaseCheck(check)
+				.content(content)
+				.createdBy("Vendor Agent") 
+				.createdAt(LocalDateTime.now())
+				.type(noteType)
+				.isInternal(noteType.equals("internal"))
+				.build();
 
 		vendorNoteRepository.save(note);
 
@@ -1013,7 +1049,7 @@ public class VerificationCheckService {
 
 		// Add a note about requirement update
 		addVendorNote(checkId, vendorId,
-				String.format("Requirement %s marked as %s. Notes: %s", requirementId, status, notes), "verification");
+				String.format("Requirement %s marked as %s. Notes: %s", requirementId, status, notes), VendorNoteType .VERIFICATION);
 
 		// Add timeline event
 		saveTimelineEvent(check, "requirement_updated",
@@ -1045,7 +1081,7 @@ public class VerificationCheckService {
 		// Add final note
 		addVendorNote(checkId, vendorId,
 				String.format("Verification completed. Final status: %s. Summary: %s", finalStatus, summary),
-				"verification");
+				VendorNoteType .VERIFICATION);
 
 		// Add timeline event
 		saveTimelineEvent(check, "verification_completed",
@@ -1207,6 +1243,28 @@ public class VerificationCheckService {
 	            .toList();
 	}
 
+	
+	private VendorNoteDTO toDto(VendorNote entity) {
+
+	    if (entity == null) {
+	        return null;
+	    }
+
+	    VendorNoteDTO dto = new VendorNoteDTO();
+
+	    dto.setNoteId(entity.getNoteId());
+	    dto.setContent(entity.getContent());
+	    dto.setCreatedBy(entity.getCreatedBy());
+	    dto.setCreatedAt(entity.getCreatedAt());
+	    dto.setType(entity.getType());
+
+	    dto.setVisibleToEmployer(entity.getVisibleToEmployer());
+	    dto.setVisibleToCandidate(entity.getVisibleToCandidate());
+
+	    dto.setInternal(entity.isInternal());
+
+	    return dto;
+	}
 	
 
 }

@@ -5,6 +5,7 @@ import lombok.*;
 import java.time.LocalDateTime;
 
 import com.org.bgv.entity.VerificationCaseCheck;
+import com.org.bgv.enums.VendorNoteType;
 
 @Entity
 @Table(name = "vendor_note")
@@ -33,8 +34,13 @@ public class VendorNote {
     @Column(name = "created_at")
     private LocalDateTime createdAt;
     
-    @Column(name = "type")
-    private String type; // internal, verification, insufficiency
+    @Enumerated(EnumType.STRING)
+    private VendorNoteType type; // internal, verification, insufficiency
+    
+    private Boolean visibleToEmployer;
+
+    private Boolean visibleToCandidate;
+
     
     @Column(name = "is_internal")
     private boolean isInternal;

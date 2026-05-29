@@ -572,5 +572,47 @@ public class VerificationActionService {
 
 	    return CaseCheckStatus.IN_PROGRESS;
 	}
+	
+	
+	public void sendNotification(Long caseId,Long checkId) {
+		
+		VerificationActionRequest verificationActionRequest = new VerificationActionRequest();
+		verificationActionRequest.setCaseId(caseId);
+		Long candidateId = getCandidateId(verificationActionRequest);
+		
+		Candidate candidate = candidateRepository
+                .findById(candidateId)
+                .orElseThrow();
+		
+		User user = userRepository
+                .findById(candidate.getUser().getUserId())
+                .orElseThrow();
+		
+		 VerificationCaseCheck check =
+                 verificationCaseCheckRepository.getReferenceById(checkId);
+
+         Company company = companyRepository
+                 .findById(check.getVerificationCase().getCompanyId())
+                 .orElseThrow();
+
+         int insufficientCount = (int) documentRepository
+                 .findByVerificationCaseCheck_CaseCheckId(check.getCaseCheckId())
+                 .stream()
+                 .filter(doc ->
+                         doc.getStatus() == DocumentStatus.INSUFFICIENT
+                                 || doc.getStatus() == DocumentStatus.REQUEST_INFO)
+                 .count();
+		
+         notificationDispatcher.dispatchVerificationCheckActionRequired(
+                 company,
+                 candidate,
+                 user,
+                 check.getCategory().getName(),
+                 check.getVerificationCase().getCaseId(),
+                 check.getCaseCheckId(),
+                 insufficientCount,
+                 ""
+         );
+	}
 
 }

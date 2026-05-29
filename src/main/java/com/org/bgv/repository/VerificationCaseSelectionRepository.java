@@ -94,4 +94,6 @@ public interface VerificationCaseSelectionRepository
     @Transactional
     @Query("DELETE FROM VerificationCaseSelection vcs WHERE vcs.verificationCase = :caseObj")
     void deleteByVerificationCase(@Param("caseObj") VerificationCase verificationCase);
+    
+    
 }
