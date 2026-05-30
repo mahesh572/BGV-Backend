@@ -68,11 +68,16 @@ import com.org.bgv.constants.SectionConstants;
 import com.org.bgv.constants.VerificationStatus;
 import com.org.bgv.dto.*;
 import com.org.bgv.entity.*;
+import com.org.bgv.enums.InvoiceStatus;
 import com.org.bgv.enums.RuleGroup;
+import com.org.bgv.invoice.entity.Invoice;
+import com.org.bgv.invoice.repository.InvoiceRepository;
 import com.org.bgv.notifications.service.NotificationDispatcher;
 import com.org.bgv.repository.*;
+import com.org.bgv.vendor.repository.VendorNoteRepository;
 import com.org.bgv.vendor.repository.VerificationActionEvidenceRepository;
 import com.org.bgv.vendor.repository.VerificationActionRepository;
+import com.org.bgv.vendor.repository.VerificationTimelineRepository;
 import com.org.bgv.wallet.service.PaymentService;
 
 import jakarta.persistence.criteria.Predicate;
@@ -146,6 +151,10 @@ public class VerificationCaseService {
 	private final PackagePricingService pricingService;
 	private final EmployerPackageSelectedRuleRepository employerPackageSelectedRuleRepository;
 	private final VerificationCaseSelectionRepository verificationCaseSelectionRepository;
+	private final VendorNoteRepository vendorNoteRepository;
+	private final VerificationTimelineRepository verificationTimelineRepository;
+	private final InvoiceRepository invoiceRepository;
+	private final VendorRepository vendorRepository;
 
 	private static final DateTimeFormatter DATE_FORMATTER = DateTimeFormatter.ofPattern("dd MMM yyyy");
 	private static final DateTimeFormatter TIMESTAMP_FORMATTER = DateTimeFormatter.ofPattern("dd MMM yyyy HH:mm");
@@ -202,7 +211,7 @@ public class VerificationCaseService {
 
 		// Asssigning vendor to Category Check START
 
-		vendorAssignmentService.assignVendorsToCaseChecks(caseChecks);
+		// vendorAssignmentService.assignVendorsToCaseChecks(caseChecks);
 
 		// Asssigning vendor to Category Check  END
 
@@ -1428,8 +1437,22 @@ public class VerificationCaseService {
 				.totalPrice(
 						verificationCase.getTotalPrice() != null ? verificationCase.getTotalPrice() : BigDecimal.ZERO)
 				.build();
+		
+		
+		Invoice invoice = invoiceRepository
+		        .findByVerificationCase(verificationCase)
+		        .orElse(null);
 
-		return VerificationCaseDetailsDTO.builder().caseId(verificationCase.getCaseId())
+		boolean paymentCompleted = false;
+		String invoiceStatus = null;
+
+		if (invoice != null) {
+		    invoiceStatus = invoice.getStatus().name();
+		    paymentCompleted = InvoiceStatus.PAID.equals(invoice.getStatus());
+		}
+
+		return VerificationCaseDetailsDTO.builder()
+				.caseId(verificationCase.getCaseId())
 				.caseNumber(verificationCase.getCaseNumber())
 				.status(verificationCase.getStatus() != null ? verificationCase.getStatus().name() : null)
 				.createdAt(verificationCase.getCreatedAt())
@@ -1439,7 +1462,11 @@ public class VerificationCaseService {
 				.pricingConfirmed(verificationCase.getPricingConfirmed())
 				.invoiceGenerated(verificationCase.getInvoiceGenerated())
 				.activityTimeline(activityTimeline)
-				.vpackage(vpackageDTO).pricing(pricingDTO).build();
+				.vpackage(vpackageDTO).pricing(pricingDTO)
+				.invoiceStatus(invoiceStatus)
+		        .paymentCompleted(paymentCompleted)
+				.build();
+		
 	}
 
 	private CandidateSummary buildCandidateSummary(Long candidateId) {
@@ -1470,11 +1497,23 @@ public class VerificationCaseService {
 		return caseChecks.stream().map((VerificationCaseCheck check) -> {
 
 			CheckCategory category = check.getCategory();
+			
+			Long vendorId = check.getVendorId();
+			
+			Vendor vendor = vendorRepository.findById(vendorId).orElseGet(null);
+			String vendorname = "";
+			if(vendor!=null) {
+				vendorname = vendor.getFirstName() + vendor.getLastName();
+			}
 
-			return VerificationCheckDTO.builder().id(check.getCaseCheckId())
+			return VerificationCheckDTO.builder()
+					.id(check.getCaseCheckId())
 					.name(category != null ? category.getName() : "Unknown Check")
-					.description(category != null ? category.getDescription() : null).status(check.getStatus().name())
-					.icon(iconService.getIconForVerification(category.getName())).build();
+					.description(category != null ? category.getDescription() : null)
+					.status(check.getStatus().name())
+					.icon(iconService.getIconForVerification(category.getName()))
+					.vendorName(vendorname)
+					.build();
 		}).collect(Collectors.toList());
 	}
 
@@ -1637,6 +1676,10 @@ public class VerificationCaseService {
 	    addressRepository.deleteByVerificationCase_CaseId(caseId);
 	    
 	    verificationCaseSelectionRepository.deleteByVerificationCase_CaseId(caseId);
+	    
+	    vendorNoteRepository.deleteByVerificationCaseCheckVerificationCaseCaseId(caseId);
+	    
+	    verificationTimelineRepository.deleteByVerificationCaseCheckVerificationCaseCaseId(caseId);
 
 	    // 6. Delete the verification case itself
 	    //    (cascades to VerificationCaseDocument + VerificationCaseCheck via CascadeType.ALL)

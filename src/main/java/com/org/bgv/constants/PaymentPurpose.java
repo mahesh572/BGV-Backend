@@ -2,6 +2,7 @@ package com.org.bgv.constants;
 
 public enum PaymentPurpose {
     WALLET_TOPUP,
+    CASE_PAYMENT,
     EMPLOYER_PACKAGE_PURCHASE,
     ADDON_PURCHASE,
     CANDIDATE_VERIFICATION,

@@ -141,4 +141,16 @@ public interface InvoiceRepository extends JpaRepository<Invoice, Long> {
     
     @Query("SELECT i.status, COUNT(i), COALESCE(SUM(i.grandTotal), 0) FROM Invoice i GROUP BY i.status")
     List<Object[]> getSystemWideInvoiceSummary();
+    
+    
+    
+    @Query("""
+    	       SELECT i
+    	       FROM Invoice i
+    	       WHERE i.invoiceNumber = :invoiceNumber
+    	          OR i.verificationCase.caseId = :caseId
+    	       """)
+    	Optional<Invoice> findByInvoiceNumberOrCaseId(
+    	        @Param("invoiceNumber") String invoiceNumber,
+    	        @Param("caseId") Long caseId);
 }

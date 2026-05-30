@@ -9,7 +9,18 @@ public enum CaseStatus {
     COMPLETED,      // All checks verified
     PARTIAL,        // Some checks failed
     FAILED,         // Critical failure
-    CANCELLED; 
+    CANCELLED, 
+	
+	
+	
+	PRICING_CONFIRMED,
+	INVOICE_GENERATED,
+	PAYMENT_PENDING,
+	PAID,
+	ASSIGNED;
+	
+	
+	
 	
 	
     

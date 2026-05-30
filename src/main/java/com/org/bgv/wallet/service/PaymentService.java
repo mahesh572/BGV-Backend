@@ -1,17 +1,27 @@
 package com.org.bgv.wallet.service;
 
 
+import com.org.bgv.config.SecurityUtils;
+import com.org.bgv.constants.CaseStatus;
+import com.org.bgv.constants.PaymentPurpose;
 import com.org.bgv.constants.PaymentStatus;
 import com.org.bgv.constants.TransactionStatus;
 import com.org.bgv.constants.TransactionType;
 import com.org.bgv.entity.*;
+import com.org.bgv.enums.InvoiceStatus;
+import com.org.bgv.enums.PaymentMethod;
+import com.org.bgv.invoice.entity.CasePayment;
+import com.org.bgv.invoice.entity.Invoice;
+import com.org.bgv.invoice.repository.CasePaymentRepository;
+import com.org.bgv.invoice.repository.InvoiceRepository;
 import com.org.bgv.repository.*;
+import com.org.bgv.service.VendorAssignmentService;
 import com.org.bgv.wallet.dto.CreatePaymentRequestDto;
 import com.org.bgv.wallet.dto.RazorpayOrderResponseDto;
 import com.org.bgv.wallet.dto.WalletBalanceResponseDto;
 import com.org.bgv.wallet.dto.WalletTransactionResponseDto;
 import com.org.bgv.wallet.repository.PaymentRequestRepository;
-import com.org.bgv.wallet.repository.UserWalletRepository;
+import com.org.bgv.wallet.repository.WalletRepository;
 import com.org.bgv.wallet.repository.WalletTransactionRepository;
 import com.razorpay.Order;
 import com.razorpay.RazorpayClient;
@@ -39,12 +49,17 @@ import javax.crypto.spec.SecretKeySpec;
 @RequiredArgsConstructor
 public class PaymentService {
     
-    private final UserWalletRepository userWalletRepository;
+    private final WalletRepository walletRepository;
     private final WalletTransactionRepository walletTransactionRepository;
     private final PaymentRequestRepository paymentRequestRepository;
     private final RazorpayClient razorpayClient;
     private final CompanyRepository companyRepository;
     private final UserRepository userRepository;
+    private final CasePaymentRepository casePaymentRepository;
+    private final InvoiceRepository invoiceRepository;
+    private final VerificationCaseRepository verificationCaseRepository;
+    private final VendorAssignmentService vendorAssignmentService;
+    private final VerificationCaseCheckRepository verificationCaseCheckRepository;
     
     
     @Value("${razorpay.key.id}")
@@ -66,11 +81,12 @@ public class PaymentService {
      */
     @Transactional
     public RazorpayOrderResponseDto createPaymentOrder(CreatePaymentRequestDto requestDto) {
+
         try {
-            // Generate unique reference
-            String requestRef = "PAY-" + UUID.randomUUID().toString().substring(0, 8).toUpperCase();
-            
-            // Create payment request record
+
+            String requestRef =
+                    "PAY-" + UUID.randomUUID().toString().substring(0, 8).toUpperCase();
+
             PaymentRequest paymentRequest = PaymentRequest.builder()
                     .requestRef(requestRef)
                     .userId(requestDto.getUserId())
@@ -79,45 +95,100 @@ public class PaymentService {
                     .currency(requestDto.getCurrency())
                     .purpose(requestDto.getPurpose())
                     .description(requestDto.getDescription())
-                    .callbackUrl(requestDto.getCallbackUrl() != null ? requestDto.getCallbackUrl() : defaultCallbackUrl)
-                    .webhookUrl(requestDto.getWebhookUrl() != null ? requestDto.getWebhookUrl() : webhookUrl)
-                    .expiresAt(LocalDateTime.now().plusHours(24)) // 24 hours expiry
+
+                    // NEW FIELDS
+                    .caseId(requestDto.getCaseId())
+                    .invoiceId(requestDto.getInvoiceId())
+                    .invoiceNumber(requestDto.getInvoiceNumber())
+                    .paymentMethod(requestDto.getPaymentMethod())
+                    .walletAmountUsed(
+                            requestDto.getWalletAmountUsed() == null
+                                    ? BigDecimal.ZERO
+                                    : requestDto.getWalletAmountUsed())
+                    .onlineAmount(
+                            requestDto.getOnlineAmount() == null
+                                    ? requestDto.getAmount()
+                                    : requestDto.getOnlineAmount())
+
+                    .callbackUrl(
+                            requestDto.getCallbackUrl() != null
+                                    ? requestDto.getCallbackUrl()
+                                    : defaultCallbackUrl)
+
+                    .webhookUrl(
+                            requestDto.getWebhookUrl() != null
+                                    ? requestDto.getWebhookUrl()
+                                    : webhookUrl)
+
+                    .expiresAt(LocalDateTime.now().plusHours(24))
                     .build();
             
+            log.info("Before Save PaymentRequest:");
+            log.info("paymentMethod={}", paymentRequest.getPaymentMethod());
+
             paymentRequest = paymentRequestRepository.save(paymentRequest);
-            
-            // Create Razorpay order
+
+            // For wallet only payment no Razorpay order required
+            if (PaymentMethod.WALLET.equals(requestDto.getPaymentMethod())) {
+
+                return RazorpayOrderResponseDto.builder()
+                        .orderId(null)
+                        .amount(0L)
+                        .currency("INR")
+                        .status("WALLET_PAYMENT")
+                        .razorpayKey(null)
+                        .build();
+            }
+
+            BigDecimal onlineAmount =
+                    requestDto.getOnlineAmount() == null
+                            ? requestDto.getAmount()
+                            : requestDto.getOnlineAmount();
+
             JSONObject orderRequest = new JSONObject();
-            orderRequest.put("amount", requestDto.getAmount().multiply(BigDecimal.valueOf(100)).longValue()); // Convert to paise
+
+            orderRequest.put(
+                    "amount",
+                    onlineAmount.multiply(BigDecimal.valueOf(100)).longValue());
+
             orderRequest.put("currency", requestDto.getCurrency());
             orderRequest.put("receipt", requestRef);
-            orderRequest.put("payment_capture", 1); // Auto-capture payment
-            
-            // Add notes if metadata exists
-            if (requestDto.getMetadata() != null) {
-                JSONObject notes = new JSONObject();
-                requestDto.getMetadata().forEach((key, value) -> notes.put(key, value.toString()));
-                orderRequest.put("notes", notes);
+            orderRequest.put("payment_capture", 1);
+
+            JSONObject notes = new JSONObject();
+
+            notes.put("companyId", requestDto.getCompanyId());
+
+            if (requestDto.getCaseId() != null) {
+                notes.put("caseId", requestDto.getCaseId());
             }
-            
+
+            if (requestDto.getInvoiceNumber() != null) {
+                notes.put("invoiceNumber", requestDto.getInvoiceNumber());
+            }
+
+            notes.put("paymentType", requestDto.getPaymentMethod());
+
+            orderRequest.put("notes", notes);
+
             Order razorpayOrder = razorpayClient.orders.create(orderRequest);
-            
-            
-            log.info("razorpayOrder:::::::::::{}",razorpayOrder);
-            
-            // Update payment request with Razorpay order ID
-            paymentRequest.setRazorpayOrderId(razorpayOrder.get("id"));
-            paymentRequest.setGatewayResponse(razorpayOrder.toString());
-            paymentRequest.setStatus(com.org.bgv.constants.PaymentStatus.CREATED);
+
+            paymentRequest.setRazorpayOrderId(
+                    razorpayOrder.get("id").toString());
+
+            paymentRequest.setGatewayResponse(
+                    razorpayOrder.toString());
+
+            paymentRequest.setStatus(PaymentStatus.CREATED);
+
             paymentRequestRepository.save(paymentRequest);
-            
-            // Build response DTO
+
             return RazorpayOrderResponseDto.builder()
                     .orderId(razorpayOrder.get("id"))
                     .entity(razorpayOrder.get("entity"))
                     .amount(((Number) razorpayOrder.get("amount")).longValue())
-                    .amountDue(((Number) razorpayOrder.get("amount_due")).longValue()) 
-                    .amountPaid(((Number) razorpayOrder.get("amount_paid")).longValue())  
+                    .amountDue(((Number) razorpayOrder.get("amount_due")).longValue())
+                    .amountPaid(((Number) razorpayOrder.get("amount_paid")).longValue())
                     .currency(razorpayOrder.get("currency"))
                     .receipt(razorpayOrder.get("receipt"))
                     .status(razorpayOrder.get("status"))
@@ -126,10 +197,13 @@ public class PaymentService {
                     .createdAt(getEpochSeconds(razorpayOrder.get("created_at")))
                     .razorpayKey(razorpayKeyId)
                     .build();
-                    
-        } catch (RazorpayException e) {
-            log.error("Razorpay order creation failed: {}", e.getMessage());
-            throw new RuntimeException("Failed to create payment order: " + e.getMessage());
+
+        } catch (Exception e) {
+
+            log.error("Payment order creation failed", e);
+
+            throw new RuntimeException(
+                    "Failed to create payment order : " + e.getMessage());
         }
     }
     
@@ -199,37 +273,25 @@ public class PaymentService {
                 paymentRequest.setStatus(PaymentStatus.PAID);
                 paymentRequestRepository.save(paymentRequest);
                 
-                // Get or create user wallet
-                UserWallet wallet = userWalletRepository
-                        .findByCompanyId(paymentRequest.getCompanyId())
-                        .orElseGet(() -> createWallet(paymentRequest.getCompanyId()));
-                
-                // Create wallet transaction
-                String transactionRef = "TXN-" + UUID.randomUUID().toString().substring(0, 8).toUpperCase();
-                WalletTransaction transaction = WalletTransaction.builder()
-                        .transactionRef(transactionRef)
-                        .wallet(wallet)
-                        .amount(paymentRequest.getAmount())
-                        .transactionType(TransactionType.CREDIT)
-                        .status(TransactionStatus.SUCCESS)
-                        .description("Wallet top-up via Razorpay - " + paymentRequest.getPurpose())
-                        .paymentGatewayRef(razorpayPaymentId)
-                        .razorpayOrderId(razorpayOrderId)
-                        .razorpayPaymentId(razorpayPaymentId)
-                        .razorpaySignature(razorpaySignature)
-                        .build();
-                
-                walletTransactionRepository.save(transaction);
-                log.info("Created transaction with ID: {}, Ref: {}", 
-                        transaction.getTransactionId(), transactionRef);
-                
-                // Update wallet balance
-                wallet.credit(paymentRequest.getAmount());
-                userWalletRepository.save(wallet);
+                if (paymentRequest.getPurpose() == PaymentPurpose.WALLET_TOPUP) {
+
+                    processWalletTopup(
+                            paymentRequest,
+                            razorpayPaymentId,
+                            razorpayOrderId,
+                            razorpaySignature);
+
+                } else if (paymentRequest.getPurpose() == PaymentPurpose.CASE_PAYMENT) {
+
+                    processCasePayment(
+                            paymentRequest,
+                            razorpayPaymentId,
+                            razorpayOrderId,
+                            razorpaySignature);
+                }
                 
                 log.info("=== Payment processed successfully ===");
-                log.info("User: {}, Amount: {}, New Balance: {}", 
-                        paymentRequest.getUserId(), paymentRequest.getAmount(), wallet.getBalance());
+               
                 return "Payment processed successfully";
                         
             } catch (Exception e) {
@@ -245,7 +307,98 @@ public class PaymentService {
         }
     }
 
+    private void processWalletTopup(
+            PaymentRequest paymentRequest,
+            String razorpayPaymentId,
+            String razorpayOrderId,
+            String razorpaySignature) {
+
+        Wallet wallet = walletRepository
+                .findByCompanyId(paymentRequest.getCompanyId())
+                .orElseGet(() -> createWallet(paymentRequest.getCompanyId()));
+
+        String transactionRef =
+                "TXN-" + UUID.randomUUID().toString().substring(0, 8).toUpperCase();
+
+        WalletTransaction transaction = WalletTransaction.builder()
+                .transactionRef(transactionRef)
+                .wallet(wallet)
+                .amount(paymentRequest.getAmount())
+                .transactionType(TransactionType.CREDIT)
+                .status(TransactionStatus.SUCCESS)
+                .description("Wallet Topup")
+                .paymentGatewayRef(razorpayPaymentId)
+                .razorpayOrderId(razorpayOrderId)
+                .razorpayPaymentId(razorpayPaymentId)
+                .razorpaySignature(razorpaySignature)
+                .build();
+
+        walletTransactionRepository.save(transaction);
+
+        wallet.credit(paymentRequest.getAmount());
+
+        walletRepository.save(wallet);
+
+        log.info("Wallet credited successfully : {}",
+                paymentRequest.getAmount());
+    }
     
+    private void processCasePayment(
+            PaymentRequest paymentRequest,
+            String razorpayPaymentId,
+            String razorpayOrderId,
+            String razorpaySignature) {
+
+        log.info("Processing CASE_PAYMENT");
+        
+        
+        VerificationCase verificationCase = verificationCaseRepository.findById(paymentRequest.getCaseId()).orElseGet(null);
+        
+        Invoice invoice = invoiceRepository
+                .findByInvoiceNumberOrCaseId(
+                        paymentRequest.getInvoiceNumber(),
+                        paymentRequest.getCaseId())
+                .orElseThrow(() ->
+                        new RuntimeException("Invoice not found"));
+        
+        paymentRequest.setInvoiceId(invoice.getId());
+
+        CasePayment casePayment = CasePayment.builder()
+                .verificationCase(verificationCase)
+                .invoice(invoice)
+                .amount(
+                        paymentRequest.getOnlineAmount() != null
+                                ? paymentRequest.getOnlineAmount()
+                                : paymentRequest.getAmount())
+                .paymentMethod(PaymentMethod.RAZORPAY)
+                .paymentReference(razorpayPaymentId)
+                .status(PaymentStatus.PAID)
+                .paidAt(LocalDateTime.now())
+                .build();
+
+        casePaymentRepository.save(casePayment);
+
+        log.info(
+                "Case payment saved. CaseId={}, InvoiceId={}, Amount={}",
+                paymentRequest.getCaseId(),
+                paymentRequest.getInvoiceId(),
+                casePayment.getAmount());
+
+        if (invoice != null) {
+
+                        invoice.setStatus(InvoiceStatus.PAID);
+
+                        invoice.setPaidAt(LocalDateTime.now());
+                        invoice.setPaidAmount(casePayment.getAmount());
+
+                        invoiceRepository.save(invoice);
+
+                        log.info(
+                                "Invoice marked as PAID : {}",
+                                invoice.getInvoiceNumber());
+                    
+        }
+    }
 
 private void createFailedTransaction(String razorpayPaymentId, String razorpayOrderId, 
                                      String razorpaySignature, String errorMessage) {
@@ -260,7 +413,7 @@ private void createFailedTransaction(String razorpayPaymentId, String razorpayOr
             PaymentRequest paymentRequest = paymentRequestOpt.get();
             
             // Get or create user wallet
-            UserWallet wallet = userWalletRepository
+            Wallet wallet = walletRepository
                     .findByCompanyId(paymentRequest.getCompanyId())
                     .orElseGet(() -> createWallet(paymentRequest.getCompanyId()));
             
@@ -320,7 +473,7 @@ public WalletBalanceResponseDto getWalletBalance(Long companyId) {
     */
     
     // For non-default company types, get or create wallet
-    UserWallet wallet = userWalletRepository
+   Wallet wallet = walletRepository
             .findByCompanyId(companyId)
             .orElseGet(() -> createWallet(companyId));
     
@@ -339,7 +492,7 @@ public WalletBalanceResponseDto getWalletBalance(Long companyId) {
     public Page<WalletTransactionResponseDto> getWalletTransactions(Long companyId, Pageable pageable) {
         
         // First get the wallet for the company
-        UserWallet wallet = userWalletRepository.findByCompanyId(companyId)
+        Wallet wallet = walletRepository.findByCompanyId(companyId)
                 .orElseThrow(() -> new EntityNotFoundException(
                     String.format("Wallet not found for company ID: %d", companyId)
                 ));
@@ -357,46 +510,121 @@ public WalletBalanceResponseDto getWalletBalance(Long companyId) {
      * Make payment from wallet
      */
     @Transactional
-    public WalletTransactionResponseDto makePaymentFromWallet(Long userId, Long companyId, 
-                                                            BigDecimal amount, String description) {
-      //  UserWallet wallet = userWalletRepository.findByUserIdAndCompanyId(userId, companyId).orElseThrow(() -> new RuntimeException("Wallet not found"));
-        
-        UserWallet wallet = userWalletRepository.findByCompanyId(companyId).orElseThrow(() -> new RuntimeException("Wallet not found"));
-        
-        User user = userRepository.findById(userId).orElseThrow(()-> new RuntimeException("User not found"));
-        
+    public WalletTransactionResponseDto makePaymentFromWallet(CreatePaymentRequestDto requestDto) {
+
+        log.info("Wallet payment request received: {}", requestDto);
+
+        Wallet wallet = walletRepository.findByCompanyId(requestDto.getCompanyId())
+                .orElseThrow(() ->
+                        new RuntimeException("Wallet not found for company: "
+                                + requestDto.getCompanyId()));
+
+        User user = userRepository.findById(requestDto.getUserId())
+                .orElseThrow(() ->
+                        new RuntimeException("User not found: "
+                                + requestDto.getUserId()));
+
+        BigDecimal amount = requestDto.getAmount();
+
         if (!wallet.hasSufficientBalance(amount)) {
-            throw new RuntimeException("Insufficient wallet balance");
+            throw new RuntimeException(
+                    "Insufficient wallet balance. Available: "
+                            + wallet.getBalance());
         }
-        
-        
-        // Create debit transaction
-        String transactionRef = "PAY-" + UUID.randomUUID().toString().substring(0, 8).toUpperCase();
+
+        // Debit wallet
+        wallet.debit(amount);
+        walletRepository.save(wallet);
+
+        // Create transaction
+        String transactionRef =
+                "PAY-" + UUID.randomUUID().toString()
+                        .substring(0, 8)
+                        .toUpperCase();
+
         WalletTransaction transaction = WalletTransaction.builder()
                 .transactionRef(transactionRef)
                 .wallet(wallet)
-                .amount(amount)
                 .user(user)
-                .transactionType(com.org.bgv.constants.TransactionType.DEBIT)
-                .status(com.org.bgv.constants.TransactionStatus.SUCCESS)
-                .description(description)
+                .amount(amount)
+                .transactionType(TransactionType.DEBIT)
+                .status(TransactionStatus.SUCCESS)
+                .description(requestDto.getDescription())
+                .metadata(
+                        String.format(
+                                "{\"caseId\":%s,\"invoiceNumber\":\"%s\",\"purpose\":\"%s\",\"paymentMethod\":\"WALLET\"}",
+                                requestDto.getCaseId(),
+                                requestDto.getInvoiceNumber(),
+                                requestDto.getPurpose()))
                 .build();
-        
+
         transaction = walletTransactionRepository.save(transaction);
-        
-        // Update wallet balance
-        wallet.debit(amount);
-        userWalletRepository.save(wallet);
-        
-        return convertToTransactionResponseDto(transaction, wallet.getBalance());
+
+        log.info("Wallet debited successfully");
+        log.info("Transaction Ref : {}", transactionRef);
+        log.info("Remaining Balance : {}", wallet.getBalance());
+
+        // ======================================
+        // CASE PAYMENT SPECIFIC LOGIC
+        // ======================================
+
+        if (PaymentPurpose.CASE_PAYMENT.equals(requestDto.getPurpose())) {
+
+            log.info("Processing case payment");
+
+            Invoice invoice = invoiceRepository
+                    .findByInvoiceNumberOrCaseId(
+                    		requestDto.getInvoiceNumber(),
+                    		requestDto.getCaseId())
+                    .orElseThrow(() ->
+                            new RuntimeException("Invoice not found"));
+
+            invoice.setStatus(InvoiceStatus.PAID);
+            invoice.setPaidAt(LocalDateTime.now());
+
+            invoiceRepository.save(invoice);
+
+            log.info("Invoice marked PAID : {}",
+                    invoice.getInvoiceNumber());
+
+            VerificationCase verificationCase = verificationCaseRepository.findById(requestDto.getCaseId()).orElseGet(null);
+            
+            
+           // Optional: create CasePayment table entry
+
+            CasePayment payment = CasePayment.builder()
+                    .verificationCase(verificationCase)
+                    .invoice(invoice)
+                    .amount(amount)
+                    .paymentMethod(PaymentMethod.WALLET)
+                    .paymentReference(transactionRef)
+                    .status(PaymentStatus.PAID)
+                    .paidAt(LocalDateTime.now())
+                    .build();
+
+            casePaymentRepository.save(payment);
+            
+            List<VerificationCaseCheck> caseChecks = verificationCaseCheckRepository
+    				.findByVerificationCase_CaseId(verificationCase.getCaseId());
+            vendorAssignmentService.assignVendorsToCaseChecks(caseChecks);
+            
+            verificationCase.setStatus(CaseStatus.IN_PROGRESS);
+            
+            verificationCaseRepository.save(verificationCase);
+            
+        }
+
+        return convertToTransactionResponseDto(
+                transaction,
+                wallet.getBalance());
     }
     
     /**
      * Create wallet for user if not exists
      */
-    private UserWallet createWallet(Long companyId) {
-        UserWallet wallet = UserWallet.builder()
-               // .userId(userId)
+    private Wallet createWallet(Long companyId) {
+        Wallet wallet = Wallet.builder()
+                .userId(SecurityUtils.getCurrentUserId())
                 .companyId(companyId)
                 .balance(BigDecimal.ZERO)
                 .currency("INR")
@@ -404,7 +632,7 @@ public WalletBalanceResponseDto getWalletBalance(Long companyId) {
                 .createdAt(LocalDateTime.now())
                 .build();
         
-        return userWalletRepository.save(wallet);
+        return walletRepository.save(wallet);
     }
     
     /**

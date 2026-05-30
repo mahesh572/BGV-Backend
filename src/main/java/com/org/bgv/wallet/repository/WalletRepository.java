@@ -1,6 +1,7 @@
 package com.org.bgv.wallet.repository;
 
-import com.org.bgv.entity.UserWallet;
+import com.org.bgv.entity.Wallet;
+
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
@@ -10,16 +11,16 @@ import java.math.BigDecimal;
 import java.util.Optional;
 
 @Repository
-public interface UserWalletRepository extends JpaRepository<UserWallet, Long> {
+public interface WalletRepository extends JpaRepository<Wallet, Long> {
     
-    Optional<UserWallet> findByUserId(Long userId);
+    Optional<Wallet> findByUserId(Long userId);
     
-    Optional<UserWallet> findByUserIdAndCompanyId(Long userId, Long companyId);
+    Optional<Wallet> findByUserIdAndCompanyId(Long userId, Long companyId);
     
-    Optional<UserWallet> findByCompanyId(Long companyId);
+    Optional<Wallet> findByCompanyId(Long companyId);
     
-    @Query("SELECT w FROM UserWallet w WHERE w.userId = :userId AND w.companyId = :companyId AND w.isActive = true")
-    Optional<UserWallet> findActiveWallet(@Param("userId") Long userId, @Param("companyId") Long companyId);
+    @Query("SELECT w FROM Wallet w WHERE w.userId = :userId AND w.companyId = :companyId AND w.isActive = true")
+    Optional<Wallet> findActiveWallet(@Param("userId") Long userId, @Param("companyId") Long companyId);
     
     @Query("SELECT COALESCE(SUM(t.amount), 0) FROM WalletTransaction t WHERE t.wallet.userId = :userId AND t.status = 'SUCCESS' AND t.transactionType = 'CREDIT'")
     BigDecimal getTotalCredits(@Param("userId") Long userId);

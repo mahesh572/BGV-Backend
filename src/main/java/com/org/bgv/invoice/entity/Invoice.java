@@ -62,6 +62,12 @@ public class Invoice {
  private LocalDateTime paidAt;
  private String paymentReference;
  
+ @Column(precision = 10, scale = 2)
+ private BigDecimal paidAmount;
+
+ @Column(precision = 10, scale = 2)
+ private BigDecimal dueAmount;
+ 
  @Column(length = 500)
  private String notes;
 }

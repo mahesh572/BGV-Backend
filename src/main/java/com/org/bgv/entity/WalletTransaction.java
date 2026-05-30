@@ -26,7 +26,7 @@ public class WalletTransaction {
     
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "wallet_id", nullable = false)
-    private UserWallet wallet;
+    private Wallet wallet;
     
     @Column(name = "amount", nullable = false, precision = 10, scale = 2)
     private BigDecimal amount;
@@ -72,6 +72,13 @@ public class WalletTransaction {
     @OneToOne(fetch = FetchType.LAZY, optional = false)
     @JoinColumn(name = "user_id")
     private User user;
+    
+    
+    @Column(name = "case_id")
+    private Long caseId;
+
+    @Column(name = "invoice_id")
+    private Long invoiceId;
     
     @PreUpdate
     protected void onUpdate() {

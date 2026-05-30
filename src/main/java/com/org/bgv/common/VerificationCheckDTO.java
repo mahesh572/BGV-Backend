@@ -15,4 +15,6 @@ public class VerificationCheckDTO {
     private String description;
     private String status;
     private String icon;
+    private Long vendorId;
+    private String vendorName;
 }

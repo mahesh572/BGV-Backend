@@ -7,6 +7,7 @@ import com.fasterxml.jackson.annotation.JsonProperty;
 import com.org.bgv.common.ActivityTimelineDTO;
 import com.org.bgv.common.VPackageDTO;
 import com.org.bgv.common.VerificationCheckDTO;
+import com.org.bgv.enums.InvoiceStatus;
 
 import lombok.AllArgsConstructor;
 import lombok.Builder;
@@ -25,6 +26,9 @@ public class VerificationCaseDetailsDTO {
     private LocalDateTime completedAt;
     private Boolean pricingConfirmed;
     private Boolean invoiceGenerated;
+  //  private InvoiceStatus paymentStatus; // PENDING, SUCCESS
+    private String invoiceStatus;
+    private Boolean paymentCompleted;
 
     private CandidateSummary candidate;
     @JsonProperty("verificationChecks")
@@ -34,4 +38,7 @@ public class VerificationCaseDetailsDTO {
     
     private VPackageDTO vpackage;
     private PricingDTO pricing;
+    
+    
+    
 }
