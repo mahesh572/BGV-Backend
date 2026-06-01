@@ -70,7 +70,11 @@ import com.org.bgv.dto.*;
 import com.org.bgv.entity.*;
 import com.org.bgv.enums.InvoiceStatus;
 import com.org.bgv.enums.RuleGroup;
+import com.org.bgv.invoice.entity.CasePayment;
 import com.org.bgv.invoice.entity.Invoice;
+import com.org.bgv.invoice.entity.InvoiceItem;
+import com.org.bgv.invoice.repository.CasePaymentRepository;
+import com.org.bgv.invoice.repository.InvoiceItemRepository;
 import com.org.bgv.invoice.repository.InvoiceRepository;
 import com.org.bgv.notifications.service.NotificationDispatcher;
 import com.org.bgv.repository.*;
@@ -155,6 +159,8 @@ public class VerificationCaseService {
 	private final VerificationTimelineRepository verificationTimelineRepository;
 	private final InvoiceRepository invoiceRepository;
 	private final VendorRepository vendorRepository;
+	private final InvoiceItemRepository invoiceItemRepository;
+	private final CasePaymentRepository casePaymentRepository;
 
 	private static final DateTimeFormatter DATE_FORMATTER = DateTimeFormatter.ofPattern("dd MMM yyyy");
 	private static final DateTimeFormatter TIMESTAMP_FORMATTER = DateTimeFormatter.ofPattern("dd MMM yyyy HH:mm");
@@ -182,13 +188,15 @@ public class VerificationCaseService {
 
 		
 		// Create verification case
-		VerificationCase verificationCase = VerificationCase.builder().candidateId(request.getCandidateId())
+		VerificationCase verificationCase = VerificationCase.builder()
+				.candidateId(request.getCandidateId())
 				.companyId(request.getCompanyId())
 				.employerPackage(employerPackage)
 				//  .basePrice(pricing.getBasePrice())
 				//  .addonPrice(pricing.getAddonPrice())
 				.totalPrice(request.getTotalPrice())
-				.status(CaseStatus.INITIATED).build();
+				.status(CaseStatus.INITIATED)
+				.build();
 
 		String caseRef = referenceNumberGenerator.generateCaseNumber();
 		verificationCase.setCaseNumber(caseRef);
@@ -1499,12 +1507,15 @@ public class VerificationCaseService {
 			CheckCategory category = check.getCategory();
 			
 			Long vendorId = check.getVendorId();
-			
-			Vendor vendor = vendorRepository.findById(vendorId).orElseGet(null);
 			String vendorname = "";
-			if(vendor!=null) {
-				vendorname = vendor.getFirstName() + vendor.getLastName();
+			if(vendorId!=null) {
+				Vendor vendor = vendorRepository.findById(vendorId).orElseGet(null);
+				
+				if(vendor!=null && vendor.getUser()!=null) {
+					vendorname = vendor.getFirstName() + vendor.getLastName();
+				}
 			}
+			
 
 			return VerificationCheckDTO.builder()
 					.id(check.getCaseCheckId())
@@ -1680,10 +1691,23 @@ public class VerificationCaseService {
 	    vendorNoteRepository.deleteByVerificationCaseCheckVerificationCaseCaseId(caseId);
 	    
 	    verificationTimelineRepository.deleteByVerificationCaseCheckVerificationCaseCaseId(caseId);
-
-	    // 6. Delete the verification case itself
-	    //    (cascades to VerificationCaseDocument + VerificationCaseCheck via CascadeType.ALL)
+	    
+	    
+	    Invoice invoice = invoiceRepository.findByVerificationCase(verificationCase).orElse(null);
+	   
+	    invoiceItemRepository.deleteByInvoice(invoice);
+	    invoiceRepository.delete(invoice);
+	    
+	  //  List<CasePayment> casePayments = casePaymentRepository.findByVerificationCase(verificationCase);
+	    
+	    casePaymentRepository.deleteByVerificationCase_CaseId(caseId);
+	 
+	    //  List<InvoiceItem> invoiceItems = invoiceItemRepository.findByInvoice(invoice);
+	    
+	    
+	  //  verificationCase.setStatus(CaseStatus.CANCELLED);
 	    verificationCaseRepository.delete(verificationCase);
+	  //  verificationCaseRepository.save(verificationCase);
 	    log.info("Verification case {} removed successfully", caseId);
 	}
 	

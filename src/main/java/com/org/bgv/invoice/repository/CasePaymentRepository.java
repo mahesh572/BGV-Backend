@@ -23,5 +23,14 @@ import java.util.Optional;
 @Repository
 public interface CasePaymentRepository extends JpaRepository<CasePayment, Long> {
 
-   
+	List<CasePayment> findByVerificationCase(VerificationCase verificationCase);
+	
+	@Transactional
+    void deleteByVerificationCase_CaseId(Long caseId);
+
+    @Transactional
+    void deleteByInvoice_Id(Long invoiceId);
+
+    @Transactional
+    void deleteByWalletTransaction_TransactionId(Long transactionId);
 }

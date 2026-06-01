@@ -56,6 +56,14 @@ public class VerificationCaseCheck {
     @Builder.Default
     private LocalDateTime createdAt = LocalDateTime.now();
     
+    @Column(name = "started_at")
+    @Builder.Default
+    private LocalDateTime startedAt = LocalDateTime.now();
+    
+    @Column(name = "completed_at")
+    @Builder.Default
+    private LocalDateTime completedAt = LocalDateTime.now();
+    
     @Column(name = "vendor_id")
     private Long vendorId;
     

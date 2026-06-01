@@ -190,9 +190,9 @@ public class VendorDashboardService {
             Map<String, Object> caseData = Map.of(
                 "id", verificationCase.getCaseId(),
                 "candidate",
-                (candidate != null && candidate.getProfile() != null)
-                    ? candidate.getProfile().getFirstName() + " " + candidate.getProfile().getLastName()
-                    : "Profile Pending",
+                (candidate != null && candidate.getFirstName() != null)
+                    ? candidate.getFirstName() + " " + candidate.getLastName()
+                    : "N/A",
                 "employer", company != null ? company.getCompanyName() : "Unknown Company",
                 "checks", checks,
                 "slaStatus", slaStatus,
@@ -279,6 +279,7 @@ public class VendorDashboardService {
             case ON_HOLD: return "on_hold";
           //  case DELAYED: return "delayed";
             case INSUFFICIENT: return "insufficient";
+            case ASSIGNED: return "assigned";
             default: return "pending";
         }
     }

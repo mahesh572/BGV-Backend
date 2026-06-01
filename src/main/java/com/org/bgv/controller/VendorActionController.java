@@ -31,7 +31,7 @@ import com.org.bgv.vendor.evidence.dto.EvidenceUploadRequest;
 import com.org.bgv.vendor.evidence.dto.EvidenceUploadResponse;
 import com.org.bgv.vendor.service.VerificationActionService;
 
-
+import jakarta.persistence.EntityNotFoundException;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 
@@ -282,5 +282,81 @@ public class VendorActionController {
         );
     }
 
+    
+    @PostMapping("/{checkId}/start")
+    public ResponseEntity<CustomApiResponse<?>> startVerification(
+            @PathVariable Long checkId) {
+
+        log.info("START_VERIFICATION initiated | checkId={}", checkId);
+
+        verificationActionService.startVerification(checkId);
+
+        return ResponseEntity.ok(
+                CustomApiResponse.success(
+                        "Verification started successfully",
+                        null,
+                        HttpStatus.OK
+                )
+        );
+    }
+    
+    @PostMapping("/{checkId}/complete")
+    public ResponseEntity<CustomApiResponse<?>> completeVerification(
+            @PathVariable Long checkId) {
+
+        try {
+
+            log.info("COMPLETE_VERIFICATION | checkId={}", checkId);
+
+            verificationActionService.completeVerification(checkId);
+
+            return ResponseEntity.ok(
+                    CustomApiResponse.success(
+                            "Verification completed successfully",
+                            null,
+                            HttpStatus.OK
+                    )
+            );
+
+        } catch (EntityNotFoundException e) {
+
+            log.error("Verification check not found | checkId={}", checkId, e);
+
+            return ResponseEntity.status(HttpStatus.NOT_FOUND)
+                    .body(
+                            CustomApiResponse.failure(
+                                    e.getMessage(),
+                                    HttpStatus.NOT_FOUND
+                            )
+                    );
+
+        } catch (IllegalStateException e) {
+
+            log.warn("Verification completion validation failed | checkId={} | reason={}",
+                    checkId,
+                    e.getMessage());
+
+            return ResponseEntity.status(HttpStatus.BAD_REQUEST)
+                    .body(
+                            CustomApiResponse.failure(
+                                    e.getMessage(),
+                                    HttpStatus.BAD_REQUEST
+                            )
+                    );
+
+        } catch (Exception e) {
+
+            log.error("Failed to complete verification | checkId={}", checkId, e);
+
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
+                    .body(
+                            CustomApiResponse.failure(
+                                    "Failed to complete verification: " + e.getMessage(),
+                                    HttpStatus.INTERNAL_SERVER_ERROR
+                            )
+                    );
+        }
+    }
+    
 }
 

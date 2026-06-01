@@ -608,7 +608,7 @@ public WalletBalanceResponseDto getWalletBalance(Long companyId) {
     				.findByVerificationCase_CaseId(verificationCase.getCaseId());
             vendorAssignmentService.assignVendorsToCaseChecks(caseChecks);
             
-            verificationCase.setStatus(CaseStatus.IN_PROGRESS);
+            verificationCase.setStatus(CaseStatus.ASSIGNED);
             
             verificationCaseRepository.save(verificationCase);
             

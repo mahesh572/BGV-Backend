@@ -1,7 +1,10 @@
 package com.org.bgv.vendor.service;
 
 import java.time.LocalDateTime;
+import java.util.ArrayList;
 import java.util.List;
+import java.util.Map;
+import java.util.stream.Collectors;
 
 import org.springframework.stereotype.Service;
 
@@ -11,17 +14,21 @@ import com.org.bgv.candidate.repository.CandidateRepository;
 import com.org.bgv.common.DocumentStatus;
 import com.org.bgv.config.SecurityUtils;
 import com.org.bgv.constants.CaseCheckStatus;
+import com.org.bgv.dto.CheckCategoryEnum;
 import com.org.bgv.entity.Company;
 import com.org.bgv.entity.Document;
+import com.org.bgv.entity.DocumentType;
 import com.org.bgv.entity.User;
 import com.org.bgv.entity.VerificationCase;
 import com.org.bgv.entity.VerificationCaseCheck;
+import com.org.bgv.entity.VerificationCaseSelection;
 import com.org.bgv.notifications.service.NotificationDispatcher;
 import com.org.bgv.repository.CompanyRepository;
 import com.org.bgv.repository.DocumentRepository;
 import com.org.bgv.repository.UserRepository;
 import com.org.bgv.repository.VerificationCaseCheckRepository;
 import com.org.bgv.repository.VerificationCaseRepository;
+import com.org.bgv.repository.VerificationCaseSelectionRepository;
 import com.org.bgv.service.EmailService;
 import com.org.bgv.vendor.action.dto.EvidenceLinkRequest;
 import com.org.bgv.vendor.action.dto.VerificationActionRequest;
@@ -29,7 +36,9 @@ import com.org.bgv.vendor.dto.ActionLevel;
 import com.org.bgv.vendor.dto.ActionReasonDTO;
 import com.org.bgv.vendor.dto.ActionStatus;
 import com.org.bgv.vendor.dto.ActionType;
+import com.org.bgv.vendor.dto.DocumentTypeVerificationDTO;
 import com.org.bgv.vendor.dto.EvidenceSource;
+import com.org.bgv.vendor.dto.ObjectFieldDTO;
 import com.org.bgv.vendor.entity.ActionReason;
 import com.org.bgv.vendor.entity.VerificationAction;
 import com.org.bgv.vendor.entity.VerificationActionEvidence;
@@ -62,6 +71,7 @@ public class VerificationActionService {
 	 private final UserRepository userRepository;
 	 private final NotificationDispatcher notificationDispatcher;
 	 private final CompanyRepository companyRepository;
+	 private final VerificationCaseSelectionRepository verificationCaseSelectionRepository;
 	
 	public List<ActionReasonDTO> getReasons(
 	        Long categoryId,
@@ -615,4 +625,231 @@ public class VerificationActionService {
          );
 	}
 
+	
+	@Transactional
+	public void startVerification(Long checkId) {
+
+	    VerificationCaseCheck check = verificationCaseCheckRepository.findById(checkId)
+	            .orElseThrow(() -> new EntityNotFoundException(
+	                    "Verification Check not found: " + checkId));
+
+	    if (check.getStatus() != CaseCheckStatus.ASSIGNED) {
+	        throw new IllegalStateException(
+	                "Only assigned checks can be started");
+	    }
+
+	    check.setStatus(CaseCheckStatus.IN_PROGRESS);
+	    check.setStartedAt(LocalDateTime.now());
+
+	    verificationCaseCheckRepository.save(check);
+/*
+	    activityTimelineService.createActivity(
+	            check.getCaseEntity().getId(),
+	            check.getId(),
+	            "CHECK_STARTED",
+	            "Verification started by vendor"
+	    );
+	    */
+	}
+	
+	
+	@Transactional
+	public void completeVerification(Long checkId) {
+
+	    VerificationCaseCheck check = verificationCaseCheckRepository.findById(checkId)
+	            .orElseThrow(() -> new EntityNotFoundException(
+	                    "Verification Check not found: " + checkId));
+
+	    if (check.getStatus() != CaseCheckStatus.IN_PROGRESS) {
+	        throw new IllegalStateException(
+	                "Only checks in progress can be completed."
+	        );
+	    }
+
+	    List<String> unverifiedDocuments = getUnverifiedDocuments(check);
+
+	    if (!unverifiedDocuments.isEmpty()) {
+
+	        throw new IllegalStateException(
+	                "Cannot complete verification. Pending documents: "
+	                        + String.join(", ", unverifiedDocuments)
+	        );
+	    }
+	    check.setStatus(CaseCheckStatus.COMPLETED);
+	    check.setCompletedAt(LocalDateTime.now());
+
+	    verificationCaseCheckRepository.save(check);
+
+	    /*
+	    activityTimelineService.createActivity(
+	            check.getVerificationCase().getCaseId(),
+	            check.getCaseCheckId(),
+	            "CHECK_COMPLETED",
+	            "Verification completed by vendor"
+	    );
+	    */
+	}
+	
+	/*
+	private boolean CheckAllDocumentsVerified(VerificationCaseCheck check) {
+
+	    Long caseId = check.getVerificationCase().getCaseId();
+
+	    List<VerificationCaseSelection> selections =
+	            verificationCaseSelectionRepository
+	                    .findByVerificationCase_CaseIdAndType(
+	                            caseId,
+	                            CheckCategoryEnum.WORK);
+
+	    for (VerificationCaseSelection selection : selections) {
+
+	        List<DocumentTypeVerificationDTO> docTypes =
+	                buildDocumentTypes(
+	                        selection.getReferenceId(),
+	                        check,
+	                        null
+	                );
+
+	        boolean allVerified = docTypes.stream()
+	                .allMatch(doc ->
+	                        "VERIFIED".equalsIgnoreCase(doc.getStatus()));
+
+	        if (!allVerified) {
+	            return false;
+	        }
+	    }
+
+	    return true;
+	}
+	*/
+	
+	private List<String> getUnverifiedDocuments(VerificationCaseCheck check) {
+
+	    Long caseId = check.getVerificationCase().getCaseId();
+
+	    List<VerificationCaseSelection> selections =
+	            verificationCaseSelectionRepository
+	                    .findByVerificationCase_CaseIdAndType(
+	                            caseId,
+	                            CheckCategoryEnum.WORK);
+
+	    List<String> unverifiedDocuments = new ArrayList();
+
+	    for (VerificationCaseSelection selection : selections) {
+
+	        List<DocumentTypeVerificationDTO> docTypes =
+	                buildDocumentTypes(
+	                        selection.getReferenceId(),
+	                        check,
+	                        null
+	                );
+
+	        docTypes.stream()
+	                .filter(doc ->
+	                        !"VERIFIED".equalsIgnoreCase(doc.getStatus()))
+	                .forEach(doc ->
+	                        unverifiedDocuments.add(
+	                                doc.getType() + " (" + doc.getStatus() + ")"
+	                        ));
+	    }
+
+	    return unverifiedDocuments;
+	}
+	
+	private List<DocumentTypeVerificationDTO> buildDocumentTypes(
+	        Long objectId,
+	        VerificationCaseCheck check,
+	        List<ObjectFieldDTO> fields) {
+
+	    log.info(
+	            "Building document types | checkId={} | objectId={} | candidateId={}",
+	            check.getCaseCheckId(),
+	            objectId,
+	            check.getVerificationCase().getCandidateId());
+
+	    List<Document> documents = documentRepository
+	            .findByCandidate_CandidateIdAndVerificationCaseCheck_CaseCheckIdAndObjectIdAndStatusNot(
+	                    check.getVerificationCase().getCandidateId(),
+	                    check.getCaseCheckId(),
+	                    objectId,
+	                    DocumentStatus.DELETED);
+
+	    log.info(
+	            "Documents fetched | checkId={} | objectId={} | count={}",
+	            check.getCaseCheckId(),
+	            objectId,
+	            documents.size());
+
+	    documents.forEach(doc ->
+	            log.info(
+	                    "Document found | documentId={} | documentType={} | status={}",
+	                    doc.getDocId(),
+	                    doc.getDocTypeId().getLabel(),
+	                    doc.getStatus()
+	            ));
+
+	    Map<Object, List<Document>> grouped = documents.stream()
+	            .collect(Collectors.groupingBy(
+	                    doc -> doc.getDocTypeId().getDocTypeId()));
+
+	    log.info(
+	            "Document groups created | checkId={} | objectId={} | groupCount={}",
+	            check.getCaseCheckId(),
+	            objectId,
+	            grouped.size());
+
+	    return grouped.entrySet().stream()
+	            .map(entry -> {
+
+	                DocumentType docType = entry.getValue().get(0).getDocTypeId();
+
+	                String resolvedStatus =
+	                        resolveDocumentTypeStatus(entry.getValue());
+
+	                log.info(
+	                        "Document type processed | checkId={} | objectId={} | documentType={} | fileCount={} | resolvedStatus={}",
+	                        check.getCaseCheckId(),
+	                        objectId,
+	                        docType.getLabel(),
+	                        entry.getValue().size(),
+	                        resolvedStatus);
+
+	                return DocumentTypeVerificationDTO.builder()
+	                        .documentTypeId(
+	                                String.valueOf(docType.getDocTypeId()))
+	                        .type(docType.getLabel())
+	                        .status(resolvedStatus)
+	                        .build();
+	            })
+	            .toList();
+	}
+	
+	private String resolveDocumentTypeStatus(List<Document> documents) {
+
+	    if (documents == null || documents.isEmpty()) {
+	        return DocumentStatus.PENDING.name();
+	    }
+
+	    if (documents.stream()
+	            .anyMatch(d -> d.getStatus() == DocumentStatus.REJECTED)) {
+	        return DocumentStatus.REJECTED.name();
+	    }
+
+	    if (documents.stream()
+	            .anyMatch(d -> d.getStatus() == DocumentStatus.INSUFFICIENT)) {
+	        return DocumentStatus.INSUFFICIENT.name();
+	    }
+
+	    if (documents.stream()
+	            .anyMatch(d -> d.getStatus() == DocumentStatus.REQUEST_INFO)) {
+	        return DocumentStatus.REQUEST_INFO.name();
+	    }
+
+	    if (documents.stream()
+	            .allMatch(d -> d.getStatus() == DocumentStatus.VERIFIED)) {
+	        return DocumentStatus.VERIFIED.name();
+	    }
+
+	    return DocumentStatus.PENDING.name();
+	}
 }
