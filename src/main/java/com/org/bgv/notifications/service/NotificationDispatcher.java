@@ -307,5 +307,113 @@ public class NotificationDispatcher {
          throw e;
      }
  }
+ 
+ public void dispatchEmploymentVerificationEmailRequested(
+	        
+	        Candidate candidate,
+	        String hrEmail,
+	        String hrName,
+	        String employeeId,
+	        String designation,
+	        String department,
+	        String employmentPeriod,
+	        String verificationPortalUrl,
+	        String vendorCompanyName,
+	        String vendorEmail,
+	        String vendorPhone
+	) {
+
+	    log.info(
+	            "📨 Dispatching EMPLOYMENT_VERIFICATION_EMAIL_REQUESTED | hrEmail={} | candidate={}",
+	            hrEmail,
+	            candidate.getFirstName()+candidate.getLastName()
+	    );
+
+	    try {
+/*
+	        var companyEmailSettings = companyEmailSettingsRepository
+	                .findByCompanyId(employerCompany.getId())
+	                .orElse(null);
+*/
+	        var platformConfig = platformConfigRepository.findById(1L)
+	                .orElseThrow(() ->
+	                        new IllegalStateException("PlatformConfig not initialized"));
+
+	        var platformEmailSettings = platformEmailSettingsRepository
+	                .findActive()
+	                .orElse(null);
+
+	        Set<NotificationPlaceholder> placeholders = EnumSet.of(
+	                NotificationPlaceholder.CANDIDATE_NAME
+	              //  NotificationPlaceholder.EMPLOYER_BRAND_NAME,
+	              //  NotificationPlaceholder.CURRENT_YEAR
+	        );
+
+	        Map<String, Object> runtimeValues = new HashMap<>();
+
+	        runtimeValues.put("hrName", hrName);
+	     //   runtimeValues.put("requestingCompany", employerCompany.getCompanyName());
+
+	        runtimeValues.put("employeeId", employeeId);
+	        runtimeValues.put("designation", designation);
+	        runtimeValues.put("department", department);
+	        runtimeValues.put("employmentPeriod", employmentPeriod);
+
+	        runtimeValues.put("verificationPortalUrl",
+	                verificationPortalUrl);
+
+	        runtimeValues.put("vendorCompanyName",
+	                vendorCompanyName);
+
+	        runtimeValues.put("vendorEmail",
+	                vendorEmail);
+
+	        runtimeValues.put("vendorPhone",
+	                vendorPhone);
+
+	        Map<String, Object> vars = placeholderEngine.resolveAll(
+	                placeholders,
+	                ResolutionContext.builder()
+	                      //  .company(employerCompany)
+	                      //  .candidate(candidate)
+	                      //  .companyEmailSettings(companyEmailSettings)
+	                        .platformConfig(platformConfig)
+	                        .platformEmailSettings(platformEmailSettings)
+	                        .runtimeValues(runtimeValues)
+	                        .build()
+	        );
+
+	        vars.putAll(runtimeValues);
+
+	        NotificationContext context = NotificationContext.builder()
+	                .event(NotificationEvent.EMPLOYMENT_VERIFICATION_EMAIL_REQUESTED)
+	               // .companyId(employerCompany.getId())
+	                .userEmailAddress(hrEmail)
+	                .variables(vars)
+	                .hrEmail(hrEmail)
+	                .build();
+
+	        dispatcher.dispatch(
+	                NotificationEvent.EMPLOYMENT_VERIFICATION_EMAIL_REQUESTED,
+	                context
+	        );
+
+	        log.info(
+	                "✅ EMPLOYMENT_VERIFICATION_EMAIL_REQUESTED dispatched | hrEmail={}",
+	                hrEmail
+	        );
+
+	    } catch (Exception e) {
+
+	        log.error(
+	                "❌ Failed to dispatch EMPLOYMENT_VERIFICATION_EMAIL_REQUESTED | hrEmail={}",
+	                hrEmail,
+	                e
+	        );
+
+	        throw e;
+	    }
+	}
+ 
 }
 

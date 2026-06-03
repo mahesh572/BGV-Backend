@@ -3,6 +3,8 @@ package com.org.bgv.vendor.entity;
 
 import java.time.LocalDateTime;
 
+import com.org.bgv.entity.VerificationCaseCheck;
+
 import jakarta.persistence.*;
 
 import lombok.*;
@@ -16,19 +18,22 @@ import lombok.*;
 @Builder
 public class VerificationMethodExecutionEvidence {
 
-    @Id
+	@Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
-    private Long id;
+    private Long evidenceId;
 
     /* =========================
        Parent Method Execution
        ========================= */
     @ManyToOne(fetch = FetchType.LAZY)
-    @JoinColumn(name = "method_execution_id", nullable = false)
+    @JoinColumn(name = "execution_id", nullable = false)
     private VerificationMethodExecution methodExecution;
 
    
-
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "check_id")
+    private VerificationCaseCheck verificationCaseCheck;
+    
     /* =========================
        Document Reference (optional)
        ========================= */
@@ -50,6 +55,9 @@ public class VerificationMethodExecutionEvidence {
        ========================= */
     @Column(length = 500)
     private String remarks;
+    
+    @Column(length = 2000)
+    private String notes;
 
     /* =========================
        Audit
@@ -62,6 +70,10 @@ public class VerificationMethodExecutionEvidence {
 
     @Column(nullable = false)
     private Boolean archived = false;
+    
+    private String contentType;
+    
+    private String key;
 
     /* =========================
        Auto timestamp

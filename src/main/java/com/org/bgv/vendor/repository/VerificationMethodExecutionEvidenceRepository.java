@@ -12,7 +12,7 @@ import com.org.bgv.vendor.entity.VerificationMethodExecutionEvidence;
 public interface VerificationMethodExecutionEvidenceRepository
         extends JpaRepository<VerificationMethodExecutionEvidence, Long> {
 
-    List<VerificationMethodExecutionEvidence> findByMethodExecutionId(Long methodExecutionId);
+    List<VerificationMethodExecutionEvidence> findByMethodExecutionExecutionId(Long methodExecutionId);
 
     List<VerificationMethodExecutionEvidence> findByDocumentId(Long documentId);
 

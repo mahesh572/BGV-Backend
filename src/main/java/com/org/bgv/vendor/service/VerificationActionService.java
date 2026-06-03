@@ -474,7 +474,7 @@ public class VerificationActionService {
 	            default -> throw invalid(actionType, current);
 	        };
 */
-	    case UPLOADED -> switch (actionType) {
+	    case UPLOADED,RE_UPLOADED -> switch (actionType) {
         case REQUEST_INFO -> DocumentStatus.REQUEST_INFO;
         case INSUFFICIENT -> DocumentStatus.INSUFFICIENT;
         case VERIFY, APPROVE -> DocumentStatus.VERIFIED;

@@ -4,7 +4,7 @@ public enum NotificationPlaceholder {
 	
 	// USER_FULL_NAME("userFullName","User Full Name"),
 
-    // 🔹 Employer / Organization
+    // 🔹 Employer / Organization // who initiated BGV for candidate
     EMPLOYER_BRAND_NAME("employerBrandName", "Employer Brand Name"),
     EMPLOYER_LEGAL_NAME("employerLegalName", "Employer Legal Name"),
     EMPLOYER_SUPPORT_EMAIL("employerSupportEmail","Employer Support Email"),
@@ -46,8 +46,29 @@ public enum NotificationPlaceholder {
 	
 	// CHECK
 	CHECK_NAME("checkName","Check Name"),
-	INSUFFICIENT_COUNT("insufficientCount","Insufficient Count");
+	INSUFFICIENT_COUNT("insufficientCount","Insufficient Count"),
 	
+	// Verification Methods
+	// Verification Method - HR Verification
+	HR_NAME("hrName", "HR Contact Name"),
+	HR_EMAIL("hrEmail", "HR Email"),
+
+	COMPANY_NAME("companyName", "Company Name"),
+
+	EMPLOYEE_ID("employeeId", "Employee ID"),
+	DESIGNATION("designation", "Designation"),
+	DEPARTMENT("department", "Department"),
+	EMPLOYMENT_PERIOD("employmentPeriod", "Employment Period"),
+
+	//VERIFICATION_METHOD("verificationMethod", "Verification Method"),
+	//VERIFICATION_REQUEST_ID("verificationRequestId", "Verification Request ID"),
+
+	//VERIFICATION_PORTAL_URL("verificationPortalUrl", "Verification Portal URL"),
+	//UPLOAD_EVIDENCE_URL("uploadEvidenceUrl", "Upload Evidence URL"),
+
+	VENDOR_NAME("vendorName", "Vendor Name"),
+	VENDOR_EMAIL("vendorEmail", "Vendor Email"),
+	VENDOR_PHONE("vendorPhone", "Vendor Phone");
 	
 
     private final String key;

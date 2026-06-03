@@ -1,6 +1,8 @@
 package com.org.bgv.vendor.dto;
 
 
+import java.util.List;
+
 import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Data;
@@ -21,4 +23,6 @@ public class VerificationMethodDTO {
     private String description;
 
     private Boolean mandatory;
+    
+    private List<VerificationMethodFieldDTO> fields;
 }

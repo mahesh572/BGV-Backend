@@ -250,6 +250,18 @@ public class NotificationEventSeeder implements ApplicationRunner {
                 "INFO",
                 List.of("EMAIL"),
                 List.of(RecipientType.EMPLOYER));
+        
+        create(
+        	    NotificationEvent.EMPLOYMENT_VERIFICATION_EMAIL_REQUESTED,
+        	    "Employment Verification Request",
+        	    "Employment Verification",
+        	    "Employment verification request sent to employer HR",
+        	    "INFO",
+        	    List.of("EMAIL"),
+        	    List.of(RecipientType.EMPLOYER_HR)
+        	);
+        
+        
     }
 
     private void create(

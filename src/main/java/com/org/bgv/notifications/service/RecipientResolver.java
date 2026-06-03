@@ -30,6 +30,8 @@ public class RecipientResolver {
 
             case VENDOR ->
                     context.getVendorEmail();
+		    case EMPLOYER_HR -> context.getHrEmail();
+		    default -> throw new IllegalArgumentException("Unexpected value: " + recipient.getRecipient());
         };
     }
 }

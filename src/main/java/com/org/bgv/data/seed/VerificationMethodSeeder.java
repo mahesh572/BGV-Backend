@@ -27,45 +27,29 @@ public class VerificationMethodSeeder implements CommandLineRunner {
             return;
         }
 
-        VerificationMethod documentReview =
-                saveMethod("DOCUMENT_REVIEW",
-                        "Document Review");
-
         VerificationMethod email =
-                saveMethod("EMAIL",
-                        "Email Verification");
+                saveMethod("EMAIL", "Email");
 
         VerificationMethod phone =
-                saveMethod("PHONE",
-                        "Phone Verification");
+                saveMethod("PHONE", "Phone Call");
 
         VerificationMethod portal =
-                saveMethod("PORTAL",
-                        "Portal Verification");
+                saveMethod("PORTAL", "Portal / System");
 
         VerificationMethod physicalVisit =
-                saveMethod("PHYSICAL_VISIT",
-                        "Physical Visit");
+                saveMethod("PHYSICAL_VISIT", "Physical Visit");
 
-        VerificationMethod referenceCall =
-                saveMethod("REFERENCE_CALL",
-                        "Reference Call");
+        VerificationMethod database =
+                saveMethod("DATABASE", "Database Check");
 
-        VerificationMethod databaseCheck =
-                saveMethod("DATABASE_CHECK",
-                        "Database Check");
+        VerificationMethod videoCall =
+                saveMethod("VIDEO_CALL", "Video Verification");
 
-        VerificationMethod videoVerification =
-                saveMethod("VIDEO_VERIFICATION",
-                        "Video Verification");
+        VerificationMethod documentReview =
+                saveMethod("DOCUMENT_REVIEW", "Document Review");
 
-        VerificationMethod employerHr =
-                saveMethod("EMPLOYER_HR_CONFIRMATION",
-                        "Employer HR Confirmation");
-
-        VerificationMethod managerConfirmation =
-                saveMethod("MANAGER_CONFIRMATION",
-                        "Manager Confirmation");
+        VerificationMethod other =
+                saveMethod("OTHER", "Other");
 
         /*
          * WORK
@@ -73,61 +57,59 @@ public class VerificationMethodSeeder implements CommandLineRunner {
         map(CheckCategoryEnum.WORK, documentReview);
         map(CheckCategoryEnum.WORK, email);
         map(CheckCategoryEnum.WORK, phone);
-        map(CheckCategoryEnum.WORK, employerHr);
-        map(CheckCategoryEnum.WORK, managerConfirmation);
+        map(CheckCategoryEnum.WORK, portal);
+        map(CheckCategoryEnum.WORK, physicalVisit);
 
         /*
          * EDUCATION
          */
         map(CheckCategoryEnum.EDUCATION, documentReview);
         map(CheckCategoryEnum.EDUCATION, email);
-        map(CheckCategoryEnum.EDUCATION, portal);
         map(CheckCategoryEnum.EDUCATION, phone);
+        map(CheckCategoryEnum.EDUCATION, portal);
 
         /*
          * ADDRESS
          */
         map(CheckCategoryEnum.ADDRESS, documentReview);
-        map(CheckCategoryEnum.ADDRESS, physicalVisit);
         map(CheckCategoryEnum.ADDRESS, phone);
+        map(CheckCategoryEnum.ADDRESS, physicalVisit);
 
         /*
          * IDENTITY
          */
         map(CheckCategoryEnum.IDENTITY, documentReview);
-        map(CheckCategoryEnum.IDENTITY, databaseCheck);
-        map(CheckCategoryEnum.IDENTITY, videoVerification);
+        map(CheckCategoryEnum.IDENTITY, database);
+        map(CheckCategoryEnum.IDENTITY, videoCall);
 
         /*
          * REFERENCE
          */
         map(CheckCategoryEnum.REFERENCE, phone);
         map(CheckCategoryEnum.REFERENCE, email);
-        map(CheckCategoryEnum.REFERENCE, referenceCall);
 
         /*
          * CRIMINAL
          */
-       // map(CheckCategoryEnum.CRIMINAL, databaseCheck);
-       // map(CheckCategoryEnum.CRIMINAL, documentReview);
+        // map(CheckCategoryEnum.CRIMINAL, database);
+        // map(CheckCategoryEnum.CRIMINAL, portal);
 
         /*
          * CREDIT
          */
-        map(CheckCategoryEnum.CREDIT, databaseCheck);
+        map(CheckCategoryEnum.CREDIT, database);
 
         /*
          * DATABASE
          */
-        map(CheckCategoryEnum.DATABASE, databaseCheck);
+        map(CheckCategoryEnum.DATABASE, database);
     }
 
     private VerificationMethod saveMethod(
             String code,
             String name) {
 
-        VerificationMethod method =
-                new VerificationMethod();
+        VerificationMethod method = new VerificationMethod();
 
         method.setCode(code);
         method.setName(name);
