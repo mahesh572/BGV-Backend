@@ -164,7 +164,7 @@ public class VendorAssignmentService {
         for (VerificationCaseCheck check : checks) {
             Vendor vendor = autoAssignVendor(check.getCategory().getCategoryId());
             check.setVendorId(vendor.getId());
-           // check.setStatus(CaseStatus.ASSIGNED);
+            check.setStatus(CaseCheckStatus.ASSIGNED);
         }
     }
     

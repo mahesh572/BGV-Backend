@@ -15,14 +15,18 @@ public interface InAppTemplateRepository
         extends JpaRepository<InAppTemplate, Long> {
 
     
+	List<InAppTemplate> findByActive(boolean active);
+	
     List<InAppTemplate> findByCompanyId(Long companyId);
 
     List<InAppTemplate> findByCompanyIdIsNull();
     
-    Optional<InAppTemplate> findByTemplateCodeAndCompanyId(
-            String templateCode,
-            Long companyId
+    Optional<InAppTemplate> findByTemplateCode(
+            String templateCode
+            
     );
+    
+    boolean existsByTemplateCode(String templateCode);
 
     @Query("""
         select t from InAppTemplate t

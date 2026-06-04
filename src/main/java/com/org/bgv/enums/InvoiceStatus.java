@@ -5,5 +5,9 @@ public enum InvoiceStatus {
     PAID,       // Payment received
     OVERDUE,    // Past due date
     CANCELLED,  // Invoice cancelled
-    REFUNDED    // Refund issued
+    REFUNDED,    // Refund issued
+    DRAFT,
+    GENERATED,
+    APPROVED,
+    PARTIALLY_PAID
 }

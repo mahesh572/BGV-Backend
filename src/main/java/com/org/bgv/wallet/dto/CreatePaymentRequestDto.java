@@ -1,6 +1,8 @@
 package com.org.bgv.wallet.dto;
 
 import com.org.bgv.constants.PaymentPurpose;
+import com.org.bgv.enums.PaymentMethod;
+
 import jakarta.validation.constraints.DecimalMin;
 import jakarta.validation.constraints.NotNull;
 import lombok.AllArgsConstructor;
@@ -38,4 +40,19 @@ public class CreatePaymentRequestDto {
     private String callbackUrl;
     
     private String webhookUrl;
+    
+    
+    // Case payment fields
+
+    private Long caseId;
+
+    private Long invoiceId;
+
+    private String invoiceNumber;
+
+    private PaymentMethod paymentMethod;
+
+    private BigDecimal walletAmountUsed;
+
+    private BigDecimal onlineAmount;
 }

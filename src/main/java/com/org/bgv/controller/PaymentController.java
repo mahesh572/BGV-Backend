@@ -33,8 +33,7 @@ public class PaymentController {
     public ResponseEntity<CustomApiResponse<RazorpayOrderResponseDto>> createPaymentOrder(
             @Valid @RequestBody CreatePaymentRequestDto requestDto) {
         try {
-            log.info("Creating payment order for user: {}, company: {}, amount: {}", 
-                    requestDto.getUserId(), requestDto.getCompanyId(), requestDto.getAmount());
+        	 log.info("Received Payment Request : {}", requestDto);
             
             RazorpayOrderResponseDto response = paymentService.createPaymentOrder(requestDto);
             
@@ -157,17 +156,12 @@ public class PaymentController {
      */
     @PostMapping("/wallet/pay")
     public ResponseEntity<CustomApiResponse<WalletTransactionResponseDto>> makePaymentFromWallet(
-            @RequestParam Long userId,
-            @RequestParam Long companyId,
-            @RequestParam BigDecimal amount,
-            @RequestParam String description) {
+    		@RequestBody CreatePaymentRequestDto requestDto) {
         
         try {
-            log.info("Processing wallet payment for user: {}, company: {}, amount: {}", 
-                    userId, companyId, amount);
             
             WalletTransactionResponseDto response = paymentService.makePaymentFromWallet(
-                    userId, companyId, amount, description);
+            		requestDto);
             
             return ResponseEntity.ok(
                     CustomApiResponse.success(

@@ -11,4 +11,6 @@ import com.org.bgv.vendor.entity.VerificationTimeline;
 @Repository
 public interface VerificationTimelineRepository extends JpaRepository<VerificationTimeline, Long> {
     List<VerificationTimeline> findByVerificationCaseCheckOrderByTimestampAsc(VerificationCaseCheck check);
+    
+    void deleteByVerificationCaseCheckVerificationCaseCaseId(Long caseId);
 }

@@ -6,6 +6,7 @@ public enum RecipientType {
     RECRUITER,
     VENDOR,
     USER,
-    ADMIN
+    ADMIN,
+    EMPLOYER_HR
 }
 

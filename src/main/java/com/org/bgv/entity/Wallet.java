@@ -8,13 +8,13 @@ import java.util.ArrayList;
 import java.util.List;
 
 @Entity
-@Table(name = "user_wallet")
+@Table(name = "wallet")
 @Getter
 @Setter
 @NoArgsConstructor
 @AllArgsConstructor
 @Builder
-public class UserWallet {
+public class Wallet {
     
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)

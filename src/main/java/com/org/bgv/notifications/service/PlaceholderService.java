@@ -7,6 +7,8 @@ import java.util.stream.Collectors;
 
 import org.springframework.stereotype.Service;
 
+import com.org.bgv.enums.InAppPlaceholderRolePolicy;
+import com.org.bgv.enums.InAppTemplatePlaceholder;
 import com.org.bgv.notifications.dto.NotificationPlaceholder;
 import com.org.bgv.notifications.dto.PlaceholderDTO;
 import com.org.bgv.notifications.dto.PlaceholderRolePolicy;
@@ -31,6 +33,24 @@ public class PlaceholderService {
             ))
             .toList();
     }
+    
+    public List<PlaceholderDTO> getInAppAllowedPlaceholders(
+            TemplateUserRole role
+    ) {
+        return Arrays.stream(InAppTemplatePlaceholder.values())
+            .filter(p ->
+            InAppPlaceholderRolePolicy
+                    .valueOf(p.name())
+                    .allowedFor(role)
+            )
+            .map(p -> new PlaceholderDTO(
+                p.key(),
+                p.label(),
+                "{{" + p.key() + "}}"
+            ))
+            .toList();
+    }
+    
 
     public Set<String> allowedKeys(TemplateUserRole role) {
         return getAllowedPlaceholders(role)

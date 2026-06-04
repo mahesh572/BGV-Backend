@@ -1,0 +1,43 @@
+package com.org.bgv.enums;
+
+public enum VerificationExecutionStatus {
+
+    DRAFT,
+
+    IN_PROGRESS,
+
+    WAITING_FOR_RESPONSE,
+
+    RESPONSE_RECEIVED,
+
+    UNDER_REVIEW,
+
+    VERIFIED,
+
+    DISCREPANCY_FOUND,
+
+    UNABLE_TO_VERIFY,
+
+    CANCELLED,
+    PENDING_VENDOR_ACTION,
+    ASSIGNED,
+    INITIATED,
+
+    EMAIL_SENT,
+
+    REMINDER_SENT,
+
+    NO_RESPONSE,
+
+    PHONE_CALL_INITIATED,
+
+    PHONE_RESPONSE_RECEIVED,
+
+    CANDIDATE_CONTACTED,
+
+    CANDIDATE_RESPONSE_RECEIVED,
+
+    FAILED,
+
+    COMPLETED
+}

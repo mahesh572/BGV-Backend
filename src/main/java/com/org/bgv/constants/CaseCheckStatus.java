@@ -3,7 +3,7 @@ package com.org.bgv.constants;
 public enum CaseCheckStatus {
 	IN_PROGRESS,        // Candidate filling data / uploading
     SUBMITTED,          // Candidate submitted to vendor
-    PENDING,            // Waiting for vendor verification
+    PENDING,            // Still Checks are not assigned to vendor
     AWAITING_CANDIDATE, // Vendor asked clarification
     RESUBMITTED,        // Candidate re-submitted
     COMPLETED,          // Vendor verified
@@ -16,6 +16,7 @@ public enum CaseCheckStatus {
     VERIFIED,
     REVERIFY_REQUIRED,
     ACTION_REQUIRED,
+    ASSIGNED,
     ESCALATED;
 	
 //	CANDIDATE_PENDING("Candidate Pending"),  // Waiting for initial submission

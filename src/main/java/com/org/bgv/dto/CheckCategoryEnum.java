@@ -1,16 +1,30 @@
 package com.org.bgv.dto;
 
-
 import java.util.Arrays;
 
 public enum CheckCategoryEnum {
 
-    IDENTITY("Identity", "IDENTITY", "Identity"),
-    EDUCATION("Education", "EDUCATION", "Education"),
-    WORK("Work Experience", "WORK", "Professional / Work Experience"),
+    IDENTITY("Identity", "IDENTITY", "Identity Verification"),
+
+    EDUCATION("Education", "EDUCATION", "Education Verification"),
+
+    WORK("Work Experience", "WORK", "Employment Verification"),
+
     ADDRESS("Address", "ADDRESS", "Address Verification"),
+
+    REFERENCE("Reference", "REFERENCE", "Reference Check"),
+
     COURT("Court", "COURT", "Court / Criminal Check"),
-    OTHER("Other", "OTHER", "Other");
+
+    DATABASE("Database", "DATABASE", "Database Verification"),
+
+    CREDIT("Credit", "CREDIT", "Credit Verification"),
+
+    GLOBAL("Global", "GLOBAL", "Global Database Check"),
+
+    DRUG("Drug", "DRUG", "Drug Test Verification"),
+
+    OTHER("Other", "OTHER", "Other Verification");
 
     private final String name;
     private final String code;
@@ -34,11 +48,12 @@ public enum CheckCategoryEnum {
         return label;
     }
 
-    // Optional helper: get enum by code
     public static CheckCategoryEnum fromCode(String code) {
         return Arrays.stream(values())
                 .filter(e -> e.code.equalsIgnoreCase(code))
                 .findFirst()
-                .orElseThrow(() -> new IllegalArgumentException("Invalid category code: " + code));
+                .orElseThrow(() ->
+                        new IllegalArgumentException(
+                                "Invalid category code: " + code));
     }
 }

@@ -1,6 +1,7 @@
 package com.org.bgv.entity;
 
 import com.org.bgv.constants.PaymentStatus;
+import com.org.bgv.enums.PaymentMethod;
 import com.org.bgv.constants.PaymentPurpose;
 import jakarta.persistence.*;
 import lombok.*;
@@ -73,6 +74,24 @@ public class PaymentRequest {
     
     @Column(name = "expires_at")
     private LocalDateTime expiresAt;
+    
+    @Column(name = "case_id")
+    private Long caseId;
+
+    @Column(name = "invoice_id")
+    private Long invoiceId;
+
+    @Column(name = "invoice_number")
+    private String invoiceNumber;
+
+    @Enumerated(EnumType.STRING)
+    private PaymentMethod paymentMethod;
+
+    @Column(name = "wallet_amount_used")
+    private BigDecimal walletAmountUsed;
+
+    @Column(name = "online_amount")
+    private BigDecimal onlineAmount;
     
     @Column(name = "created_at")
     @Builder.Default

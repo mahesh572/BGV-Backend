@@ -42,6 +42,10 @@ public class NotificationContext {
     
     // EMPLOYER
     private String companySupportEmail;
+    
+    
+    // Verification Activity
+    private String hrEmail;
 
 }
 

@@ -102,7 +102,72 @@ public enum PlaceholderRolePolicy {
 	PASSWORD_LINK_EXPIRY_DURATION(EnumSet.of(TemplateUserRole.ADMINISTRATOR)),
 	
 	CHECK_NAME(EnumSet.of(TemplateUserRole.ADMINISTRATOR)),
-	INSUFFICIENT_COUNT(EnumSet.of(TemplateUserRole.ADMINISTRATOR));
+	INSUFFICIENT_COUNT(EnumSet.of(TemplateUserRole.ADMINISTRATOR)),
+	
+	
+	// Verification Request / HR Verification
+	
+	COMPANY_NAME(EnumSet.of(
+	        TemplateUserRole.ADMINISTRATOR)),
+
+	HR_NAME(EnumSet.of(
+	        TemplateUserRole.ADMINISTRATOR
+	        
+	)),
+
+	HR_EMAIL(EnumSet.of(
+	        TemplateUserRole.ADMINISTRATOR
+	)),
+
+	EMPLOYEE_ID(EnumSet.of(
+	        TemplateUserRole.ADMINISTRATOR
+	        
+	)),
+
+	DESIGNATION(EnumSet.of(
+	        TemplateUserRole.ADMINISTRATOR
+	        
+	)),
+
+	DEPARTMENT(EnumSet.of(
+	        TemplateUserRole.ADMINISTRATOR
+	        
+	)),
+
+	EMPLOYMENT_PERIOD(EnumSet.of(
+	        TemplateUserRole.ADMINISTRATOR
+	        
+	)),
+
+	VERIFICATION_REQUEST_ID(EnumSet.of(
+	        TemplateUserRole.ADMINISTRATOR
+	       
+	)),
+
+	VERIFICATION_PORTAL_URL(EnumSet.of(
+	        TemplateUserRole.ADMINISTRATOR
+	        
+	)),
+
+	UPLOAD_EVIDENCE_URL(EnumSet.of(
+	        TemplateUserRole.ADMINISTRATOR
+	        
+	)),
+
+	VENDOR_NAME(EnumSet.of(
+	        TemplateUserRole.ADMINISTRATOR
+	       
+	)),
+
+	VENDOR_EMAIL(EnumSet.of(
+	        TemplateUserRole.ADMINISTRATOR
+	        
+	)),
+
+	VENDOR_PHONE(EnumSet.of(
+	        TemplateUserRole.ADMINISTRATOR
+	       
+	));
 	
 
     private final Set<TemplateUserRole> roles;

@@ -1,5 +1,7 @@
 package com.org.bgv.notifications;
 
+import com.org.bgv.enums.InAppNotificationType;
+
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
 import jakarta.persistence.EnumType;
@@ -36,7 +38,7 @@ public class InAppTemplate {
     private String message;
     
     @Column(name = "type", length = 50)
-    private String type; // e.g., "account_creation", "password_reset"
+    private InAppNotificationType type; // e.g., "account_creation", "password_reset"
 
     private String deepLink;
     
