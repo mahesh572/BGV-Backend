@@ -49,7 +49,7 @@ public class WorkRuleStrategy implements RuleExecutionStrategy {
             VerificationCaseSelection selection = selectionRepo.save(
                     VerificationCaseSelection.builder()
                             .verificationCase(verificationCase)
-                            .type(CheckCategoryEnum.WORK)
+                            .type(CheckCategoryEnum.WORK_EXPERIENCE)
                             .referenceId(work.getExperienceId())
                             .status("PENDING")
                             .build()

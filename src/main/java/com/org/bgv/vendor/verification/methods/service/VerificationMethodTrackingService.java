@@ -10,20 +10,25 @@ import org.springframework.stereotype.Service;
 
 import com.org.bgv.enums.VerificationExecutionAction;
 import com.org.bgv.vendor.dto.ExecutionActionDto;
+import com.org.bgv.vendor.dto.VerificationExecutionNoteDto;
 import com.org.bgv.vendor.dto.VerificationMethodExecutionDetailsDto;
 import com.org.bgv.vendor.dto.VerificationMethodFieldDTO;
 import com.org.bgv.vendor.entity.VerificationMethodExecution;
 import com.org.bgv.vendor.entity.VerificationMethodExecutionField;
 import com.org.bgv.vendor.entity.VerificationMethodField;
+import com.org.bgv.vendor.repository.VerificationExecutionNoteRepository;
 import com.org.bgv.vendor.repository.VerificationMethodExecutionFieldRepository;
 import com.org.bgv.vendor.repository.VerificationMethodExecutionRepository;
 import com.org.bgv.vendor.repository.VerificationMethodFieldRepository;
 import com.org.bgv.vendor.service.ExecutionActionConfigService;
+import com.org.bgv.vendor.service.VerificationExecutionNoteService;
 
 import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 
 @Service
 @RequiredArgsConstructor
+@Slf4j
 public class VerificationMethodTrackingService {
 
     private final VerificationMethodExecutionRepository executionRepository;
@@ -31,6 +36,8 @@ public class VerificationMethodTrackingService {
     private final VerificationMethodExecutionFieldRepository fieldRepository;
     private final VerificationMethodFieldRepository methodFieldRepository;
     private final ExecutionActionConfigService executionActionConfigService;
+    private final VerificationExecutionNoteRepository verificationExecutionNoteRepository;
+    private final VerificationExecutionNoteService verificationExecutionNoteService;
 
     public List<VerificationMethodExecutionDetailsDto>
     getExecutions(Long checkId) {
@@ -53,46 +60,65 @@ public class VerificationMethodTrackingService {
         return mapExecution(execution);
     }
 
-    private VerificationMethodExecutionDetailsDto
-    mapExecution(
+    private VerificationMethodExecutionDetailsDto mapExecution(
             VerificationMethodExecution execution) {
+
+        log.info("Mapping executionId={} method={}",
+                execution.getExecutionId(),
+                execution.getVerificationMethod().getCode());
 
         List<VerificationMethodExecutionField> values =
                 fieldRepository.findByExecutionExecutionId(
                         execution.getExecutionId());
 
+        log.debug("Found {} fields for executionId={}",
+                values.size(),
+                execution.getExecutionId());
+
         List<VerificationMethodFieldDTO> fields =
                 values.stream()
                         .map(field ->
-                        VerificationMethodFieldDTO.builder()
+                                VerificationMethodFieldDTO.builder()
                                         .fieldName(field.getFieldName())
-                                        .fieldLabel(
-                                                field.getFieldName())
+                                        .fieldLabel(field.getFieldName())
                                         .fieldType("TEXT")
                                         .value(field.getFieldValue())
                                         .build())
                         .toList();
 
-        return VerificationMethodExecutionDetailsDto
-                .builder()
-                .executionId(
-                        execution.getExecutionId())
-                .methodCode(
-                        execution.getVerificationMethod()
-                                .getCode())
-                .methodName(
-                        execution.getVerificationMethod()
-                                .getName())
-                .status(
-                        execution.getStatus())
-                .initiatedAt(
-                        execution.getInitiatedAt())
-                .completedAt(
-                        execution.getCompletedAt())
-                .fields(fields)
-                .build();
+        log.debug("Fetching notes for executionId={}",
+                execution.getExecutionId());
+
+        List<VerificationExecutionNoteDto> notes =
+                verificationExecutionNoteService
+                        .getExecutionNotes(execution.getExecutionId());
+
+        log.debug("Found {} notes for executionId={}",
+                notes.size(),
+                execution.getExecutionId());
+
+        VerificationMethodExecutionDetailsDto dto =
+                VerificationMethodExecutionDetailsDto.builder()
+                        .executionId(execution.getExecutionId())
+                        .methodCode(
+                                execution.getVerificationMethod().getCode())
+                        .methodName(
+                                execution.getVerificationMethod().getName())
+                        .status(execution.getStatus())
+                        .initiatedAt(execution.getInitiatedAt())
+                        .completedAt(execution.getCompletedAt())
+                        .fields(fields)
+                        .notes(notes)
+                        .build();
+
+        log.info(
+                "Execution mapped successfully. executionId={}, fields={}, notes={}",
+                execution.getExecutionId(),
+                fields.size(),
+                notes.size());
+
+        return dto;
     }
-    
     
     public List<VerificationMethodExecutionDetailsDto>
     getExecutions(
@@ -130,6 +156,11 @@ public class VerificationMethodTrackingService {
                         .findByVerificationMethodMethodIdOrderByDisplayOrderAsc(
                                 execution.getVerificationMethod()
                                         .getMethodId());
+        
+        List<VerificationExecutionNoteDto> notes =
+                verificationExecutionNoteService
+                        .getExecutionNotes(execution.getExecutionId());
+        
 
         List<VerificationMethodFieldDTO> fields =
                 methodFields.stream()
@@ -170,6 +201,7 @@ public class VerificationMethodTrackingService {
                 	        .map(this::mapAction)
                 	        .toList()
                 	)
+                .notes(notes)
                 .build();
     }
     

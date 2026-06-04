@@ -29,4 +29,7 @@ public class VerificationMethodExecutionDetailsDto {
 
     private List<VerificationMethodFieldDTO> fields;
     private List<ExecutionActionDto> allowedActions;
+    
+ // Notes
+    private List<VerificationExecutionNoteDto> notes;
 }

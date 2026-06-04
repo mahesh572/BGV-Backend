@@ -188,7 +188,7 @@ public class VerificationCaseSelectionService {
 	    // =========================
 	    // 3. WORK RULES
 	    // =========================
-	    else if (checkCategory != null && checkCategory.getName().equalsIgnoreCase(CheckCategoryEnum.WORK.getName())) {
+	    else if (checkCategory != null && checkCategory.getName().equalsIgnoreCase(CheckCategoryEnum.WORK_EXPERIENCE.getName())) {
 	        processWorkRules(verificationCase, rule);
 	    }
 	    
@@ -409,12 +409,12 @@ public class VerificationCaseSelectionService {
 
 	    for (WorkExperience work : selectedWork) {
 	        VerificationCaseSelection existingSelection = verificationCaseSelectionRepository
-	                .findByVerificationCaseAndTypeAndReferenceId(verificationCase, CheckCategoryEnum.WORK, work.getExperienceId())
+	                .findByVerificationCaseAndTypeAndReferenceId(verificationCase, CheckCategoryEnum.WORK_EXPERIENCE, work.getExperienceId())
 	                .orElse(null);
 	        
 	        if (existingSelection == null) {
 	            // Create new selection only if it doesn't exist
-	            VerificationCaseSelection selection = createSelection(verificationCase, CheckCategoryEnum.WORK, work.getExperienceId());
+	            VerificationCaseSelection selection = createSelection(verificationCase, CheckCategoryEnum.WORK_EXPERIENCE, work.getExperienceId());
 	            
 	            if (isAddon) {
 	                selection.setIncludedInBase(false);
@@ -442,13 +442,13 @@ public class VerificationCaseSelectionService {
 	        List<WorkExperience> allWork = workExperienceRepository.findByVerificationCaseCaseId(verificationCase.getCaseId());
 	        for (WorkExperience work : allWork) {
 	            boolean alreadySelected = verificationCaseSelectionRepository
-	                    .findByVerificationCaseAndTypeAndReferenceId(verificationCase, CheckCategoryEnum.WORK, work.getExperienceId())
+	                    .findByVerificationCaseAndTypeAndReferenceId(verificationCase, CheckCategoryEnum.WORK_EXPERIENCE, work.getExperienceId())
 	                    .isPresent();
 	            
 	            if (!alreadySelected) {
 	                // This work experience was NOT selected by base rule (e.g., candidate has 3+ experiences
 	                // but base rule only selected last 2)
-	                VerificationCaseSelection selection = createSelection(verificationCase, CheckCategoryEnum.WORK, work.getExperienceId());
+	                VerificationCaseSelection selection = createSelection(verificationCase, CheckCategoryEnum.WORK_EXPERIENCE, work.getExperienceId());
 	                selection.setIncludedInBase(false);
 	                selection.setUnitPrice(rule.getUnitPrice() != null ? rule.getUnitPrice() : BigDecimal.ZERO);
 	                verificationCaseSelectionRepository.save(selection);

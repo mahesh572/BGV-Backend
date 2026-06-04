@@ -3,6 +3,7 @@ package com.org.bgv.vendor.service;
 import java.time.LocalDateTime;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Map;
 
 import org.springframework.data.util.Pair;
 import org.springframework.stereotype.Service;
@@ -10,15 +11,19 @@ import org.springframework.web.multipart.MultipartFile;
 
 import com.org.bgv.config.SecurityUtils;
 import com.org.bgv.entity.VerificationCaseCheck;
+import com.org.bgv.enums.ActivityType;
 import com.org.bgv.enums.VerificationExecutionStatus;
 import com.org.bgv.exceptions.BusinessException;
 import com.org.bgv.repository.VerificationCaseCheckRepository;
 import com.org.bgv.s3.S3StorageService;
+import com.org.bgv.service.ActivityFactory;
+import com.org.bgv.service.ActivityTimelineService;
 import com.org.bgv.vendor.entity.VerificationMethodExecution;
 import com.org.bgv.vendor.entity.VerificationMethodExecutionEvidence;
 import com.org.bgv.vendor.evidence.dto.VerificationExecutionEvidenceDto;
 import com.org.bgv.vendor.repository.VerificationMethodExecutionEvidenceRepository;
 import com.org.bgv.vendor.repository.VerificationMethodExecutionRepository;
+import com.org.bgv.vendor.verification.methods.service.VerificationContext;
 
 import jakarta.persistence.EntityNotFoundException;
 import jakarta.transaction.Transactional;
@@ -34,6 +39,8 @@ public class VerificationExecutionEvidenceService
     private final VerificationCaseCheckRepository checkRepository;
     private final VerificationMethodExecutionEvidenceRepository evidenceRepository;
     private final S3StorageService fileStorageService;
+    private final ActivityTimelineService activityTimelineService;
+    private final VerificationContextUtil verificationContextUtil;
 
    
     public List<VerificationExecutionEvidenceDto> uploadEvidence(
@@ -56,6 +63,7 @@ public class VerificationExecutionEvidenceService
 
         List<VerificationMethodExecutionEvidence> savedEvidence =
                 new ArrayList();
+        VerificationContext context = verificationContextUtil.build(check.getCaseCheckId(), execution.getObjectId(), check.getCategory().getName());
 
         for (MultipartFile file : files) {
 
@@ -75,10 +83,37 @@ public class VerificationExecutionEvidenceService
                             .uploadedAt(LocalDateTime.now())
                             .uploadedBy(SecurityUtils.getCurrentUserId())
                             .build();
+            
+            VerificationMethodExecutionEvidence saved =
+                    evidenceRepository.save(evidence);
 
             savedEvidence.add(
-                    evidenceRepository.save(evidence)
+            		saved
             );
+            
+            
+            activityTimelineService.log(
+                    ActivityFactory.create(
+                            check.getCaseCheckId(),
+                            check.getCaseCheckId(),
+                            execution.getExecutionId(),
+                            saved.getEvidenceId(),
+                            null,
+                            ActivityType.DOCUMENT_UPLOADED,
+                            "Evidence uploaded",
+                            file.getOriginalFilename() + " uploaded",
+                            SecurityUtils.getCurrentUserId(),
+                            "VENDOR",
+                            null,
+                            "UPLOADED",
+                            Map.of(
+                                    "fileName", file.getOriginalFilename(),
+                                    "contentType", file.getContentType(),
+                                    "fileSize", file.getSize()
+                            ),
+                            context.getCandidate()
+                    )
+        );
         }
 
         /*
@@ -140,6 +175,33 @@ public class VerificationExecutionEvidenceService
 
         // Delete DB record
         evidenceRepository.delete(evidence);
+        
+        VerificationMethodExecution  verificationMethodExecution = evidence.getMethodExecution();
+        
+        VerificationContext context = verificationContextUtil.build(evidence.getVerificationCaseCheck().getCaseCheckId(), verificationMethodExecution.getObjectId(), evidence.getVerificationCaseCheck().getCategory().getName());
+        
+        activityTimelineService.log(
+                ActivityFactory.create(
+                        evidence.getVerificationCaseCheck().getCaseCheckId(),
+                        evidence.getVerificationCaseCheck().getCaseCheckId(),
+                        verificationMethodExecution.getExecutionId(),
+                        evidence.getEvidenceId(),
+                        null,
+                        ActivityType.DOCUMENT_DELETED,
+                        "Evidence deleted",
+                        evidence.getFileName() + " deleted",
+                        SecurityUtils.getCurrentUserId(),
+                        "VENDOR",
+                        "ACTIVE",
+                        "DELETED",
+                        Map.of(
+                                "fileName", evidence.getFileName(),
+                                "contentType", evidence.getContentType(),
+                                "fileSize", evidence.getFileSize()
+                        ),
+                        context.getCandidate()
+                )
+        );
     }
 
     private boolean deleteFileIfExists(String key) {

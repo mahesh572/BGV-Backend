@@ -84,7 +84,7 @@ public class VerificationContextUtil {
 
         switch (checkType.toUpperCase()) {
 
-            case "WORK":
+            case "WORK_EXPERIENCE":
                 return buildEmploymentVerificationData(objectId);
 
             case "EDUCATION":

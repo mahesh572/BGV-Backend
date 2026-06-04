@@ -444,7 +444,7 @@ public class InvoiceGenerationService {
         switch (selection.getType()) {
             case EDUCATION:
                 return "Education Verification";
-            case WORK:
+            case WORK_EXPERIENCE:
                 return "Employment Verification";
             case IDENTITY:
                 return "Identity Verification";

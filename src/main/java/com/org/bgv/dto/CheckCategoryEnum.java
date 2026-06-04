@@ -8,7 +8,7 @@ public enum CheckCategoryEnum {
 
     EDUCATION("Education", "EDUCATION", "Education Verification"),
 
-    WORK("Work Experience", "WORK", "Employment Verification"),
+    WORK_EXPERIENCE("Work Experience", "WORK EXPERIENCE", "Employment Verification"),
 
     ADDRESS("Address", "ADDRESS", "Address Verification"),
 
@@ -55,5 +55,15 @@ public enum CheckCategoryEnum {
                 .orElseThrow(() ->
                         new IllegalArgumentException(
                                 "Invalid category code: " + code));
+    }
+    
+    public static CheckCategoryEnum fromName(String name) {
+
+        return Arrays.stream(values())
+                .filter(e -> e.getName().equalsIgnoreCase(name))
+                .findFirst()
+                .orElseThrow(() ->
+                        new IllegalArgumentException(
+                                "Invalid category name: " + name));
     }
 }

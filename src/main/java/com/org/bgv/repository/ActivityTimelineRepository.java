@@ -14,22 +14,11 @@ import com.org.bgv.entity.ActivityTimeline;
 @Repository
 public interface ActivityTimelineRepository extends JpaRepository<ActivityTimeline, Long> {
     
-    List<ActivityTimeline> findByCandidateCandidateIdOrderByTimestampDesc(Long candidateId);
-    
-    List<ActivityTimeline> findByCandidateUuidOrderByTimestampDesc(String candidateUuid);
-    
-    List<ActivityTimeline> findByCandidateAndStatusOrderByTimestampDesc(
-            Candidate candidate, String status);
-    
-    @Query("SELECT a FROM ActivityTimeline a WHERE a.candidate.candidateId = :candidateId " +
-           "AND a.timestamp BETWEEN :startDate AND :endDate ORDER BY a.timestamp DESC")
-    List<ActivityTimeline> findByCandidateAndDateRange(
-            @Param("candidateId") Long candidateId,
-            @Param("startDate") LocalDateTime startDate,
-            @Param("endDate") LocalDateTime endDate);
-    
-    
-    List<ActivityTimeline> findByCaseIdOrderByTimestampAsc(Long caseId);
+	List<ActivityTimeline> findByCandidateCandidateIdOrderByCreatedAtDesc(Long candidateId);
 
-    List<ActivityTimeline> findByCandidateCandidateIdOrderByTimestampAsc(Long candidateId);
+	List<ActivityTimeline> findByCandidateUuidOrderByCreatedAtDesc(String candidateUuid);
+/*
+	List<ActivityTimeline> findByCandidateAndStatusOrderByCreatedAtDesc(
+	        Candidate candidate, String status);
+	        */
 }

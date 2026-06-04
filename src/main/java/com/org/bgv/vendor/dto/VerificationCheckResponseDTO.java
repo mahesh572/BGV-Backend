@@ -3,6 +3,7 @@ package com.org.bgv.vendor.dto;
 import com.fasterxml.jackson.annotation.JsonInclude;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.org.bgv.common.DocumentTypeInfo;
+import com.org.bgv.dto.CheckCategoryEnum;
 import com.org.bgv.vendor.action.dto.ActionDTO;
 
 import lombok.AllArgsConstructor;
@@ -34,7 +35,7 @@ public class VerificationCheckResponseDTO {
     private String checkRef;
     
     @JsonProperty("checkType")
-    private String checkType;
+    private CheckCategoryEnum checkType;
     
     @JsonProperty("checkName")
     private String checkName;

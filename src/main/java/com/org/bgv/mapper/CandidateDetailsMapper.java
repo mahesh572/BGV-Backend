@@ -131,10 +131,10 @@ public class CandidateDetailsMapper {
                 .id(activity.getId())
                 .title(activity.getTitle())
                 .description(activity.getDescription())
-                .timestamp(activity.getTimestamp().format(TIMESTAMP_FORMATTER))
-                .icon(getIconForActivity(activity.getType()))
-                .status(activity.getStatus())
-                .type(activity.getType())
+              //  .timestamp(activity.getTimestamp().format(TIMESTAMP_FORMATTER))
+             //   .icon(getIconForActivity(activity.getType()))
+             //   .status(activity.getStatus())
+             //   .type(activity.getType())
              //   .createdAt(activity.getCreatedAt())
                 .build();
     }

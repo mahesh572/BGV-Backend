@@ -113,7 +113,7 @@ public class WorkExperienceService {
 	    }
 	    
 	   // final String CATEGORY_NAME = "Work Experience";
-	    final String CATEGORY_NAME = CheckCategoryEnum.WORK.getName();
+	    final String CATEGORY_NAME = CheckCategoryEnum.WORK_EXPERIENCE.getName();
 	    
 	    CheckCategory category = checkCategoryRepository
                 .findByNameIgnoreCase(CATEGORY_NAME)

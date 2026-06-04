@@ -54,11 +54,11 @@ public class VerificationMethodSeeder implements CommandLineRunner {
         /*
          * WORK
          */
-        map(CheckCategoryEnum.WORK, documentReview);
-        map(CheckCategoryEnum.WORK, email);
-        map(CheckCategoryEnum.WORK, phone);
-        map(CheckCategoryEnum.WORK, portal);
-        map(CheckCategoryEnum.WORK, physicalVisit);
+        map(CheckCategoryEnum.WORK_EXPERIENCE, documentReview);
+        map(CheckCategoryEnum.WORK_EXPERIENCE, email);
+        map(CheckCategoryEnum.WORK_EXPERIENCE, phone);
+        map(CheckCategoryEnum.WORK_EXPERIENCE, portal);
+        map(CheckCategoryEnum.WORK_EXPERIENCE, physicalVisit);
 
         /*
          * EDUCATION

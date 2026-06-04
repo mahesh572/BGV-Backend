@@ -10,11 +10,11 @@ public enum RuleGroup {
 
 	RULE(Set.of(CheckCategoryEnum.IDENTITY.getName())),
     DOCUMENT_SELECTION(Set.of(CheckCategoryEnum.IDENTITY.getName())),
-    RECORD_COUNT(Set.of( CheckCategoryEnum.WORK.getName())),
-    ADD_ON(Set.of( CheckCategoryEnum.WORK.getName())),
-    CUSTOM(Set.of(  CheckCategoryEnum.WORK.getName())),
-	NONE(Set.of(CheckCategoryEnum.IDENTITY.getName(), CheckCategoryEnum.EDUCATION.getName(), CheckCategoryEnum.WORK.getName())),
-	ALL(Set.of( CheckCategoryEnum.EDUCATION.getName(), CheckCategoryEnum.WORK.getName())),
+    RECORD_COUNT(Set.of( CheckCategoryEnum.WORK_EXPERIENCE.getName())),
+    ADD_ON(Set.of( CheckCategoryEnum.WORK_EXPERIENCE.getName())),
+    CUSTOM(Set.of(  CheckCategoryEnum.WORK_EXPERIENCE.getName())),
+	NONE(Set.of(CheckCategoryEnum.IDENTITY.getName(), CheckCategoryEnum.EDUCATION.getName(), CheckCategoryEnum.WORK_EXPERIENCE.getName())),
+	ALL(Set.of( CheckCategoryEnum.EDUCATION.getName(), CheckCategoryEnum.WORK_EXPERIENCE.getName())),
 	// 🔹 Education Record Count Selection
     EDUCATION_RECORD_SELECTION(Set.of( CheckCategoryEnum.EDUCATION.getName())),
 

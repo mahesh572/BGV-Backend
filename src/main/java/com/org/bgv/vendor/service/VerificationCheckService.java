@@ -185,7 +185,8 @@ public class VerificationCheckService {
 				.caseRef(getCaseReference(verificationCase))
 				.checkId(String.valueOf(check.getCaseCheckId()))
 				.checkRef(check.getCheckRef())
-				.checkType(check.getCategory().getCode().toLowerCase())
+				//.checkType(check.getCategory().getName())
+				.checkType(CheckCategoryEnum.fromName(check.getCategory().getName()))
 				.checkName(check.getCategory().getName())
 				.status(check.getStatus().name())
 				.candidate(mapCandidateInfo(candidate))
@@ -368,7 +369,7 @@ public class VerificationCheckService {
 	            verificationCaseSelectionRepository
 	                    .findByVerificationCase_CaseIdAndType(
 	                            caseId,
-	                            CheckCategoryEnum.WORK
+	                            CheckCategoryEnum.WORK_EXPERIENCE
 	                    );
 
 	    List<Long> experienceIds =
