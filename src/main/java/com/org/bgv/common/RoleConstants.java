@@ -22,6 +22,10 @@ public class RoleConstants {
 	
 	public static final String ROLE_USER = "User";
 	
+	public static final String ROLE_FIELD_AGENT = "Field Agent";
+	public static final String ROLE_VENDOR_AGENT = "Vendor Agent";
+	
+	
 	
 
 	

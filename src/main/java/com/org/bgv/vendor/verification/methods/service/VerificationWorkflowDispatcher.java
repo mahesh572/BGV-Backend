@@ -2,6 +2,7 @@ package com.org.bgv.vendor.verification.methods.service;
 
 import org.springframework.stereotype.Service;
 
+import com.org.bgv.enums.VerificationMethodCode;
 import com.org.bgv.vendor.entity.VerificationMethodExecution;
 
 import lombok.RequiredArgsConstructor;
@@ -17,21 +18,21 @@ public class VerificationWorkflowDispatcher {
     public void dispatch(
             VerificationMethodExecution execution,VerificationContext context) {
 
-        String code =
+    	VerificationMethodCode code =
                 execution.getVerificationMethod()
                         .getCode();
 
         switch (code) {
 
-            case "EMAIL":
+            case VerificationMethodCode.EMAIL:
                 emailToHrHandler.execute(execution,context);
                 break;
 
-            case "PHONE":
+            case VerificationMethodCode.PHONE_VERIFICATION:
                 phoneCallHandler.execute(execution,context);
                 break;
 
-            case "FIELD_VISIT":
+            case VerificationMethodCode.FIELD_VISIT:
                 fieldVisitHandler.execute(execution,context);
                 break;
 

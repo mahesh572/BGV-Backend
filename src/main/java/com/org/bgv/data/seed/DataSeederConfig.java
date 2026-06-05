@@ -238,7 +238,9 @@ public class DataSeederConfig implements CommandLineRunner {
 				createRole("Vendor User", "Vendor User", RoleConstants.TYPE_VENDOR),
 				createRole("Vendor Administrator", "Vendor Administrator", RoleConstants.TYPE_VENDOR),
 				createRole("Vendor Verifier", "Vendor Verifier", RoleConstants.TYPE_VENDOR),
-
+				createRole("Vendor Agent", "Vendor Agent", RoleConstants.TYPE_VENDOR),
+				createRole("Field Agent", "Field Agent", RoleConstants.TYPE_VENDOR),
+				
 				createRole("Candidate", "Candidate", RoleConstants.TYPE_COMPANY),
 				createRole("Company Administrator", "Company Administrator", RoleConstants.TYPE_COMPANY),
 				createRole("Company HR Manager", "Company HR Manager", RoleConstants.TYPE_COMPANY),

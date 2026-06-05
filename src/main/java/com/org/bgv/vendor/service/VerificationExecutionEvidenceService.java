@@ -10,6 +10,7 @@ import org.springframework.stereotype.Service;
 import org.springframework.web.multipart.MultipartFile;
 
 import com.org.bgv.config.SecurityUtils;
+import com.org.bgv.dto.CheckCategoryEnum;
 import com.org.bgv.entity.VerificationCaseCheck;
 import com.org.bgv.enums.ActivityType;
 import com.org.bgv.enums.VerificationExecutionStatus;
@@ -61,9 +62,9 @@ public class VerificationExecutionEvidenceService
                                 new EntityNotFoundException(
                                         "Check not found: " + checkId));
 
-        List<VerificationMethodExecutionEvidence> savedEvidence =
-                new ArrayList();
-        VerificationContext context = verificationContextUtil.build(check.getCaseCheckId(), execution.getObjectId(), check.getCategory().getName());
+        List<VerificationMethodExecutionEvidence> savedEvidence =  new ArrayList();
+        
+        VerificationContext context = verificationContextUtil.build(check.getCaseCheckId(), execution.getObjectId(), CheckCategoryEnum.fromName(check.getCategory().getName()).name());
 
         for (MultipartFile file : files) {
 

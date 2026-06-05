@@ -5,6 +5,7 @@ import java.util.Optional;
 import org.springframework.boot.CommandLineRunner;
 import org.springframework.stereotype.Component;
 
+import com.org.bgv.enums.VerificationMethodCode;
 import com.org.bgv.vendor.entity.VerificationMethod;
 import com.org.bgv.vendor.entity.VerificationMethodField;
 import com.org.bgv.vendor.repository.VerificationMethodFieldRepository;
@@ -41,7 +42,7 @@ public class VerificationMethodFieldSeeder implements CommandLineRunner {
 
         
         Optional<VerificationMethod> optionalMethod =
-                methodRepository.findByCode("EMAIL");
+                methodRepository.findByCode(VerificationMethodCode.EMAIL);
                        
         
         if (optionalMethod.isEmpty()) {
@@ -90,7 +91,7 @@ public class VerificationMethodFieldSeeder implements CommandLineRunner {
 
         
         Optional<VerificationMethod> optionalMethod =
-                methodRepository.findByCode("PHONE");
+                methodRepository.findByCode(VerificationMethodCode.PHONE_VERIFICATION);
                        
         
         if (optionalMethod.isEmpty()) {
@@ -139,7 +140,7 @@ public class VerificationMethodFieldSeeder implements CommandLineRunner {
 
         
         Optional<VerificationMethod> optionalMethod =
-                methodRepository.findByCode("PORTAL");
+                methodRepository.findByCode(VerificationMethodCode.PORTAL);
                        
         
         if (optionalMethod.isEmpty()) {
@@ -176,7 +177,7 @@ public class VerificationMethodFieldSeeder implements CommandLineRunner {
 
         
         Optional<VerificationMethod> optionalMethod =
-                methodRepository.findByCode("PHYSICAL_VISIT");
+                methodRepository.findByCode(VerificationMethodCode.FIELD_VISIT);
                        
         
         if (optionalMethod.isEmpty()) {
@@ -217,7 +218,7 @@ public class VerificationMethodFieldSeeder implements CommandLineRunner {
     private void seedDatabaseFields() {
 
     	Optional<VerificationMethod> optionalMethod =
-                methodRepository.findByCode("DATABASE");
+                methodRepository.findByCode(VerificationMethodCode.DATABASE);
                        
         
         if (optionalMethod.isEmpty()) {
@@ -253,7 +254,7 @@ public class VerificationMethodFieldSeeder implements CommandLineRunner {
         
         
         Optional<VerificationMethod> optionalMethod =
-                methodRepository.findByCode("VIDEO_CALL");
+                methodRepository.findByCode(VerificationMethodCode.VIDEO_CALL);
                        
         
         if (optionalMethod.isEmpty()) {
@@ -290,7 +291,7 @@ public class VerificationMethodFieldSeeder implements CommandLineRunner {
 
         
         Optional<VerificationMethod> optionalMethod =
-                methodRepository.findByCode("OTHER");
+                methodRepository.findByCode(VerificationMethodCode.OTHER);
                        
         
         if (optionalMethod.isEmpty()) {

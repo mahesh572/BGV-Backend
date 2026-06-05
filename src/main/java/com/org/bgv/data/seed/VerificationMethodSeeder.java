@@ -4,6 +4,7 @@ import org.springframework.boot.CommandLineRunner;
 import org.springframework.stereotype.Component;
 
 import com.org.bgv.dto.CheckCategoryEnum;
+import com.org.bgv.enums.VerificationMethodCode;
 import com.org.bgv.vendor.entity.CheckVerificationMethod;
 import com.org.bgv.vendor.entity.VerificationMethod;
 import com.org.bgv.vendor.repository.CheckVerificationMethodRepository;
@@ -28,28 +29,28 @@ public class VerificationMethodSeeder implements CommandLineRunner {
         }
 
         VerificationMethod email =
-                saveMethod("EMAIL", "Email");
+                saveMethod(VerificationMethodCode.EMAIL, "Email");
 
         VerificationMethod phone =
-                saveMethod("PHONE", "Phone Call");
+                saveMethod(VerificationMethodCode.PHONE_VERIFICATION, "Phone Verification");
 
         VerificationMethod portal =
-                saveMethod("PORTAL", "Portal / System");
+                saveMethod(VerificationMethodCode.PORTAL, "Portal / System");
 
         VerificationMethod physicalVisit =
-                saveMethod("PHYSICAL_VISIT", "Physical Visit");
+                saveMethod(VerificationMethodCode.FIELD_VISIT, "Field Visit");
 
         VerificationMethod database =
-                saveMethod("DATABASE", "Database Check");
+                saveMethod(VerificationMethodCode.DATABASE, "Database Check");
 
         VerificationMethod videoCall =
-                saveMethod("VIDEO_CALL", "Video Verification");
+                saveMethod(VerificationMethodCode.VIDEO_CALL, "Video Verification");
 
         VerificationMethod documentReview =
-                saveMethod("DOCUMENT_REVIEW", "Document Review");
+                saveMethod(VerificationMethodCode.DOCUMENT_REVIEW, "Document Review");
 
         VerificationMethod other =
-                saveMethod("OTHER", "Other");
+                saveMethod(VerificationMethodCode.OTHER, "Other");
 
         /*
          * WORK
@@ -106,7 +107,7 @@ public class VerificationMethodSeeder implements CommandLineRunner {
     }
 
     private VerificationMethod saveMethod(
-            String code,
+    		VerificationMethodCode code,
             String name) {
 
         VerificationMethod method = new VerificationMethod();

@@ -3,6 +3,8 @@ package com.org.bgv.vendor.dto;
 
 import java.util.List;
 
+import com.org.bgv.enums.VerificationMethodCode;
+
 import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Data;
@@ -16,7 +18,7 @@ public class VerificationMethodDTO {
 
     private Long methodId;
 
-    private String code;
+    private VerificationMethodCode code;
 
     private String name;
 

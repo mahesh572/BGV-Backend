@@ -1,5 +1,7 @@
 package com.org.bgv.vendor.entity;
 
+import com.org.bgv.enums.VerificationMethodCode;
+
 import jakarta.persistence.Entity;
 import jakarta.persistence.GeneratedValue;
 import jakarta.persistence.GenerationType;
@@ -22,7 +24,7 @@ public class VerificationMethod {
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long methodId;
 
-    private String code;
+    private VerificationMethodCode code;
 
     private String name;
 

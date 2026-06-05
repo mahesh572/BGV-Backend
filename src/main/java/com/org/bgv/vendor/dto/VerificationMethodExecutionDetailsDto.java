@@ -5,6 +5,7 @@ import java.util.List;
 
 import com.org.bgv.enums.VerificationExecutionAction;
 import com.org.bgv.enums.VerificationExecutionStatus;
+import com.org.bgv.enums.VerificationMethodCode;
 
 import lombok.Builder;
 import lombok.Data;
@@ -15,7 +16,7 @@ public class VerificationMethodExecutionDetailsDto {
 
     private Long executionId;
 
-    private String methodCode;
+    private VerificationMethodCode methodCode;
     
     private Long checkId;
 
@@ -29,6 +30,8 @@ public class VerificationMethodExecutionDetailsDto {
 
     private List<VerificationMethodFieldDTO> fields;
     private List<ExecutionActionDto> allowedActions;
+    
+    private FieldVisitAssignmentDto fieldVisitAssignment;
     
  // Notes
     private List<VerificationExecutionNoteDto> notes;

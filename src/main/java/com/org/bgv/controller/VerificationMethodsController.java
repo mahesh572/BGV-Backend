@@ -21,8 +21,11 @@ import com.org.bgv.api.response.CustomApiResponse;
 import com.org.bgv.dto.CheckCategoryEnum;
 import com.org.bgv.exceptions.BusinessException;
 import com.org.bgv.s3.S3StorageService;
+import com.org.bgv.vendor.dto.AssignFieldAgentRequest;
+import com.org.bgv.vendor.dto.FieldAgentDto;
 import com.org.bgv.vendor.dto.StartVerificationMethodRequest;
 import com.org.bgv.vendor.dto.UpdateExecutionStatusRequest;
+import com.org.bgv.vendor.dto.UpdateVisitLocationRequest;
 import com.org.bgv.vendor.dto.VerificationMethodDTO;
 import com.org.bgv.vendor.dto.VerificationMethodExecutionDetailsDto;
 import com.org.bgv.vendor.evidence.dto.VerificationExecutionEvidenceDto;
@@ -359,4 +362,49 @@ public class VerificationMethodsController {
 	        );
 	    }
 	}
+	@GetMapping("/field-agents")
+	public ResponseEntity<CustomApiResponse<List<FieldAgentDto>>> getFieldAgents() {
+
+	    return ResponseEntity.ok(
+	            CustomApiResponse.success(
+	            		"",
+	            		service.getFieldAgents(),
+	            		 HttpStatus.OK
+	            )
+	    );
+	}
+	
+	@PostMapping("/{executionId}/assign-field-agent")
+	public ResponseEntity<CustomApiResponse<String>> assignFieldAgent(
+	        @PathVariable Long executionId,
+	        @RequestBody AssignFieldAgentRequest request) {
+
+		service.assignToFieldAgent(executionId, request);
+
+	    return ResponseEntity.ok(
+	            CustomApiResponse.success(
+	                    "Field agent assigned successfully",
+	                    null,
+	                    HttpStatus.OK
+	            )
+	    );
+	}
+	
+	@PostMapping("/executions/{executionId}/location")
+    public ResponseEntity<CustomApiResponse<String>> updateLocation(
+            @PathVariable Long executionId,
+            @RequestBody UpdateVisitLocationRequest request) {
+
+		service.updateLocation(
+				executionId,
+                request);
+
+        return ResponseEntity.ok(
+                CustomApiResponse.success(
+                        "Location updated successfully",
+                        null,
+                        HttpStatus.OK
+                )
+        );
+    }
 }

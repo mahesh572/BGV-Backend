@@ -38,6 +38,13 @@ public enum VerificationExecutionStatus {
     CANDIDATE_RESPONSE_RECEIVED,
 
     FAILED,
+    MAKE_PHONE_CALL,
+    PHONE_CALL_FAILED,
+    
+    VISIT_ASSIGNED,
+    VISIT_SCHEDULED,
+    VISIT_IN_PROGRESS,
+    VISIT_COMPLETED,
 
     COMPLETED
 }

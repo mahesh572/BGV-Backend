@@ -20,7 +20,7 @@ public class FieldVisitHandler
             VerificationMethodExecution execution,VerificationContext context) {
 
         execution.setStatus(
-                VerificationExecutionStatus.ASSIGNED);
+                VerificationExecutionStatus.INITIATED);
 
         executionRepository.save(execution);
     }

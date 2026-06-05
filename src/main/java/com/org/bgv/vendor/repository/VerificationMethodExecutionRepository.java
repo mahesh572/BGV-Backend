@@ -28,5 +28,11 @@ public interface VerificationMethodExecutionRepository
             Long objectId,
             Long methodId,
             List<VerificationExecutionStatus> statuses);
+    
+    boolean existsByVerificationCheckCaseCheckIdAndObjectIdAndVerificationMethodMethodIdAndStatusNotIn(
+            Long checkId,
+            Long objectId,
+            Long methodId,
+            List<VerificationExecutionStatus> statuses);
 
 }
