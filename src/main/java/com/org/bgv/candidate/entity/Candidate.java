@@ -86,11 +86,11 @@ public class Candidate {
     @JoinColumn(name = "user_id")
     private User user;
     
-    
+    /*
     @OneToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "profile_id")
     private Profile profile;
-    
+    */
     
     @Column(name = "uuid", unique = true, nullable = false)
     private String uuid;
@@ -129,7 +129,7 @@ public class Candidate {
     
     
     @ManyToOne(fetch = FetchType.LAZY)
-    @JoinColumn(name = "company_id", nullable = false)
+    @JoinColumn(name = "company_id")
     private Company company;
 
     

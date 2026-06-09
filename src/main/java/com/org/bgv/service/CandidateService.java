@@ -938,7 +938,7 @@ public class CandidateService {
         log.info("candidate:::::::::::::::::{}",candidate);
         
         // Eagerly fetch related entities
-        candidate.getProfile();
+      //  candidate.getProfile();
         candidate.getCompany();
         candidate.getActivityTimeline().size(); // Force initialization
         

@@ -4,7 +4,7 @@ import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 
 import com.org.bgv.common.Status;
-import com.org.bgv.dto.VendorDTO;
+import com.org.bgv.dto.CreateVendorUserRequest;
 import com.org.bgv.entity.CheckCategory;
 import com.org.bgv.entity.CheckType;
 import com.org.bgv.entity.Profile;
@@ -43,7 +43,7 @@ public class VendorService {
     private final ProfileRepository profileRepository;
 
     @Transactional
-    public Boolean createVendor(VendorDTO vendorDTO) {
+    public Boolean createVendor(CreateVendorUserRequest vendorDTO) {
         Boolean isSuccess = Boolean.FALSE;
         if(vendorDTO != null) {
             // Create and save User
@@ -55,7 +55,7 @@ public class VendorService {
                 .build();
             
             user = userRepository.save(user);
-            
+            /*
             // Create and save Vendor
             Vendor vendor = Vendor.builder()
                 .addressLine1(vendorDTO.getAddressLine1())
@@ -100,16 +100,17 @@ public class VendorService {
             
             userRoleRepository.save(userRole);
             */
-            
+            /*
             // Handle services provided - FIXED: Use final reference
             if (vendorDTO.getServicesProvided() != null && !vendorDTO.getServicesProvided().isEmpty()) {
             	saveVendorServicesWithStream(vendor, vendorDTO.getServicesProvided());
             }
-            
+            */
             // create profile
             
             isSuccess = Boolean.TRUE;
         }
+        
         return isSuccess;
     }
     

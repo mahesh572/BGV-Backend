@@ -37,8 +37,6 @@ public class Company {
     @Column(name = "company_name", nullable = false)
     private String companyName;
     
-    
-    
     @Enumerated(EnumType.STRING)
     @Column
     private CompanyType companyType;
@@ -64,12 +62,7 @@ public class Company {
     @Enumerated(EnumType.STRING)
     private CompanySize companySize;
     
-    @Column(name = "website")
-    private String website;
-    
-    @Column(name = "description", length = 1000)
-    private String description;
-    
+       
     // Contact Information
     @Column(name = "contact_person_name")
     private String contactPersonName;
@@ -106,12 +99,17 @@ public class Company {
     private String zipCode;
     
     // Additional Information
+    
+    @Column(name = "website")
+    private String website;
+    
     @Column(name = "linkedin_profile")
     private String linkedinProfile;
     
-    
+    /*
     @Column(name = "admin_profile_picture_path")
     private String adminProfilePicturePath;
+    */
     
     // Audit fields
     @Column(name = "created_at")

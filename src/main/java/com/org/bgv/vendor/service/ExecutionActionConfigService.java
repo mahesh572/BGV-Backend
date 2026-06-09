@@ -162,7 +162,7 @@ public class ExecutionActionConfigService {
         }
     }
     
-    private List<VerificationExecutionAction> getFieldVisitActions(
+    public List<VerificationExecutionAction> getFieldVisitActions(
             VerificationExecutionStatus status) {
 
         switch (status) {

@@ -11,7 +11,7 @@ import org.springframework.stereotype.Service;
 import com.org.bgv.enums.VerificationExecutionAction;
 import com.org.bgv.enums.VerificationMethodCode;
 import com.org.bgv.vendor.dto.ExecutionActionDto;
-import com.org.bgv.vendor.dto.FieldVisitAssignmentDto;
+import com.org.bgv.vendor.dto.FieldVisitDto;
 import com.org.bgv.vendor.dto.VerificationExecutionNoteDto;
 import com.org.bgv.vendor.dto.VerificationMethodExecutionDetailsDto;
 import com.org.bgv.vendor.dto.VerificationMethodFieldDTO;
@@ -186,7 +186,7 @@ public class VerificationMethodTrackingService {
                         )
                         .toList();
         
-        FieldVisitAssignmentDto assignmentDto = null;
+        FieldVisitDto assignmentDto = null;
 
         if (VerificationMethodCode.FIELD_VISIT.equals(
                 execution.getVerificationMethod().getCode())) {
@@ -197,7 +197,7 @@ public class VerificationMethodTrackingService {
                                     execution.getExecutionId())
                             .map(assignment ->
 
-                                    FieldVisitAssignmentDto.builder()
+                            FieldVisitDto.builder()
                                     .assignmentId(assignment.getAssignmentId())
                                     .fieldAgentId(assignment.getFieldAgent().getUserId())
                                     .fieldAgentName("N/A")
@@ -239,7 +239,7 @@ public class VerificationMethodTrackingService {
                 .build();
     }
     
-    private ExecutionActionDto mapAction(VerificationExecutionAction action) {
+    public ExecutionActionDto mapAction(VerificationExecutionAction action) {
     	
     	
     	log.info("VerificationExecutionAction:::::::::::::::::::::::::::",action);

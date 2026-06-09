@@ -8,7 +8,7 @@ import lombok.Data;
 
 @Data
 @Builder
-public class FieldVisitAssignmentDto {
+public class FieldVisitDto {
 
     private Long assignmentId;
 

@@ -30,4 +30,10 @@ public interface NavigationMenuRepository extends JpaRepository<NavigationMenu, 
     
     @Query("SELECT m FROM NavigationMenu m WHERE m.parent IS NULL AND m.isActive = true AND :role MEMBER OF m.permissions ORDER BY m.order ASC")
     List<NavigationMenu> findRootMenusByRole(@Param("role") String role);
+    
+    
+
+    Optional<NavigationMenu> findByNameAndParentId(String name, Long parentId);
+
+    
 }

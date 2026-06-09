@@ -428,7 +428,7 @@ public class CompanyService {
 	        company.setIndustry(request.getIndustry());
 	        company.setCompanySize(request.getCompanySize());
 	        company.setWebsite(request.getWebsite());
-	        company.setDescription(request.getDescription());
+	       // company.setDescription(request.getDescription());
 	        
 	        // Contact Information
 	        company.setContactPersonName(request.getContactPersonName());
@@ -462,7 +462,7 @@ public class CompanyService {
 	        company.setIndustry(request.getIndustry());
 	        company.setCompanySize(request.getCompanySize());
 	        company.setWebsite(request.getWebsite());
-	        company.setDescription(request.getDescription());
+	      //  company.setDescription(request.getDescription());
 	        
 	        // Update contact information
 	        company.setContactPersonName(request.getContactPersonName());
@@ -826,7 +826,7 @@ public class CompanyService {
 	                .industry(company.getIndustry())
 	                .companySize(company.getCompanySize())
 	                .website(company.getWebsite())
-	                .description(company.getDescription())
+	               // .description(company.getDescription())
 	                
 	                // Contact Information
 	                .contactPersonName(company.getContactPersonName())

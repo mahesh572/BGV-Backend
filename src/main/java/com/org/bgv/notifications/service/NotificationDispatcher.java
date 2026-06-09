@@ -15,6 +15,7 @@ import com.org.bgv.company.entity.Employee;
 import com.org.bgv.company.repository.CompanyEmailSettingsRepository;
 import com.org.bgv.company.repository.EmployeeRepository;
 import com.org.bgv.entity.Company;
+import com.org.bgv.entity.Profile;
 import com.org.bgv.entity.User;
 import com.org.bgv.notifications.NotificationEvent;
 import com.org.bgv.notifications.dto.NotificationContext;
@@ -65,6 +66,58 @@ public class NotificationDispatcher {
                 .variables(Map.of(
                         NotificationPlaceholder.EMPLOYEE_NAME.key(),
                         employee.getFirstName() + " " + employee.getLastName(),
+
+                        NotificationPlaceholder.EMPLOYEE_EMAIL.key(),
+                        user.getEmail(),
+
+                        NotificationPlaceholder.RESET_PASSWORD_LINK.key(),
+                        resetLink,
+
+                        NotificationPlaceholder.PASSWORD_LINK_EXPIRY_DURATION.key(),
+                        "24 hours",
+
+                        NotificationPlaceholder.EMPLOYER_SUPPORT_EMAIL.key(),
+                        supportEmailResolver.resolve(company.getId()),
+
+                        NotificationPlaceholder.TEMPORARY_PASSWORD.key(),
+                        tempPassword
+                ))
+                .build();
+
+        log.debug(
+                "🧩 Employee notification placeholders resolved: {}",
+                context.getVariables().keySet()
+        );
+
+        dispatcher.dispatch(NotificationEvent.EMPLOYEE_ACCOUNT_CREATED, context);
+
+        log.info(
+                "✅ EMPLOYEE_ACCOUNT_CREATED notification dispatched | companyId={} | userEmail={}",
+                company.getId(), user.getEmail()
+        );
+    }
+    
+    public void dispatchUserCreatedNotification(
+            Company company,
+            Profile profile,
+            User user,
+            String tempPassword
+    ) {
+        log.info(
+                "📨 Dispatching EMPLOYEE_ACCOUNT_CREATED notification | companyId={} | userEmail={}",
+                company.getId(), user.getEmail()
+        );
+
+        String resetLink = resetTokenService.generateResetLink(user.getUserId());
+        log.debug("🔗 Generated reset password link for userId={}", user.getUserId());
+
+        NotificationContext context = NotificationContext.builder()
+                .event(NotificationEvent.EMPLOYEE_ACCOUNT_CREATED)
+                .companyId(company.getId())
+                .userEmailAddress(user.getEmail())
+                .variables(Map.of(
+                        NotificationPlaceholder.EMPLOYEE_NAME.key(),
+                        profile.getFirstName() + " " + profile.getLastName(),
 
                         NotificationPlaceholder.EMPLOYEE_EMAIL.key(),
                         user.getEmail(),

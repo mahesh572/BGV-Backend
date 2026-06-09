@@ -1,6 +1,8 @@
 package com.org.bgv.repository;
 
 import com.org.bgv.entity.CompanyUser;
+import com.org.bgv.entity.User;
+
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Modifying;
 import org.springframework.data.jpa.repository.Query;
@@ -46,4 +48,17 @@ public interface CompanyUserRepository extends JpaRepository<CompanyUser, Long> 
     void insertCompanyUser(@Param("companyId") Long companyId, 
                           @Param("userId") Long userId,
                           @Param("createdAt") LocalDateTime createdAt);
+    
+    
+    @Query("""
+            select cu.user
+            from CompanyUser cu
+            join UserRole ur on ur.user = cu.user
+            where cu.companyId = :companyId
+            and ur.role.name = :roleName
+            """)
+    List<User> findUsersByCompanyIdAndRole(
+            @Param("companyId") Long companyId,
+            @Param("roleName") String roleName
+    );
 }

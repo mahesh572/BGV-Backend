@@ -31,7 +31,7 @@ public class VerificationMethodExecutionDetailsDto {
     private List<VerificationMethodFieldDTO> fields;
     private List<ExecutionActionDto> allowedActions;
     
-    private FieldVisitAssignmentDto fieldVisitAssignment;
+    private FieldVisitDto fieldVisitAssignment;
     
  // Notes
     private List<VerificationExecutionNoteDto> notes;

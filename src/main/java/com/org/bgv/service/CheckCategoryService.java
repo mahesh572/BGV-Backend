@@ -6,6 +6,7 @@ import java.util.stream.Collectors;
 
 import org.springframework.stereotype.Service;
 
+import com.org.bgv.commom.dto.VerificationServiceResponse;
 import com.org.bgv.common.CheckCategoryRequest;
 import com.org.bgv.common.CheckCategoryResponse;
 import com.org.bgv.entity.CheckCategory;
@@ -134,4 +135,38 @@ public class CheckCategoryService {
         return checkCategoryRepository.existsByCode(code);
     }
 	
+    
+    public List<VerificationServiceResponse> getVerificationServices() {
+
+        return checkCategoryRepository.findAll()
+                .stream()
+                .filter(CheckCategory::getIsActive)
+                .map(category -> VerificationServiceResponse.builder()
+                        .categoryId(category.getCategoryId())
+                        .categoryCode(category.getCode())
+                        .categoryName(category.getName())
+                        .serviceName(getServiceName(category.getCode()))
+                      //  .hasDocuments(category.getHasDocuments())
+                      //  .price(category.getPrice())
+                        .build())
+                .toList();
+    }
+    
+    private String getServiceName(String categoryCode) {
+
+        return switch (categoryCode) {
+
+            case "IDENTITY" -> "Identity Verification";
+
+            case "EDUCATION" -> "Education Verification";
+
+            case "WORK" -> "Employment Verification";
+
+            case "ADDRESS" -> "Address Verification";
+
+            case "COURT" -> "Court Record Verification";
+
+            default -> "Other Verification";
+        };
+    }
 }

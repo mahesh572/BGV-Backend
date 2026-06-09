@@ -1192,7 +1192,7 @@ public class VerificationCaseService {
 		return VerificationCaseDTO.builder().caseId(verificationCase.getCaseId())
 				.candidateId(verificationCase.getCandidateId()).companyId(verificationCase.getCompanyId())
 				.companyName(company != null ? company.getCompanyName() : "Unknown Company")
-				.companyLogo(company != null ? company.getAdminProfilePicturePath() : null)
+				// .companyLogo(company != null ? company.getAdminProfilePicturePath() : null)
 				.status(verificationCase.getStatus()).createdAt(verificationCase.getCreatedAt())
 				.updatedAt(verificationCase.getUpdatedAt()).completedAt(verificationCase.getCompletedAt())
 				// .verificationType(verificationType)

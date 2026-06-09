@@ -49,6 +49,7 @@ public class RoleService {
     private final RoleMapper roleMapper;
     private final UserRepository userRepository;
     private final CandidateRepository candidateRepository;
+    private final CompanyUserRepository companyUserRepository;
 
     
     public RoleDto createRole(RoleCreateRequest request) {
@@ -228,6 +229,24 @@ public class RoleService {
                 .label(typeLabel)
                 .roles(roleDetailDtos)
                 .build();
+    }
+    
+    
+    public List<RoleDetailDto> getRolesByTypeMetaInfo(String roleType) {
+        Long type = mapRoleTypeToConstant(roleType);
+        String typeLabel = getTypeLabel(roleType);
+        
+        List<Role> roles = roleRepository.findByType(type);
+        
+        List<RoleDetailDto> roleDetailDtos = roles.stream()
+                .map(role -> {
+                    // Count users with this role
+                    Integer assignedCount = userRoleRepository.countByRole(role);
+                    return roleMapper.toDetailDto(role, assignedCount);
+                })
+                .collect(Collectors.toList());
+        
+        return roleDetailDtos;
     }
 
     public Optional<RoleDto> getRoleById(Long id) {
@@ -414,6 +433,15 @@ public class RoleService {
                 );
             }
         });
+    }
+    
+    public List<User> getusersByCompanyIdAndRoleName(Long companyId,String roleName) {
+
+        return companyUserRepository.findUsersByCompanyIdAndRole(
+                companyId,
+                roleName
+                
+        );
     }
 
 }

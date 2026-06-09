@@ -10,6 +10,7 @@ import org.springframework.stereotype.Service;
 import com.org.bgv.common.RoleConstants;
 import com.org.bgv.config.SecurityUtils;
 import com.org.bgv.dto.CheckCategoryEnum;
+import com.org.bgv.entity.Profile;
 import com.org.bgv.entity.Role;
 import com.org.bgv.entity.User;
 import com.org.bgv.entity.UserRole;
@@ -74,6 +75,7 @@ public class VerificationMethodExecutionService {
     private final FieldVisitAssignmentRepository fieldVisitAssignmentRepository;
     private final UserRepository userRepository;
     private final FieldVisitLocationRepository fieldVisitLocationRepository;
+   
 
     
     public Long startVerification(
@@ -93,7 +95,7 @@ public class VerificationMethodExecutionService {
                                         "Verification method not found: "
                                                 + request.getMethodId()));
         
-        
+        /*
         List<VerificationExecutionStatus> activeStatuses =
                 List.of(
                         VerificationExecutionStatus.IN_PROGRESS,
@@ -104,15 +106,26 @@ public class VerificationMethodExecutionService {
                         VerificationExecutionStatus.RESPONSE_RECEIVED
                        
                 );
-
+*/
+        
+        List<VerificationExecutionStatus> terminalStatuses = List.of(
+                VerificationExecutionStatus.COMPLETED,
+                VerificationExecutionStatus.CANCELLED,
+                VerificationExecutionStatus.VISIT_COMPLETED
+        );
         boolean alreadyRunning =
                 executionRepository
                 .existsByVerificationCheckCaseCheckIdAndObjectIdAndVerificationMethodMethodIdAndStatusNotIn(
                         request.getCheckId(),
                         request.getObjectId(),
                         request.getMethodId(),
-                        activeStatuses
+                        terminalStatuses
                 );
+
+        if (alreadyRunning) {
+            throw new BusinessException(
+                    "Verification method is already running for this object");
+        }
 
         if (alreadyRunning) {
             throw new BusinessException(
@@ -321,29 +334,21 @@ public class VerificationMethodExecutionService {
     
     
     public List<FieldAgentDto> getFieldAgents() {
+    	
+    	
+    	Long companyId = SecurityUtils.getCurrentUserCompanyId();
+    	
+    	List<User> userList = roleService.getusersByCompanyIdAndRoleName(companyId, RoleConstants.ROLE_FIELD_AGENT);
 
-        Optional<RoleDto> roleDto =
-                roleService.getRoleByName(RoleConstants.ROLE_FIELD_AGENT);
+        
 
-        if (roleDto.isEmpty()) {
-            throw new BusinessException("Field agent role not found");
-        }
-
-        Role role = roleRepository.findById(roleDto.get().getRoleid())
-                .orElseThrow(() ->
-                        new BusinessException("Role not found"));
-
-        List<UserRole> userRoles =
-                userRoleRepository.findByRole(role);
-
-        return userRoles.stream()
-                .map(userRole -> {
-                    User user = userRole.getUser();
-
+        return userList.stream()
+                .map(user -> {
+                  Profile profile = user.getProfile();
                     return FieldAgentDto.builder()
                             .userId(user.getUserId())
                            // .employeeCode(user.getEmployeeCode())
-                          //  .name(user.getFullName())
+                            .name(profile.getFirstName()+profile.getLastName())
                             .email(user.getEmail())
                           //  .phone(user.getPhoneNumber())
                             .build();

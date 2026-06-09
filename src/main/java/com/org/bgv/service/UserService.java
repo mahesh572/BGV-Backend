@@ -295,6 +295,16 @@ public class UserService {
             throw new RuntimeException("Failed to fetch user: " + e.getMessage(), e);
         }
     }
+    
+    public User getUserById(Long id) {
+        try {
+        	User user = userRepository.findById(id)
+                    .orElseThrow(() -> new RuntimeException("User not found with id: " + id));
+            return user;
+        } catch (Exception e) {
+            throw new RuntimeException("Failed to fetch user: " + e.getMessage(), e);
+        }
+    }
 
     public UserDto create(UserDto userDto) {
         try {

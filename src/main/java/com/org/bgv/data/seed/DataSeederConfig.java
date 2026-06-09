@@ -422,7 +422,7 @@ public class DataSeederConfig implements CommandLineRunner {
 		// company.setIndustry("");
 		// company.setCompanySize("1-10");
 		company.setWebsite("https://bgventures.com");
-		company.setDescription("Default administration company ");
+		//company.setDescription("Default administration company ");
 
 		// Contact Information
 		company.setContactPersonName("System Administrator");

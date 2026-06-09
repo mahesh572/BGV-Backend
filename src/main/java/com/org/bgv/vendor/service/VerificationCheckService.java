@@ -671,18 +671,19 @@ public class VerificationCheckService {
 	                .build();
 	    }
 
-	    Profile profile = candidate.getProfile();
+	  //  Profile profile = candidate.getProfile();
 
 	    String name = "Profile Pending";
 	    String phone = null;
 
+	    /*
 	    if (profile != null) {
 	        name = Stream.of(profile.getFirstName(), profile.getLastName())
 	                .filter(Objects::nonNull)
 	                .collect(Collectors.joining(" "));
 	        phone = profile.getPhoneNumber();
 	    }
-
+*/
 	    return CandidateInfoDTO.builder()
 	            .candidateId(String.valueOf(candidate.getCandidateId()))
 	            .candidateRef(candidate.getCandidateRef())
