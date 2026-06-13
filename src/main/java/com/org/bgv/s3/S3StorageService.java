@@ -20,6 +20,7 @@ import lombok.extern.slf4j.Slf4j;
 import software.amazon.awssdk.core.ResponseInputStream;
 import software.amazon.awssdk.core.sync.RequestBody;
 import software.amazon.awssdk.services.s3.S3Client;
+import software.amazon.awssdk.services.s3.model.DeleteObjectResponse;
 import software.amazon.awssdk.services.s3.model.GetObjectRequest;
 import software.amazon.awssdk.services.s3.model.GetObjectResponse;
 import software.amazon.awssdk.services.s3.model.PutObjectRequest;
@@ -63,10 +64,38 @@ public class S3StorageService {
 
     // -------------------- DELETE --------------------
     public void deleteFile(String key) {
-        log.info("Deleting file from S3 | key={}", key);
-        s3Client.deleteObject(b -> b.bucket(BUCKET_NAME).key(key));
-    }
 
+        log.info("Initiating S3 file deletion | bucket={} | key={}",
+                BUCKET_NAME, key);
+
+        try {
+
+            DeleteObjectResponse response =
+                    s3Client.deleteObject(b ->
+                            b.bucket(BUCKET_NAME)
+                                    .key(key));
+
+            log.info(
+                    "Successfully deleted file from S3 | bucket={} | key={} | requestId={} | statusCode={}",
+                    BUCKET_NAME,
+                    key,
+                    response.responseMetadata().requestId(),
+                    response.sdkHttpResponse().statusCode()
+            );
+
+        } catch (Exception ex) {
+
+            log.error(
+                    "Failed to delete file from S3 | bucket={} | key={} | error={}",
+                    BUCKET_NAME,
+                    key,
+                    ex.getMessage(),
+                    ex
+            );
+
+            throw ex;
+        }
+    }
     // -------------------- DOWNLOAD --------------------
     public ResponseEntity<InputStreamResource> downloadFile(Long docId) {
 

@@ -124,8 +124,7 @@ public class VerificationMethodTrackingService {
         return dto;
     }
     
-    public List<VerificationMethodExecutionDetailsDto>
-    getExecutions(
+    public List<VerificationMethodExecutionDetailsDto> getExecutions(
             Long checkId,
             Long objectId) {
 

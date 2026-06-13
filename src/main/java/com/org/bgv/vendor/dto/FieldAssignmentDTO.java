@@ -14,6 +14,8 @@ import java.util.List;
 @NoArgsConstructor
 @AllArgsConstructor
 public class FieldAssignmentDTO {
+ 
+ private Long checkId;
  private Long assignmentId;
  private Long executionId;
  private String verificationMethodName;
@@ -34,8 +36,8 @@ public class FieldAssignmentDTO {
  private String designation;
  private String additionalInstructions;
  private boolean isOverdue;
- private boolean canStart;
- private boolean canComplete;
+ //private boolean canStart;
+// private boolean canComplete;
  private List<ExecutionActionDto> allowedActions;
  
  

@@ -18,9 +18,11 @@ import org.springframework.web.bind.annotation.RestController;
 import org.springframework.web.multipart.MultipartFile;
 
 import com.org.bgv.api.response.CustomApiResponse;
+import com.org.bgv.common.ActivityTimelineDTO;
 import com.org.bgv.dto.CheckCategoryEnum;
 import com.org.bgv.exceptions.BusinessException;
 import com.org.bgv.s3.S3StorageService;
+import com.org.bgv.service.ActivityTimelineService;
 import com.org.bgv.vendor.dto.AssignFieldAgentRequest;
 import com.org.bgv.vendor.dto.FieldAgentDto;
 import com.org.bgv.vendor.dto.StartVerificationMethodRequest;
@@ -49,6 +51,7 @@ public class VerificationMethodsController {
 	private final VerificationMethodExecutionService service;
 	private final VerificationMethodTrackingService trackingService;
 	private final VerificationExecutionEvidenceService evidenceService;
+	private final ActivityTimelineService activityTimelineService;
 	
 	@GetMapping("/checks/{checkType}/verification-methods")
 	public ResponseEntity<CustomApiResponse<List<VerificationMethodDTO>>> getMethods(
@@ -353,6 +356,8 @@ public class VerificationMethodsController {
 	        );
 
 	    } catch (Exception ex) {
+	    	
+	    	log.error("Failed to delete evidence {}", evidenceId, ex);
 
 	        return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(
 	                CustomApiResponse.failure(
@@ -407,4 +412,26 @@ public class VerificationMethodsController {
                 )
         );
     }
+	
+	
+	@GetMapping("/timeline")
+	public ResponseEntity<CustomApiResponse<List<ActivityTimelineDTO>>> getTimeline(
+	        @RequestParam Long checkId,
+	        @RequestParam Long objectId) {
+		
+		log.info("timeline::::::::::::::::::::::::::::::::{}{}",checkId,objectId);
+
+	    List<ActivityTimelineDTO> timeline =
+	            activityTimelineService.getTimeline(
+	                    checkId,
+	                    objectId);
+
+	    return ResponseEntity.ok(
+	            CustomApiResponse.success(
+	                    "Activity timeline fetched successfully",
+	                    timeline,
+	                    HttpStatus.OK
+	            )
+	    );
+	}
 }

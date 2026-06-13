@@ -84,7 +84,8 @@ public class VerificationExecutionNoteService {
                         null,
                         null,
                         null,
-                        context.getCandidate()
+                        context.getCandidate(),
+                        execution.getObjectId()
                 )
         );
 

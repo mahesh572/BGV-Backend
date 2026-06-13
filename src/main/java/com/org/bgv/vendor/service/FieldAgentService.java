@@ -6,6 +6,7 @@ import com.org.bgv.entity.User;
 import com.org.bgv.enums.VerificationExecutionAction;
 import com.org.bgv.enums.VerificationExecutionStatus;
 import com.org.bgv.service.UserService;
+import com.org.bgv.vendor.dto.CompleteFieldVisitRequest;
 import com.org.bgv.vendor.dto.ExecutionActionDto;
 import com.org.bgv.vendor.dto.FieldAssignmentDTO;
 import com.org.bgv.vendor.entity.FieldVisitAssignment;
@@ -80,16 +81,7 @@ public class FieldAgentService {
     User fieldAgent = userService.getUserById(userId);
     assignments = assignmentRepository.findByFieldAgent(fieldAgent);
     
-    /*
-    if (status != null && !status.isEmpty()) {
-         VerificationExecutionStatus executionStatus = VerificationExecutionStatus.valueOf(status);
-         assignments = assignmentRepository.findByFieldAgentAndStatus(fieldAgent, executionStatus);
-     } else if (date != null) {
-         assignments = assignmentRepository.findByFieldAgentAndScheduledDateBetween(fieldAgent, date, date);
-     } else {
-         
-     }
-     */
+   
      return assignments.stream()
          .map(this::convertToDTO)
          .collect(Collectors.toList());
@@ -174,40 +166,28 @@ public class FieldAgentService {
   * Complete a field visit
   */
  @Transactional
- public FieldAssignmentDTO completeVisit(Long assignmentId, User fieldAgent, String outcome, String remarks,
-                                         Double latitude, Double longitude, String address) {
-     FieldVisitAssignment assignment = assignmentRepository.findById(assignmentId)
-         .orElseThrow(() -> new RuntimeException("Assignment not found"));
-     
-     // Verify ownership
-     if (!assignment.getFieldAgent().getUserId().equals(fieldAgent.getUserId())) {
-         throw new RuntimeException("Unauthorized access to assignment");
-     }
-     
-     // Validate status
-     if (assignment.getExecution().getStatus() != VerificationExecutionStatus.VISIT_IN_PROGRESS) {
-         throw new RuntimeException("Cannot complete visit from current status");
-     }
-     
-     // Update assignment
+ public FieldAssignmentDTO completeVisit(
+         Long executionId,
+         CompleteFieldVisitRequest request) {
+
+     FieldVisitAssignment assignment =
+             assignmentRepository.findByExecutionExecutionId(executionId)
+             .orElseThrow(() -> new RuntimeException("Assignment not found"));
+
+     assignment.setOutcome(request.getOutcome());
+     assignment.setRemarks(request.getRemarks());
+     assignment.setLatitude(request.getLatitude());
+     assignment.setLongitude(request.getLongitude());
      assignment.setCompletedAt(LocalDateTime.now());
-     assignment.setOutcome(outcome);
-     if (remarks != null) {
-         assignment.setRemarks(remarks);
-     }
-     if (latitude != null && longitude != null) {
-         assignment.setLatitude(latitude);
-         assignment.setLongitude(longitude);
-     }
-     
-     // Update execution status
+
      VerificationMethodExecution execution = assignment.getExecution();
-     execution.setStatus(VerificationExecutionStatus.COMPLETED);
+     execution.setStatus(VerificationExecutionStatus.VISIT_COMPLETED);
      execution.setCompletedAt(LocalDateTime.now());
+
      executionRepository.save(execution);
-     
-     FieldVisitAssignment savedAssignment = assignmentRepository.save(assignment);
-     return convertToDTO(savedAssignment);
+
+     return convertToDTO(
+             assignmentRepository.save(assignment));
  }
 
  /**
@@ -246,12 +226,12 @@ public class FieldAgentService {
                         assignment.getScheduledDate().isBefore(today) &&
                         execution.getStatus() != VerificationExecutionStatus.COMPLETED;
      
-     boolean canStart = execution.getStatus() == VerificationExecutionStatus.VISIT_ASSIGNED ||
-                       execution.getStatus() == VerificationExecutionStatus.INITIATED;
+   //  boolean canStart = execution.getStatus() == VerificationExecutionStatus.VISIT_ASSIGNED || execution.getStatus() == VerificationExecutionStatus.INITIATED;
      
-     boolean canComplete = execution.getStatus() == VerificationExecutionStatus.VISIT_IN_PROGRESS;
+    // boolean canComplete = execution.getStatus() == VerificationExecutionStatus.VISIT_IN_PROGRESS;
      
      return FieldAssignmentDTO.builder()
+    		 .checkId(execution.getVerificationCheck().getCaseCheckId())
          .assignmentId(assignment.getAssignmentId())
          .executionId(execution.getExecutionId())
          .verificationMethodName(execution.getVerificationMethod().getName())
@@ -272,8 +252,6 @@ public class FieldAgentService {
          .designation(contactInfo.get("designation"))
          .additionalInstructions(contactInfo.get("additionalInstructions"))
          .isOverdue(isOverdue)
-         .canStart(canStart)
-         .canComplete(canComplete)
          .allowedActions(allowedActionList)
          .build();
  }

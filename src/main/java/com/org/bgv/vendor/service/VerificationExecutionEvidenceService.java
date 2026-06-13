@@ -112,7 +112,8 @@ public class VerificationExecutionEvidenceService
                                     "contentType", file.getContentType(),
                                     "fileSize", file.getSize()
                             ),
-                            context.getCandidate()
+                            context.getCandidate(),
+                            execution.getObjectId()
                     )
         );
         }
@@ -179,7 +180,7 @@ public class VerificationExecutionEvidenceService
         
         VerificationMethodExecution  verificationMethodExecution = evidence.getMethodExecution();
         
-        VerificationContext context = verificationContextUtil.build(evidence.getVerificationCaseCheck().getCaseCheckId(), verificationMethodExecution.getObjectId(), evidence.getVerificationCaseCheck().getCategory().getName());
+        VerificationContext context = verificationContextUtil.build(evidence.getVerificationCaseCheck().getCaseCheckId(), verificationMethodExecution.getObjectId(),  CheckCategoryEnum.fromName(evidence.getVerificationCaseCheck().getCategory().getName()).name());
         
         activityTimelineService.log(
                 ActivityFactory.create(
@@ -200,7 +201,8 @@ public class VerificationExecutionEvidenceService
                                 "contentType", evidence.getContentType(),
                                 "fileSize", evidence.getFileSize()
                         ),
-                        context.getCandidate()
+                        context.getCandidate(),
+                        verificationMethodExecution.getObjectId()
                 )
         );
     }

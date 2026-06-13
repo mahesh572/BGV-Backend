@@ -1,5 +1,8 @@
 package com.org.bgv.common;
 
+import com.org.bgv.enums.ActivitySeverity;
+import com.org.bgv.enums.ActivityType;
+
 import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Data;
@@ -15,6 +18,8 @@ public class ActivityTimelineDTO {
     private String description;
     private String timestamp;
     private String icon;
-    private String status;
-    private String type;
+    private ActivityStatus status;
+    private ActivityType type;
+    private ActivitySeverity severity; 
+    private String actorRole ;
 }

@@ -48,4 +48,7 @@ public class CandidateDetailsDTO {
     
     @JsonProperty("activityTimeline")
     private List<ActivityTimelineDTO> activityTimeline;
+    
+    
+    
 }

@@ -23,11 +23,52 @@ import lombok.RequiredArgsConstructor;
 @RequiredArgsConstructor
 public class ActivityTimelineService {
 
-	private final ActivityTimelineRepository repository;
+	private final ActivityTimelineRepository activityTimelineRepository;
 
     public void log(ActivityTimeline activity) {
-        repository.save(activity);
+    	activityTimelineRepository.save(activity);
     }
 
+    
+    
+    public List<ActivityTimelineDTO> getTimeline(
+            Long checkId,
+            Long objectId) {
+
+        return activityTimelineRepository
+                .findByCheckIdAndObjectIdOrderByCreatedAtDesc(
+                        checkId,
+                        objectId
+                )
+                .stream()
+                .map(this::toDTO)
+                .collect(Collectors.toList());
+    }
+
+    private ActivityTimelineDTO toDTO(ActivityTimeline activity) {
+
+        return ActivityTimelineDTO.builder()
+                .id(activity.getId())
+                .title(activity.getTitle())
+                .description(activity.getDescription())
+                .timestamp(
+                        activity.getCreatedAt()
+                                .format(DateTimeFormatter.ofPattern("dd MMM yyyy HH:mm"))
+                )
+               // .icon(getIcon(activity))
+                .status(
+                        activity.getActivityStatus() != null
+                                ? activity.getActivityStatus()
+                                : null
+                )
+                .type(activity.getActivityType())
+                .severity(
+                        activity.getSeverity() != null
+                                ? activity.getSeverity()
+                                : null
+                )
+                .actorRole(activity.getActorRole())
+                .build();
+    }
    
 }

@@ -6,12 +6,21 @@ import java.util.Map;
 
 import org.springframework.stereotype.Service;
 
+import com.org.bgv.config.SecurityUtils;
+import com.org.bgv.entity.User;
 import com.org.bgv.enums.VerificationExecutionAction;
 import com.org.bgv.enums.VerificationExecutionStatus;
 import com.org.bgv.enums.VerificationMethodCode;
+import com.org.bgv.service.UserService;
+
+import lombok.AllArgsConstructor;
 
 @Service
+@AllArgsConstructor
 public class ExecutionActionConfigService {
+	
+	private final UserService userService;
+	private final ActionPolicyFactory actionPolicyFactory;
 
 	    public List<VerificationExecutionAction> getActions(
 	            VerificationMethodCode methodCode,
@@ -164,7 +173,22 @@ public class ExecutionActionConfigService {
     
     public List<VerificationExecutionAction> getFieldVisitActions(
             VerificationExecutionStatus status) {
+    	
+    	 Long userId = SecurityUtils.getCurrentUserId();
+    	 User fieldAgent = userService.getUserById(userId);
+    	 
+    	 
+    	
+    	 User currentUser = userService.getUserById(SecurityUtils.getCurrentUserId());
 
+    	 ActionPolicy policy = actionPolicyFactory.getPolicy(currentUser);
+
+    	 List<VerificationExecutionAction> actions =
+    	         policy.getActions(status);
+    	 
+    	 return actions;
+
+    	/*
         switch (status) {
 
             case INITIATED:
@@ -232,5 +256,6 @@ public class ExecutionActionConfigService {
             default:
                 return List.of();
         }
+        */
     }
 }

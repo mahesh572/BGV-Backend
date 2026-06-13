@@ -21,4 +21,10 @@ public interface ActivityTimelineRepository extends JpaRepository<ActivityTimeli
 	List<ActivityTimeline> findByCandidateAndStatusOrderByCreatedAtDesc(
 	        Candidate candidate, String status);
 	        */
+	
+	List<ActivityTimeline> findByCheckIdAndObjectIdOrderByCreatedAtDesc(
+            Long checkId,
+            Long objectId
+    );
+	
 }

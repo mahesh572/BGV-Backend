@@ -1,6 +1,8 @@
 package com.org.bgv.entity;
 
 import com.org.bgv.candidate.entity.Candidate;
+import com.org.bgv.common.ActivityStatus;
+import com.org.bgv.enums.ActivitySeverity;
 import com.org.bgv.enums.ActivityType;
 import jakarta.persistence.*;
 import lombok.*;
@@ -29,6 +31,8 @@ public class ActivityTimeline {
     private Long caseId;
 
     private Long checkId;
+    
+    private Long objectId;
 
     private Long executionId;
 
@@ -51,10 +55,12 @@ public class ActivityTimeline {
     private String description;
 
     @Column(name = "activity_status")
-    private String activityStatus; // COMPLETED, FAILED, PENDING
+    @Enumerated(EnumType.STRING)
+    private ActivityStatus activityStatus; // COMPLETED, FAILED, PENDING
 
-    @Column(name = "severity")
-    private String severity; // INFO, WARN, ERROR
+    @Enumerated(EnumType.STRING)
+    private ActivitySeverity severity;
+
 
     // ===============================
     // 👤 ACTOR DETAILS

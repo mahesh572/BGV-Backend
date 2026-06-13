@@ -15,6 +15,7 @@ import com.org.bgv.entity.Role;
 import com.org.bgv.entity.User;
 import com.org.bgv.entity.UserRole;
 import com.org.bgv.entity.VerificationCaseCheck;
+import com.org.bgv.enums.ActivitySeverity;
 import com.org.bgv.enums.ActivityType;
 import com.org.bgv.enums.VendorNoteType;
 import com.org.bgv.enums.VerificationExecutionStatus;
@@ -197,7 +198,8 @@ public class VerificationMethodExecutionService {
                                 "methodId", method.getMethodId(),
                                 "methodName", method.getName()
                         ),
-                        context.getCandidate()
+                        context.getCandidate(),
+                        execution.getObjectId()
                 )
         );
        
@@ -206,23 +208,27 @@ public class VerificationMethodExecutionService {
     }
     
     @Transactional
-    public void updateStatus(Long executionId, UpdateExecutionStatusRequest request) {
+    public void updateStatus(Long executionId,
+                             UpdateExecutionStatusRequest request) {
 
         VerificationMethodExecution execution =
                 executionRepository.findById(executionId)
-                        .orElseThrow(() -> new RuntimeException(
-                                "Execution not found: " + executionId
-                        ));
+                        .orElseThrow(() ->
+                                new RuntimeException(
+                                        "Execution not found: " + executionId));
 
-        // Optional: validation (recommended)
-        validateStatusTransition(execution.getStatus(), request.getStatus());
+        // Capture old status BEFORE changing
+        VerificationExecutionStatus oldStatus = execution.getStatus();
+
+        // Validate transition
+        validateStatusTransition(oldStatus, request.getStatus());
 
         // Update status
         execution.setStatus(request.getStatus());
 
-        // If moving to RESPONSE_RECEIVED or COMPLETED, you may set timestamp logic
+        // Timestamp logic
         if (request.getStatus() == VerificationExecutionStatus.RESPONSE_RECEIVED) {
-           // execution.setResponseReceivedAt(LocalDateTime.now());
+            // execution.setResponseReceivedAt(LocalDateTime.now());
         }
 
         if (request.getStatus() == VerificationExecutionStatus.COMPLETED) {
@@ -231,12 +237,22 @@ public class VerificationMethodExecutionService {
 
         // Save execution
         executionRepository.save(execution);
-        
-        
-        VerificationContext context = verificationContextUtil.build(execution.getVerificationCheck().getCaseCheckId(), execution.getObjectId(),  CheckCategoryEnum.fromName(execution.getVerificationCheck().getCategory().getName()).name());
-        
+
+        VerificationContext context =
+                verificationContextUtil.build(
+                        execution.getVerificationCheck().getCaseCheckId(),
+                        execution.getObjectId(),
+                        CheckCategoryEnum.fromName(
+                                execution.getVerificationCheck()
+                                        .getCategory()
+                                        .getName())
+                                .name()
+                );
+
+        // Create activity timeline entry
         activityTimelineService.log(
                 ActivityFactory.create(
+
                         execution.getVerificationCheck()
                                 .getVerificationCase()
                                 .getCaseId(),
@@ -245,33 +261,44 @@ public class VerificationMethodExecutionService {
                                 .getCaseCheckId(),
 
                         executionId,
+
                         null,
+
                         null,
 
                         ActivityType.STATUS_CHANGED,
 
                         "Execution status updated",
 
-                        "Status changed by vendor",
+                        String.format(
+                                "Status changed from %s to %s by vendor",
+                                oldStatus,
+                                request.getStatus()
+                        ),
 
                         SecurityUtils.getCurrentUserId(),
 
                         "VENDOR",
 
-                        execution.getStatus().name(),
+                        oldStatus.name(),              // statusFrom
 
-                        request.getStatus().name(),
+                        request.getStatus().name(),    // statusTo
 
                         Map.of(
-                                "executionId", executionId
+                                "executionId", executionId,
+                                "oldStatus", oldStatus.name(),
+                                "newStatus", request.getStatus().name()
                         ),
 
-                        context.getCandidate()
+                        context.getCandidate(),
+                        execution.getObjectId()
                 )
         );
 
-        // Store notes (recommended separate table or audit log)
-        if (request.getNotes() != null && !request.getNotes().isBlank()) {
+        // Add note if provided
+        if (request.getNotes() != null &&
+                !request.getNotes().isBlank()) {
+
             addExecutionNote(execution, request.getNotes());
         }
     }
@@ -468,7 +495,8 @@ public class VerificationMethodExecutionService {
                                 "scheduledDate", request.getScheduledDate()
                         ),
 
-                        context.getCandidate()
+                        context.getCandidate(),
+                        execution.getObjectId()
                 )
         );
     }
@@ -498,5 +526,30 @@ public class VerificationMethodExecutionService {
                         .build();
 
         fieldVisitLocationRepository.save(location);
+    }
+    
+    
+    
+    public static ActivitySeverity from(ActivityType type) {
+
+        switch (type) {
+
+            case MARK_VERIFIED:
+            case CASE_COMPLETED:
+            case REPORT_SHARED:
+                return ActivitySeverity.SUCCESS;
+
+            case MARK_DISCREPANCY_FOUND:
+            case ADDRESS_NOT_FOUND:
+            case CANDIDATE_NOT_AVAILABLE:
+                return ActivitySeverity.WARNING;
+
+            case MARK_UNABLE_TO_VERIFY:
+            case DOCUMENT_UPLOAD_FAILED:
+                return ActivitySeverity.ERROR;
+
+            default:
+                return ActivitySeverity.INFO;
+        }
     }
 }

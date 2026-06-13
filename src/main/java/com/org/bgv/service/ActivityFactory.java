@@ -22,11 +22,13 @@ public class ActivityFactory {
             String statusFrom,
             String statusTo,
             Map<String,Object> metadata,
-            Candidate candidate) {
+            Candidate candidate,
+            Long ObjectId) {
 
         return ActivityTimeline.builder()
                 .caseId(caseId)
                 .checkId(checkId)
+                .objectId(ObjectId)
                 .executionId(executionId)
                 .documentId(documentId)
                 .noteId(noteId)

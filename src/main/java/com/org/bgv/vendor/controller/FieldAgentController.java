@@ -2,6 +2,7 @@ package com.org.bgv.vendor.controller;
 
 import com.org.bgv.api.response.CustomApiResponse;
 import com.org.bgv.entity.User;
+import com.org.bgv.vendor.dto.CompleteFieldVisitRequest;
 import com.org.bgv.vendor.dto.FieldAssignmentDTO;
 import com.org.bgv.vendor.dto.UpdateVisitLocationRequest;
 import com.org.bgv.vendor.service.FieldAgentService;
@@ -112,11 +113,11 @@ public class FieldAgentController {
      * Complete visit
      */
     
-    /*
+    
     @PostMapping("/executions/{executionId}/complete")
     public ResponseEntity<CustomApiResponse<String>> completeVisit(
             @PathVariable Long executionId,
-            @RequestBody CompleteVisitRequest request) {
+            @RequestBody CompleteFieldVisitRequest  request) {
 
         service.completeVisit(
                 executionId,
@@ -130,7 +131,7 @@ public class FieldAgentController {
                 )
         );
     }
-*/
+
     /**
      * Update location
      */
