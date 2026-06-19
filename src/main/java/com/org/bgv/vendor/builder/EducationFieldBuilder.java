@@ -33,14 +33,14 @@ public class EducationFieldBuilder implements ObjectFieldBuilder<EducationHistor
         fields.add(FieldsUtil.text(
                 "INSTITUTE_NAME",
                 "Institute Name",
-                edu.getInstitute_name(),
+                edu.getInstituteName(),
                 true
         ));
 
         fields.add(FieldsUtil.text(
                 "UNIVERSITY_NAME",
                 "University Name",
-                edu.getUniversity_name(),
+                edu.getUniversityName(),
                 false
         ));
 

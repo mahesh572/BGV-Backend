@@ -133,14 +133,16 @@ public class Candidate {
     private Company company;
 
     
-    
+    /*
     @OneToMany(mappedBy = "candidate", 
             cascade = CascadeType.ALL, 
             fetch = FetchType.LAZY,
             orphanRemoval = true)
    @OrderBy("timestamp DESC")
    private List<ActivityTimeline> activityTimeline = new ArrayList<>();
-    
+   
+   */
+    /*
     // Helper method to add activity
     public void addActivity(ActivityTimeline activity) {
         activityTimeline.add(activity);
@@ -152,6 +154,8 @@ public class Candidate {
         activityTimeline.remove(activity);
         activity.setCandidate(null);
     }
+    
+    */
     
  // Lifecycle Methods
     @PrePersist

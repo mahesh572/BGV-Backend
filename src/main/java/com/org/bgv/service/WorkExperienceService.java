@@ -199,11 +199,11 @@ public class WorkExperienceService {
 				.candidateId(candidate.getCandidateId())
 				.verificationCase(verificationCase)
 				.verificationCaseCheck(verificationCaseCheck)
-				.company_name(dto.getCompanyName())
+				.companyName(dto.getCompanyName())
 				.position(dto.getPosition())
-				.start_date(dto.getStartDate()).end_date(dto.getEndDate()).reason(dto.getReasonForLeaving())
-				.employee_id(dto.getEmployeeId()).manager_email_id(dto.getManagerEmail())
-				.hr_email_id(dto.getHrEmail()).address(dto.getCompanyAddress())
+				.startDate(dto.getStartDate()).endDate(dto.getEndDate()).reason(dto.getReasonForLeaving())
+				.employeeId(dto.getEmployeeId()).managerEmailId(dto.getManagerEmail())
+				.hrEmailId(dto.getHrEmail()).address(dto.getCompanyAddress())
 				.city(dto.getCity())
 				.state(dto.getState())
 				.country(dto.getCountry())
@@ -217,9 +217,9 @@ public class WorkExperienceService {
 		return WorkExperienceDTO.builder().id(entity.getExperienceId())
 				// .profileId(entity.getProfile() != null ? entity.getProfile().getProfileId() :
 				// null)
-				.companyName(entity.getCompany_name()).position(entity.getPosition()).startDate(entity.getStart_date())
-				.endDate(entity.getEnd_date()).reasonForLeaving(entity.getReason()).employeeId(entity.getEmployee_id())
-				.managerEmail(entity.getManager_email_id()).hrEmail(entity.getHr_email_id())
+				.companyName(entity.getCompanyName()).position(entity.getPosition()).startDate(entity.getStartDate())
+				.endDate(entity.getEndDate()).reasonForLeaving(entity.getReason()).employeeId(entity.getEmployeeId())
+				.managerEmail(entity.getManagerEmailId()).hrEmail(entity.getHrEmailId())
 				.companyAddress(entity.getAddress())
 				
 				.city(entity.getCity())
@@ -404,14 +404,14 @@ public class WorkExperienceService {
 	        // =====================================================
 	        // MAP FIELDS (COMMON)
 	        // =====================================================
-	        workExperience.setCompany_name(dto.getCompanyName());
-	        workExperience.setEmployee_id(dto.getEmployeeId());
+	        workExperience.setCompanyName(dto.getCompanyName());
+	        workExperience.setEmployeeId(dto.getEmployeeId());
 	        workExperience.setPosition(dto.getPosition());
-	        workExperience.setStart_date(dto.getStartDate());
-	        workExperience.setEnd_date(dto.getEndDate());
+	        workExperience.setStartDate(dto.getStartDate());
+	        workExperience.setEndDate(dto.getEndDate());
 	        workExperience.setReason(dto.getReasonForLeaving());
-	        workExperience.setHr_email_id(dto.getHrEmail());
-	        workExperience.setManager_email_id(dto.getManagerEmail());
+	        workExperience.setHrEmailId(dto.getHrEmail());
+	        workExperience.setManagerEmailId(dto.getManagerEmail());
 	        workExperience.setAddress(dto.getCompanyAddress());
 	        workExperience.setEmploymentType(dto.getEmploymentType());
 	        workExperience.setCurrentlyWorking(dto.getCurrentlyWorking());
@@ -445,15 +445,15 @@ public class WorkExperienceService {
         WorkExperienceDTO dto = new WorkExperienceDTO();
         dto.setId(experience.getExperienceId());
         dto.setCandidateId(experience.getCandidateId());
-        dto.setCompanyName(experience.getCompany_name());
+        dto.setCompanyName(experience.getCompanyName());
         dto.setPosition(experience.getPosition());
         dto.setEmploymentType(experience.getEmploymentType());
-        dto.setStartDate(experience.getStart_date());
-        dto.setEndDate(experience.getEnd_date());
+        dto.setStartDate(experience.getStartDate());
+        dto.setEndDate(experience.getEndDate());
         dto.setCurrentlyWorking(experience.getCurrentlyWorking());
-        dto.setEmployeeId(experience.getEmployee_id());
-        dto.setManagerEmail(experience.getManager_email_id());
-        dto.setHrEmail(experience.getHr_email_id());
+        dto.setEmployeeId(experience.getEmployeeId());
+        dto.setManagerEmail(experience.getManagerEmailId());
+        dto.setHrEmail(experience.getHrEmailId());
         dto.setReasonForLeaving(experience.getReason());
         dto.setNoticePeriod(experience.getNoticePeriod());
         dto.setCompanyAddress(experience.getAddress());

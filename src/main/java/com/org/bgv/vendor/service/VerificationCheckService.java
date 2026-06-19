@@ -8,14 +8,17 @@ import com.org.bgv.candidate.repository.CandidateRepository;
 import com.org.bgv.candidate.repository.EducationHistoryRepository;
 import com.org.bgv.candidate.repository.IdentityProofRepository;
 import com.org.bgv.candidate.repository.WorkExperienceRepository;
+import com.org.bgv.commom.dto.OptionDTO;
 import com.org.bgv.common.CheckObjectType;
 import com.org.bgv.common.DocumentEntityType;
 import com.org.bgv.common.DocumentStatus;
 import com.org.bgv.common.DocumentTypeInfo;
+import com.org.bgv.common.Option;
 import com.org.bgv.constants.CaseCheckStatus;
 import com.org.bgv.constants.CaseStatus;
 import com.org.bgv.dto.CheckCategoryEnum;
 import com.org.bgv.entity.*;
+import com.org.bgv.enums.ComparisonStatus;
 import com.org.bgv.enums.VendorNoteType;
 import com.org.bgv.repository.*;
 import com.org.bgv.vendor.action.dto.ActionDTO;
@@ -37,6 +40,7 @@ import com.org.bgv.vendor.dto.EvidenceDTO;
 import com.org.bgv.vendor.dto.EvidenceTypeDTO;
 import com.org.bgv.vendor.dto.IdentityCheckDTO;
 import com.org.bgv.vendor.dto.IdentityContextDTO;
+import com.org.bgv.vendor.dto.ObjectComparisonFieldDTO;
 import com.org.bgv.vendor.dto.ObjectDTO;
 import com.org.bgv.vendor.dto.ObjectFieldDTO;
 import com.org.bgv.vendor.dto.RequirementDTO;
@@ -52,12 +56,15 @@ import com.org.bgv.vendor.entity.CategoryEvidenceType;
 import com.org.bgv.vendor.entity.EvidenceType;
 import com.org.bgv.vendor.entity.VendorNote;
 import com.org.bgv.vendor.entity.VerificationCheckHistory;
+import com.org.bgv.vendor.entity.VerificationObject;
 //import com.org.bgv.vendor.entity.VerificationEvidence;
 import com.org.bgv.vendor.entity.VerificationTimeline;
 import com.org.bgv.vendor.repository.CategoryEvidenceTypeRepository;
 import com.org.bgv.vendor.repository.EvidenceTypeRepository;
 import com.org.bgv.vendor.repository.VendorNoteRepository;
 import com.org.bgv.vendor.repository.VerificationCheckHistoryRepository;
+import com.org.bgv.vendor.repository.VerificationFieldComparisonRepository;
+import com.org.bgv.vendor.repository.VerificationObjectRepository;
 //import com.org.bgv.vendor.repository.VerificationEvidenceRepository;
 import com.org.bgv.vendor.repository.VerificationTimelineRepository;
 
@@ -97,51 +104,9 @@ public class VerificationCheckService {
 	private final WorkExperienceRepository workExperienceRepository;
 	private final ObjectFieldBuilderRegistry fieldBuilderRegistry;
 	private final VerificationCaseSelectionRepository verificationCaseSelectionRepository;
+	private final VerificationFieldComparisonRepository verificationFieldComparisonRepository;
+	private final VerificationObjectRepository verificationObjectRepository;
 
-	/**
-	 * Get verification check details by type
-	 */
-	/*
-	 * @Transactional(readOnly = true) public VendorVerificationCheckDTO
-	 * getVerificationCheck(Long checkId, Long vendorId) {
-	 * 
-	 * log.info("Fetching verification check {} for vendor {}", checkId, vendorId);
-	 * 
-	 * VerificationCaseCheck check =
-	 * verificationCaseCheckRepository.findById(checkId) .orElseThrow(() -> new
-	 * RuntimeException("Verification check not found"));
-	 * 
-	 * // 1️⃣ Vendor authorization if (!Objects.equals(check.getVendorId(),
-	 * vendorId)) { throw new
-	 * RuntimeException("Vendor not authorized to access this check"); }
-	 * 
-	 * VerificationCase verificationCase = check.getVerificationCase();
-	 * 
-	 * Candidate candidate =
-	 * candidateRepository.findById(verificationCase.getCandidateId())
-	 * .orElseThrow(() -> new RuntimeException("Candidate not found"));
-	 * 
-	 * Company company =
-	 * companyRepository.findById(verificationCase.getCompanyId()).orElse(null);
-	 * 
-	 * // 2️⃣ Base DTO VendorVerificationCheckDTO dto = buildCommonCheckDTO(check,
-	 * verificationCase, candidate, company);
-	 * 
-	 * // 3️⃣ Declared + Context dto.setDeclaredInfo(getDeclaredInfo(check,
-	 * candidate)); dto.setContext(getCheckContext(check,
-	 * check.getCategory().getCode()));
-	 * 
-	 * // 4️⃣ Evidence already uploaded dto.setEvidence(getEvidence(check));
-	 * 
-	 * // 5️⃣ Evidence types allowed for this category
-	 * dto.setEvidenceTypeList(getAllowedEvidenceTypes(check.getCategory().
-	 * getCategoryId()));
-	 * 
-	 * // 6️⃣ Document types applicable for this category
-	 * dto.setDocumentTypeInfos(getDocumentTypesForCategory(check));
-	 * 
-	 * return dto; }
-	 */
 
 	@Transactional(readOnly = true)
 	public VerificationCheckResponseDTO getVerificationCheck(Long checkId, Long vendorId) {
@@ -227,6 +192,37 @@ public class VerificationCheckService {
 
 	    List<IdentityProof> identities = identityProofRepository
 	            .findByVerificationCaseCheckCaseCheckId(check.getCaseCheckId());
+	    
+	    List<VerificationObject> objects =
+	            verificationObjectRepository
+	                    .findByVerificationCheckAndObjectType(
+	                            check,
+	                            CheckCategoryEnum.IDENTITY);
+	    
+	    return objects.stream()
+	            .map(object -> {
+	            	List<ObjectComparisonFieldDTO> fields = buildComparisonFields(object);
+	            	 List<DocumentTypeVerificationDTO> documentTypes = buildDocumentTypes(object.getSourceId(), check,null);
+	            	 
+	            	 // Compute object status from document types
+		                DocumentStatus objectStatus = resolveObjectStatus(documentTypes);
+		                
+		                return ObjectDTO.builder()
+		                        .objectId(object.getSourceId())
+		                        .objectType(CheckCategoryEnum.IDENTITY.getName())
+		                        .displayName(object.getObjectName())
+		                       // .data(buildIdentityData(identity))
+		                        .status(objectStatus.name()) // store as string if DTO expects string
+		                        .documentTypes(documentTypes)
+		                        .evidence(Collections.emptyList())
+		                        .actions(VendorActionCatalog.objectActions()) // optionally pass objectStatus to restrict actions
+		                        .fields(fields)
+		                        .build();
+	            	 
+	            })
+	            .toList();
+	    
+	    /*
 
 	    return identities.stream()
 	            .map(identity -> {
@@ -254,6 +250,8 @@ public class VerificationCheckService {
 	                        .build();
 	            })
 	            .toList();
+	            
+	            */
 	}
 
 
@@ -274,7 +272,37 @@ public class VerificationCheckService {
 
 	    List<EducationHistory> educations = educationHistoryRepository
 	            .findByVerificationCaseCheck_CaseCheckId(check.getCaseCheckId());
-
+	    
+	    List<VerificationObject> objects =
+	            verificationObjectRepository
+	                    .findByVerificationCheckAndObjectType(
+	                            check,
+	                            CheckCategoryEnum.EDUCATION);
+	    
+	    
+	    return objects.stream()
+	            .map(object -> {
+	            	 List<ObjectComparisonFieldDTO> fields = buildComparisonFields(object);
+	            	 
+	            	 List<DocumentTypeVerificationDTO> documentTypes = buildDocumentTypes(object.getSourceId(), check, null);
+	            	 DocumentStatus objectStatus =
+		                        resolveObjectStatus(documentTypes);
+	            	 
+	            	 return ObjectDTO.builder()
+		                        .objectId(object.getSourceId())
+		                        .objectType(CheckObjectType.EDUCATION.name())
+		                        .displayName(object.getObjectName())
+		                        // .data(buildEducationData(education)) // not needed anymore
+		                        .status(objectStatus.name())
+		                        .documentTypes(documentTypes)
+		                        .evidence(Collections.emptyList())
+		                        .actions(VendorActionCatalog.objectActions())
+		                        .fields(fields)
+		                        .fieldSatusOptions(getComparisonStatuses())
+		                        .build();
+	            	
+	            }).toList();
+/*
 	    return educations.stream()
 	            .map(education -> {
 
@@ -307,6 +335,8 @@ public class VerificationCheckService {
 	                        .build();
 	            })
 	            .toList();
+	            
+	            */
 	}
 
 
@@ -331,8 +361,8 @@ public class VerificationCheckService {
 
 		data.put("fieldOfStudy", education.getField() != null ? education.getField().getName() : null);
 
-		data.put("instituteName", education.getInstitute_name());
-		data.put("universityName", education.getUniversity_name());
+		data.put("instituteName", education.getInstituteName());
+		data.put("universityName", education.getUniversityName());
 
 		data.put("fromDate", education.getFromDate());
 		data.put("toDate", education.getToDate());
@@ -379,7 +409,40 @@ public class VerificationCheckService {
 
 	    List<WorkExperience> experiences =
 	            workExperienceRepository.findAllById(experienceIds);
+	    
+	    List<VerificationObject> objects =
+	            verificationObjectRepository
+	                    .findByVerificationCheckAndObjectType(
+	                            check,
+	                            CheckCategoryEnum.WORK_EXPERIENCE);
+	    
+	    
+	    
+	     return objects.stream()
+	            .map(object -> {
 
+	                List<ObjectComparisonFieldDTO> fields = buildComparisonFields(object);
+	                
+	                List<DocumentTypeVerificationDTO> documentTypes =
+	                        buildDocumentTypes(
+	                        		object.getSourceId(),
+	                                check,
+	                                null
+	                        );
+
+	                return ObjectDTO.builder()
+	                        .objectId(object.getSourceId())
+	                        .objectType(object.getObjectType().name())
+	                        .displayName(object.getObjectName())
+	                        .status(object.getStatus().name())
+	                        .fields(fields)
+	                        .fieldSatusOptions(getComparisonStatuses())
+	                        .documentTypes(documentTypes)
+	                        .build();
+
+	            })
+	            .toList();
+/*
 	    return experiences.stream()
 	            .map(experience -> {
 
@@ -396,6 +459,7 @@ public class VerificationCheckService {
 	                                null
 	                        );
 
+	                
 	                DocumentStatus objectStatus =
 	                        resolveObjectStatus(documentTypes);
 
@@ -409,12 +473,14 @@ public class VerificationCheckService {
 	                        .build();
 	            })
 	            .toList();
+	            
+	            */
 	}
 
 
 	private String resolveWorkExperienceName(WorkExperience experience) {
 
-		String company = experience.getCompany_name();
+		String company = experience.getCompanyName();
 		String position = experience.getPosition();
 
 		if (company != null && position != null) {
@@ -428,21 +494,21 @@ public class VerificationCheckService {
 
 		Map<String, Object> data = new HashMap<>();
 
-		data.put("companyName", experience.getCompany_name());
+		data.put("companyName", experience.getCompanyName());
 		data.put("position", experience.getPosition());
 
-		data.put("startDate", experience.getStart_date());
-		data.put("endDate", experience.getEnd_date());
+		data.put("startDate", experience.getStartDate());
+		data.put("endDate", experience.getEndDate());
 		data.put("currentlyWorking", experience.getCurrentlyWorking());
 
 		data.put("employmentType", experience.getEmploymentType());
 		data.put("noticePeriod", experience.getNoticePeriod());
 
-		data.put("employeeId", experience.getEmployee_id());
+		data.put("employeeId", experience.getEmployeeId());
 		data.put("reasonForLeaving", experience.getReason());
 
-		data.put("managerEmail", experience.getManager_email_id());
-		data.put("hrEmail", experience.getHr_email_id());
+		data.put("managerEmail", experience.getManagerEmailId());
+		data.put("hrEmail", experience.getHrEmailId());
 
 		data.put("address", experience.getAddress());
 		data.put("city", experience.getCity());
@@ -1268,5 +1334,41 @@ public class VerificationCheckService {
 	    return dto;
 	}
 	
+	
+	private List<ObjectComparisonFieldDTO> buildComparisonFields(VerificationObject object) {
 
+	    return verificationFieldComparisonRepository
+	            .findByVerificationObjectOrderById(object)
+	            .stream()
+	            .map(field ->
+
+	                    ObjectComparisonFieldDTO.builder()
+	                            .comparisonId(field.getId())
+	                            .fieldName(field.getFieldName())
+	                            .displayName(field.getDisplayName())
+	                            .candidateValue(field.getCandidateValue())
+	                            .sourceValue(field.getSourceValue())
+	                            .result(field.getResult().name())
+	                            .verified(field.getVerified())
+	                            .remarks(field.getRemarks())
+	                            .build()
+
+	            )
+	            .toList();
+	}
+	
+
+	public List<OptionDTO> getComparisonStatuses() {
+
+        return Arrays.stream(ComparisonStatus.values())
+                .map(status ->
+                        new OptionDTO(
+                                status.name(),
+                                status.getLabel(),
+                                status.getColor()))
+                .toList();
+    }
+	
+	
+	
 }

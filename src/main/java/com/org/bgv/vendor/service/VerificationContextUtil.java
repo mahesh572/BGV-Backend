@@ -110,19 +110,19 @@ public class VerificationContextUtil {
                 .orElseThrow();
 
         String employmentPeriod =
-                formatDate(work.getStart_date())
+                formatDate(work.getStartDate())
                 + " - "
                 + (Boolean.TRUE.equals(work.getCurrentlyWorking())
                         ? "Present"
-                        : formatDate(work.getEnd_date()));
+                        : formatDate(work.getEndDate()));
 
         return EmploymentVerificationData.builder()
-                .companyName(work.getCompany_name())
-                .employeeId(work.getEmployee_id())
+                .companyName(work.getCompanyName())
+                .employeeId(work.getEmployeeId())
                 .designation(work.getPosition())
                 .department(null) // add field later if available
                 .employmentPeriod(employmentPeriod)
-                .hrEmail(work.getHr_email_id())
+                .hrEmail(work.getHrEmailId())
                 .build();
     }
     

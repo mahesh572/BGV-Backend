@@ -67,8 +67,11 @@ public class EducationHistory {
     @JoinColumn(name = "field_id")
     private FieldOfStudy field;
 
-    private String institute_name;
-    private String university_name;
+    @Column(name = "institute_name")
+    private String instituteName;
+
+    @Column(name = "university_name")
+    private String universityName;
     private LocalDate fromDate;      // Start date (constructed from month/year)
     private LocalDate toDate;        // End date (constructed from month/year)
 

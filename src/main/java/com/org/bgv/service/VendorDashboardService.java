@@ -9,6 +9,8 @@ import com.org.bgv.entity.*;
 import com.org.bgv.repository.*;
 
 import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
+
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -19,6 +21,7 @@ import java.util.stream.Collectors;
 
 @Service
 @RequiredArgsConstructor
+@Slf4j
 public class VendorDashboardService {
     
     private final VerificationCaseRepository verificationCaseRepository;
@@ -41,6 +44,8 @@ public class VendorDashboardService {
                 Arrays.asList(CaseStatus.ASSIGNED, CaseStatus.IN_PROGRESS, CaseStatus.PENDING)
             );
         */
+    	
+    	log.info("vendor Id.............................{}",vendorId);
     	List<VerificationCaseCheck> vendorChecks = verificationCaseCheckRepository
                 .findByVendorIdOrderByUpdatedAtDesc(
                     vendorId

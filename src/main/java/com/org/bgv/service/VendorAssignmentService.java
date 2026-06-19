@@ -160,12 +160,32 @@ public class VendorAssignmentService {
     }
     
     @Transactional
-    public void assignVendorsToCaseChecks(List<VerificationCaseCheck> checks) {
+    public boolean assignVendorsToCaseChecks(
+            List<VerificationCaseCheck> checks) {
+
+        boolean allAssigned = true;
+
         for (VerificationCaseCheck check : checks) {
-            Vendor vendor = autoAssignVendor(check.getCategory().getCategoryId());
+
+            Vendor vendor =
+                    autoAssignVendor(check.getCategory().getCategoryId());
+
+            if (vendor == null) {
+
+                check.setStatus(
+                        CaseCheckStatus.PENDING_VENDOR_ASSIGNMENT);
+
+                allAssigned = false;
+                continue;
+            }
+
             check.setVendorId(vendor.getId());
             check.setStatus(CaseCheckStatus.ASSIGNED);
         }
+
+        verificationCaseCheckRepository.saveAll(checks);
+
+        return allAssigned;
     }
     
     

@@ -9,6 +9,8 @@ public enum CheckCategoryEnum {
     EDUCATION("Education", "EDUCATION", "Education Verification"),
 
     WORK_EXPERIENCE("Work Experience", "WORK EXPERIENCE", "Employment Verification"),
+    
+    EMPLOYEMENT("Employement", "EMPLOYEMENT", "Employment Verification"),
 
     ADDRESS("Address", "ADDRESS", "Address Verification"),
 

@@ -31,8 +31,8 @@ public class EducationHistoryMapper {
                 .fromYear(entity.getFromDate() != null ? entity.getFromDate().getYear() : null)
                 .toMonth(entity.getToDate() != null ? getMonthName(entity.getToDate()) : null)
                 .toYear(entity.getToDate() != null ? entity.getToDate().getYear() : null)
-                .institutionName(entity.getInstitute_name())
-                .universityName(entity.getUniversity_name())
+                .institutionName(entity.getInstituteName())
+                .universityName(entity.getUniversityName())
                 .city(entity.getCity())
                 .state(entity.getState())
                 .country(entity.getCountry())
@@ -50,8 +50,8 @@ public class EducationHistoryMapper {
                 .id(dto.getId())
                 .grade(dto.getGrade())
                 .gpa(dto.getGpa())
-                .institute_name(dto.getInstitutionName())
-                .university_name(dto.getUniversityName())
+                .instituteName(dto.getInstitutionName())
+                .universityName(dto.getUniversityName())
                 .city(dto.getCity())
                 .state(dto.getState())
                 .country(dto.getCountry())
@@ -71,8 +71,8 @@ public class EducationHistoryMapper {
 
         entity.setGrade(dto.getGrade());
         entity.setGpa(dto.getGpa());
-        entity.setInstitute_name(dto.getInstitutionName());
-        entity.setUniversity_name(dto.getUniversityName());
+        entity.setInstituteName(dto.getInstitutionName());
+        entity.setUniversityName(dto.getUniversityName());
         entity.setCity(dto.getCity());
         entity.setState(dto.getState());
         entity.setCountry(dto.getCountry());

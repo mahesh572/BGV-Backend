@@ -940,7 +940,7 @@ public class CandidateService {
         // Eagerly fetch related entities
       //  candidate.getProfile();
         candidate.getCompany();
-        candidate.getActivityTimeline().size(); // Force initialization
+      //  candidate.getActivityTimeline().size(); // Force initialization
         
         return candidateDetailsMapper.toDTO(candidate);
     }

@@ -31,6 +31,7 @@ import com.org.bgv.entity.IdentityDocuments;
 import com.org.bgv.entity.Profile;
 import com.org.bgv.entity.VerificationCase;
 import com.org.bgv.entity.VerificationCaseCheck;
+import com.org.bgv.exceptions.BusinessException;
 import com.org.bgv.repository.CheckCategoryRepository;
 import com.org.bgv.repository.DocumentRepository;
 import com.org.bgv.repository.DocumentTypeRepository;
@@ -532,17 +533,12 @@ public class IdentityProofService {
 
         log.info("Fetching identity information for candidate: {}", candidateId);
 
-        List<IdentityProof> identities =
-                identityProofRepository.findByCandidate_CandidateId(candidateId);
-
-        if (identities.isEmpty()) {
-            throw new RuntimeException("No identity proofs found for candidate " + candidateId);
-        }
-
-        return identities.stream()
+        return identityProofRepository.findByCandidate_CandidateId(candidateId)
+                .stream()
                 .map(this::convertToDTO)
                 .toList();
     }
+    
     private IdentityProofDTO convertToDTO(IdentityProof identity) {
     	IdentityProofDTO dto = new IdentityProofDTO();
         dto.setId(identity.getId());

@@ -1167,7 +1167,7 @@ public class DocumentService {
                             .degreeLabel(education.getDegree().getLabel())
                             .degreeType(education.getTypeOfEducation())
                             .fieldOfStudy(education.getField().getName())
-                            .institionName(education.getInstitute_name())
+                            .institionName(education.getInstituteName())
                             .build();
 
 
@@ -1238,7 +1238,7 @@ public class DocumentService {
             .map(workExperience -> {
                 CompanyDto companyDto = CompanyDto.builder()
                     .companyId(workExperience.getExperienceId())
-                    .companyName(workExperience.getCompany_name())
+                    .companyName(workExperience.getCompanyName())
                     .build();
                 
                 List<DocumentTypeDto> companyDocumentTypes = buildCompanyDocumentTypes(candidateId, category, documentTypes, workExperience.getExperienceId());

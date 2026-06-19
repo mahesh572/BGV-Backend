@@ -34,8 +34,8 @@ public interface WorkExperienceRepository extends JpaRepository<WorkExperience, 
     @Query("SELECT w FROM WorkExperience w WHERE w.candidateId = :candidateId " +
            "ORDER BY " +
            "CASE WHEN w.currentlyWorking = true THEN 0 ELSE 1 END, " +
-           "COALESCE(w.end_date, CURRENT_DATE) DESC, " +
-           "w.start_date DESC")
+           "COALESCE(w.endDate, CURRENT_DATE) DESC, " +
+           "w.startDate DESC")
     List<WorkExperience> findByCandidateIdOrderByDate(@Param("candidateId") Long candidateId);
     
     List<WorkExperience> findByCandidateIdAndCurrentlyWorking(Long candidateId, boolean currentlyWorking);

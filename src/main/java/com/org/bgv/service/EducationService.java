@@ -214,8 +214,8 @@ public class EducationService {
         		.verificationCaseCheck(verificationCaseCheck)
                 .degree(degree)
                 .field(field)
-                .institute_name(dto.getInstitutionName())
-                .university_name(dto.getUniversityName())
+                .instituteName(dto.getInstitutionName())
+                .universityName(dto.getUniversityName())
                 .fromDate(parseDate(dto.getFromMonth(), dto.getFromYear()))
                 .toDate(parseDate(dto.getToMonth(), dto.getToYear()))
                 .city(dto.getCity())
@@ -244,8 +244,8 @@ public class EducationService {
                 .fromYear(entity.getFromDate() != null ? entity.getFromDate().getYear() : null)
                 .toMonth(entity.getToDate() != null ? getMonthName(entity.getToDate()) : null)
                 .toYear(entity.getToDate() != null ? entity.getToDate().getYear() : null)
-                .institutionName(entity.getInstitute_name())
-                .universityName(entity.getUniversity_name())
+                .institutionName(entity.getInstituteName())
+                .universityName(entity.getUniversityName())
                 .city(entity.getCity())
                 .state(entity.getState())
                 .country(entity.getCountry())
@@ -341,8 +341,8 @@ public class EducationService {
         // =====================================================
         // MAP FIELDS
         // =====================================================
-        education.setInstitute_name(dto.getInstitutionName());
-        education.setUniversity_name(dto.getUniversityName());
+        education.setInstituteName(dto.getInstitutionName());
+        education.setUniversityName(dto.getUniversityName());
         education.setFromDate(parseDate(dto.getFromMonth(), dto.getFromYear()));
         education.setToDate(parseDate(dto.getToMonth(), dto.getToYear()));
         education.setCity(dto.getCity());
@@ -473,8 +473,8 @@ public class EducationService {
                 .fromYear(educationHistory.getFromDate() != null ? educationHistory.getFromDate().getYear() : null)
                 .toMonth(educationHistory.getToDate() != null ? getMonthName(educationHistory.getToDate()) : null)
                 .toYear(educationHistory.getToDate() != null ? educationHistory.getToDate().getYear() : null)
-                .institutionName(educationHistory.getInstitute_name())
-                .universityName(educationHistory.getUniversity_name())
+                .institutionName(educationHistory.getInstituteName())
+                .universityName(educationHistory.getUniversityName())
                 .city(educationHistory.getCity())
                 .state(educationHistory.getState())
                 .country(educationHistory.getCountry())

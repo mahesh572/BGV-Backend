@@ -140,6 +140,7 @@ public class VendorUserService {
                 .vehicleAvailable(request.getVehicleAvailable())
                 .maxDailyCapacity(request.getMaxDailyCapacity())
                 .regions(regions)
+                .user(user)
                 .build();
 
         VendorUser savedVendorUser = vendorUserRepository.save(vendorUser);

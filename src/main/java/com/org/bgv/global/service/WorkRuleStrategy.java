@@ -63,7 +63,7 @@ public class WorkRuleStrategy implements RuleExecutionStrategy {
     private List<WorkExperience> getLatest(Long caseId, int limit) {
         return workRepo.findByVerificationCaseCaseId(caseId)
                 .stream()
-                .sorted(Comparator.comparing(WorkExperience::getEnd_date,
+                .sorted(Comparator.comparing(WorkExperience::getEndDate,
                         Comparator.nullsLast(Comparator.reverseOrder())))
                 .limit(limit)
                 .toList();

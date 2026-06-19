@@ -1435,7 +1435,7 @@ public class VerificationCaseService {
 
 		List<VerificationCheckDTO> verificationChecks = buildVerificationChecks(caseChecks);
 
-		List<ActivityTimelineDTO> activityTimeline = buildActivityTimeline(verificationCase, caseChecks);
+		// List<ActivityTimelineDTO> activityTimeline = buildActivityTimeline(verificationCase, caseChecks);
 
 		VPackageDTO vpackageDTO = buildVPackageDTO(verificationCase);
 
@@ -1469,7 +1469,7 @@ public class VerificationCaseService {
 				.verificationChecks(verificationChecks)
 				.pricingConfirmed(verificationCase.getPricingConfirmed())
 				.invoiceGenerated(verificationCase.getInvoiceGenerated())
-				.activityTimeline(activityTimeline)
+				// .activityTimeline(activityTimeline)
 				.vpackage(vpackageDTO).pricing(pricingDTO)
 				.invoiceStatus(invoiceStatus)
 		        .paymentCompleted(paymentCompleted)
@@ -1527,7 +1527,7 @@ public class VerificationCaseService {
 					.build();
 		}).collect(Collectors.toList());
 	}
-
+/*
 	private List<ActivityTimelineDTO> buildActivityTimeline(VerificationCase verificationCase,
 			List<VerificationCaseCheck> caseChecks) {
 
@@ -1567,6 +1567,7 @@ public class VerificationCaseService {
 
 		return timeline;
 	}
+	*/
 
 	private String formatTimestamp(LocalDateTime time) {
 		if (time == null)
@@ -1634,80 +1635,101 @@ public class VerificationCaseService {
 	
 	@Transactional
 	public void removeVerificationCase(Long caseId) {
+
 	    log.info("Removing verification case with caseId: {}", caseId);
 
 	    VerificationCase verificationCase = verificationCaseRepository.findById(caseId)
-	            .orElseThrow(() -> new RuntimeException("Verification case not found with id: " + caseId));
+	            .orElseThrow(() ->
+	                    new RuntimeException("Verification case not found with id: " + caseId));
 
-	    // 1. Delete document links first (no cascade from VerificationCaseDocument → Link)
+	    // ==========================================================
+	    // Delete document links
+	    // ==========================================================
 	    List<VerificationCaseDocument> caseDocuments =
 	            verificationCaseDocumentRepository.findByVerificationCaseCaseId(caseId);
 
 	    for (VerificationCaseDocument doc : caseDocuments) {
 	        verificationCaseDocumentLinkRepository.deleteAllByCaseDocument(doc);
 	    }
-	    log.info("Deleted document links for caseId: {}", caseId);
 
-	    // 2. Delete candidate verification (tracks candidate upload progress)
-	    if (candidateVerificationRepository
-	            .existsByCandidateIdAndVerificationCaseCaseId(
-	                    verificationCase.getCandidateId(), caseId)) {
-	        candidateVerificationRepository
-	                .deleteByVerificationCaseCaseId(caseId);
-	        log.info("Deleted candidate verification for caseId: {}", caseId);
+	    // ==========================================================
+	    // Candidate verification
+	    // ==========================================================
+	    candidateVerificationRepository.deleteByVerificationCaseCaseId(caseId);
+
+	    // ==========================================================
+	    // Candidate package rules
+	    // ==========================================================
+	    candidatePackageRuleDocumentRepository.deleteByVerificationCaseCaseId(caseId);
+
+	    candidatePackageRuleRepository.deleteByVerificationCaseCaseId(caseId);
+
+	    // ==========================================================
+	    // Documents
+	    // ==========================================================
+	    documentRepository.deleteByVerificationCaseCaseId(caseId);
+
+	    // ==========================================================
+	    // Vendor actions
+	    // ==========================================================
+	    verificationActionEvidenceRepository
+	            .deleteByActionVerificationCaseCaseId(caseId);
+
+	    verificationActionRepository
+	            .deleteByVerificationCaseCaseId(caseId);
+
+	    // ==========================================================
+	    // Vendor notes / timeline
+	    // ==========================================================
+	    vendorNoteRepository
+	            .deleteByVerificationCaseCheckVerificationCaseCaseId(caseId);
+
+	    verificationTimelineRepository
+	            .deleteByVerificationCaseCheckVerificationCaseCaseId(caseId);
+
+	    // ==========================================================
+	    // Selection records
+	    // ==========================================================
+	    verificationCaseSelectionRepository
+	            .deleteByVerificationCase_CaseId(caseId);
+
+	    // ==========================================================
+	    // Candidate data
+	    // ==========================================================
+	    identityProofRepository.deleteByVerificationCaseCaseId(caseId);
+
+	    educationHistoryRepository.deleteByVerificationCaseCaseId(caseId);
+
+	    workExperienceRepository.deleteByVerificationCaseCaseId(caseId);
+
+	    addressRepository.deleteByVerificationCase_CaseId(caseId);
+
+	    // ==========================================================
+	    // Invoice
+	    // ==========================================================
+	    Invoice invoice =
+	            invoiceRepository.findByVerificationCase(verificationCase)
+	                    .orElse(null);
+
+	    if (invoice != null) {
+
+	        invoiceItemRepository.deleteByInvoice(invoice);
+
+	        invoiceRepository.delete(invoice);
+
+	        log.info("Deleted invoice for caseId: {}", caseId);
 	    }
 
-	    // 3. Delete candidate package rule documents tied to this case
-	    candidatePackageRuleDocumentRepository.deleteByVerificationCaseCaseId(caseId);
-	    log.info("Deleted candidate package rule documents for caseId: {}", caseId);
-
-	    // 4. Delete candidate package rules tied to this case
-	    candidatePackageRuleRepository.deleteByVerificationCaseCaseId(caseId);
-	    log.info("Deleted candidate package rules for caseId: {}", caseId);
-
-	    // 5. Delete documents (uploaded files) linked to this case
-	    documentRepository.deleteByVerificationCaseCaseId(caseId);
-	    log.info("Deleted uploaded documents for caseId: {}", caseId);
-	    
-	    verificationActionEvidenceRepository.deleteByActionVerificationCaseCaseId(caseId);
-	    log.info("Deleted verification action evidence for caseId: {}", caseId);
-	    
-	    verificationActionRepository.deleteByVerificationCaseCaseId(caseId);
-	    log.info("Deleted verification actions for caseId: {}", caseId);
-	    
-	    identityProofRepository.deleteByVerificationCaseCaseId(caseId);
-	    log.info("Deleted identity proofs for caseId: {}", caseId);
-	    
-	    educationHistoryRepository.deleteByVerificationCaseCaseId(caseId);
-	    log.info("Deleted education history for caseId: {}", caseId);
-	    
-	    workExperienceRepository.deleteByVerificationCaseCaseId(caseId);
-	    log.info("Deleted work experience for caseId: {}", caseId);
-	    
-	    addressRepository.deleteByVerificationCase_CaseId(caseId);
-	    
-	    verificationCaseSelectionRepository.deleteByVerificationCase_CaseId(caseId);
-	    
-	    vendorNoteRepository.deleteByVerificationCaseCheckVerificationCaseCaseId(caseId);
-	    
-	    verificationTimelineRepository.deleteByVerificationCaseCheckVerificationCaseCaseId(caseId);
-	    
-	    
-	    Invoice invoice = invoiceRepository.findByVerificationCase(verificationCase).orElse(null);
-	   
-	    invoiceItemRepository.deleteByInvoice(invoice);
-	    invoiceRepository.delete(invoice);
-	    
-	  //  List<CasePayment> casePayments = casePaymentRepository.findByVerificationCase(verificationCase);
-	    
+	    // ==========================================================
+	    // Payments
+	    // ==========================================================
 	    casePaymentRepository.deleteByVerificationCase_CaseId(caseId);
-	 
-	    //  List<InvoiceItem> invoiceItems = invoiceItemRepository.findByInvoice(invoice);
-	    
-	    
-	  //  verificationCase.setStatus(CaseStatus.CANCELLED);
+
+	    // ==========================================================
+	    // Finally delete case
+	    // ==========================================================
 	    verificationCaseRepository.delete(verificationCase);
-	  //  verificationCaseRepository.save(verificationCase);
+
 	    log.info("Verification case {} removed successfully", caseId);
 	}
 	

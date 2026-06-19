@@ -20,7 +20,7 @@ public class WorkExperienceFieldBuilder
         fields.add(FieldsUtil.text(
                 "COMPANY_NAME",
                 "Company Name",
-                work.getCompany_name(),
+                work.getCompanyName(),
                 true
         ));
 
@@ -34,14 +34,14 @@ public class WorkExperienceFieldBuilder
         fields.add(FieldsUtil.date(
                 "START_DATE",
                 "Start Date",
-                work.getStart_date(),
+                work.getStartDate(),
                 true
         ));
 
         fields.add(FieldsUtil.date(
                 "END_DATE",
                 "End Date",
-                work.getCurrentlyWorking() ? null : work.getEnd_date(),
+                work.getCurrentlyWorking() ? null : work.getEndDate(),
                 false
         ));
 
@@ -85,21 +85,21 @@ public class WorkExperienceFieldBuilder
         fields.add(FieldsUtil.text(
                 "EMPLOYEE_ID",
                 "Employee ID",
-                work.getEmployee_id(),
+                work.getEmployeeId(),
                 false
         ));
 
         fields.add(FieldsUtil.text(
                 "MANAGER_EMAIL",
                 "Manager Email",
-                work.getManager_email_id(),
+                work.getManagerEmailId(),
                 false
         ));
 
         fields.add(FieldsUtil.text(
                 "HR_EMAIL",
                 "HR Email",
-                work.getHr_email_id(),
+                work.getHrEmailId(),
                 false
         ));
 

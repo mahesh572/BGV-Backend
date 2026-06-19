@@ -70,6 +70,7 @@ import com.org.bgv.notifications.service.NotificationDispatcher;
 import com.org.bgv.repository.*;
 import com.org.bgv.vendor.repository.VerificationActionEvidenceRepository;
 import com.org.bgv.vendor.repository.VerificationActionRepository;
+import com.org.bgv.vendor.service.VerificationObjectService;
 import com.org.bgv.wallet.service.PaymentService;
 
 import jakarta.persistence.criteria.Predicate;
@@ -138,6 +139,7 @@ public class VerificationCaseSelectionService {
 	private final AddressRepository addressRepository;
 	private final VerificationCaseSelectionRepository verificationCaseSelectionRepository;
 	private final RuleExecutionStrategyFactory strategyFactory;
+	private final VerificationObjectService verificationObjectService;
 
 	@Transactional
 	public void populateSelections(Long caseId) {
@@ -170,6 +172,8 @@ public class VerificationCaseSelectionService {
 	private void processRule(VerificationCase verificationCase, CandidatePackageRule rule) {
 	    Long categoryId = rule.getCheckCategoryId();
 	    CheckCategory checkCategory = checkCategoryRepository.findByCategoryId(categoryId);
+	    
+	    VerificationCaseCheck verificationCaseCheck = verificationCaseCheckRepository.findByVerificationCase_CaseIdAndCategory_CategoryId(verificationCase.getCaseId(), categoryId).orElseGet(null);
 
 	    // =========================
 	    // 1. DOCUMENT TYPE RULES
@@ -182,21 +186,21 @@ public class VerificationCaseSelectionService {
 	    // 2. EDUCATION RULES
 	    // =========================
 	    else if (checkCategory != null && checkCategory.getName().equalsIgnoreCase(CheckCategoryEnum.EDUCATION.getName())) {
-	        processEducationRules(verificationCase, rule);
+	        processEducationRules(verificationCase, rule,verificationCaseCheck);
 	    }
 
 	    // =========================
 	    // 3. WORK RULES
 	    // =========================
 	    else if (checkCategory != null && checkCategory.getName().equalsIgnoreCase(CheckCategoryEnum.WORK_EXPERIENCE.getName())) {
-	        processWorkRules(verificationCase, rule);
+	        processWorkRules(verificationCase, rule,verificationCaseCheck);
 	    }
 	    
 	    // =========================
 	    // 4. ADDRESS RULES
 	    // =========================
 	    else if (checkCategory != null && checkCategory.getName().equalsIgnoreCase(CheckCategoryEnum.ADDRESS.getName())) {
-	        processAddressRules(verificationCase, rule);
+	        processAddressRules(verificationCase, rule,verificationCaseCheck);
 	    }
 	}
 
@@ -308,7 +312,7 @@ public class VerificationCaseSelectionService {
 
 
 
-	private void processEducationRules(VerificationCase verificationCase, CandidatePackageRule rule) {
+	private void processEducationRules(VerificationCase verificationCase, CandidatePackageRule rule,VerificationCaseCheck verificationCaseCheck) {
 	    RuleTypes ruleType = ruleTypesRepository.findById(rule.getRuleTypeId()).orElse(null);
 	    if (ruleType == null) return;
 
@@ -354,6 +358,15 @@ public class VerificationCaseSelectionService {
 	            edu.setVerificationCase(verificationCase);
 	            educationHistoryRepository.save(edu);
 	            
+	            String objectName =
+	                    edu.getDegree().getName() + " - " + edu.getInstituteName();
+	            
+	            verificationObjectService.create(
+	            		verificationCaseCheck,
+	                    CheckCategoryEnum.EDUCATION,
+	                    edu.getId(),
+	                    objectName);
+	            
 	            attachDocumentsToSelection(selection, edu.getId(), checkCategory.getCategoryId());
 	            updateSelectionStatus(selection);
 	        }
@@ -380,6 +393,15 @@ public class VerificationCaseSelectionService {
 	                edu.setVerificationCase(verificationCase);
 	                educationHistoryRepository.save(edu);
 	                
+	                String objectName =
+	                        edu.getDegree().getName() + " - " + edu.getInstituteName();
+	                
+	                verificationObjectService.create(
+		            		verificationCaseCheck,
+		                    CheckCategoryEnum.EDUCATION,
+		                    edu.getId(),
+		                    objectName);
+	                
 	                attachDocumentsToSelection(selection, edu.getId(), checkCategory.getCategoryId());
 	                updateSelectionStatus(selection);
 	            }
@@ -387,7 +409,7 @@ public class VerificationCaseSelectionService {
 	    }
 	}
 
-	private void processWorkRules(VerificationCase verificationCase, CandidatePackageRule rule) {
+	private void processWorkRules(VerificationCase verificationCase, CandidatePackageRule rule,VerificationCaseCheck verificationCaseCheck) {
 	    RuleTypes ruleType = ruleTypesRepository.findById(rule.getRuleTypeId()).orElse(null);
 	    if (ruleType == null) return;
 
@@ -429,6 +451,12 @@ public class VerificationCaseSelectionService {
 	            work.setVerificationCase(verificationCase);
 	            workExperienceRepository.save(work);
 	            
+	            verificationObjectService.create(
+	            		verificationCaseCheck,
+	                    CheckCategoryEnum.WORK_EXPERIENCE,
+	                    work.getExperienceId(),
+	                    work.getCompanyName());
+	            
 	            attachDocumentsToSelection(selection, work.getExperienceId(), checkCategory.getCategoryId());
 	            updateSelectionStatus(selection);
 	        }
@@ -456,6 +484,12 @@ public class VerificationCaseSelectionService {
 	                work.setVerificationCase(verificationCase);
 	                workExperienceRepository.save(work);
 	                
+	                verificationObjectService.create(
+		            		verificationCaseCheck,
+		                    CheckCategoryEnum.WORK_EXPERIENCE,
+		                    work.getExperienceId(),
+		                    work.getCompanyName());
+	                
 	                attachDocumentsToSelection(selection, work.getExperienceId(), checkCategory.getCategoryId());
 	                updateSelectionStatus(selection);
 	            }
@@ -463,7 +497,7 @@ public class VerificationCaseSelectionService {
 	    }
 	}
 
-	private void processAddressRules(VerificationCase verificationCase, CandidatePackageRule rule) {
+	private void processAddressRules(VerificationCase verificationCase, CandidatePackageRule rule,VerificationCaseCheck verificationCaseCheck) {
 	    RuleTypes ruleType = ruleTypesRepository.findById(rule.getRuleTypeId()).orElse(null);
 	    if (ruleType == null) return;
 
@@ -503,6 +537,19 @@ public class VerificationCaseSelectionService {
 	            
 	            addr.setVerificationCase(verificationCase);
 	            addressRepository.save(addr);
+	            
+	            String objectName =
+	                    addr.getAddressType()
+	                    + " Address - "
+	                    + addr.getCity()
+	                    + ", "
+	                    + addr.getState();
+	            
+	            verificationObjectService.create(
+	            		verificationCaseCheck,
+	                    CheckCategoryEnum.ADDRESS,
+	                    addr.getId(),
+	                    objectName);
 	            
 	            attachDocumentsToSelection(selection, addr.getId(), checkCategory.getCategoryId());
 	            updateSelectionStatus(selection);
@@ -579,8 +626,8 @@ public class VerificationCaseSelectionService {
 	    return workExperienceRepository.findByVerificationCaseCaseId(caseId)
 	            .stream()
 	            .sorted(Comparator.<WorkExperience, LocalDate>comparing(w -> {
-	                if (w.getEnd_date() != null) {
-	                    return w.getEnd_date();
+	                if (w.getEndDate() != null) {
+	                    return w.getEndDate();
 	                } else {
 	                    return LocalDate.now();
 	                }

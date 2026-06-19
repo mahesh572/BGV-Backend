@@ -60,14 +60,27 @@ public class WorkExperience {
     @Column(name = "company_id")
     private Long companyId;
     
-    private String company_name;
+    @Column(name="company_name")
+    private String companyName;
+
     private String position;
-    private LocalDate start_date;
-    private LocalDate end_date;
+    
+    @Column(name="start_date")
+    private LocalDate startDate;
+
+    @Column(name="end_date")
+    private LocalDate endDate;
+    
     private String reason;
-    private String employee_id;
-    private String manager_email_id;
-    private String hr_email_id;
+   
+    @Column(name="employee_id")
+    private String employeeId;
+   
+    @Column(name="hr_email_id")
+    private String hrEmailId;
+
+    @Column(name="manager_email_id")
+    private String managerEmailId;
     private String address;
     
     private Boolean currentlyWorking;
@@ -98,17 +111,17 @@ public class WorkExperience {
     
  // Helper methods
     public int getDurationInMonths() {
-        if (start_date == null) {
+        if (startDate == null) {
             return 0;
         }
         
-        LocalDate end = currentlyWorking ? LocalDate.now() : end_date;
+        LocalDate end = currentlyWorking ? LocalDate.now() : endDate;
         if (end == null) {
             return 0;
         }
         
         return (int) java.time.temporal.ChronoUnit.MONTHS.between(
-            start_date.withDayOfMonth(1),
+        		startDate.withDayOfMonth(1),
             end.withDayOfMonth(1)
         );
     }

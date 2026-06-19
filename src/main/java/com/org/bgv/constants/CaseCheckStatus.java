@@ -17,6 +17,7 @@ public enum CaseCheckStatus {
     REVERIFY_REQUIRED,
     ACTION_REQUIRED,
     ASSIGNED,
+    PENDING_VENDOR_ASSIGNMENT,
     ESCALATED;
 	
 //	CANDIDATE_PENDING("Candidate Pending"),  // Waiting for initial submission

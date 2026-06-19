@@ -76,7 +76,7 @@ public class CandidateDetailsMapper {
              //   .company(mapCompany(candidate.getCompany()))
               //  .vpackage(getMockPackage()) // Mock data - replace with actual
                 .verificationChecks(getVerificationChecks(candidate)) 
-                .activityTimeline(mapActivityTimeline(candidate.getActivityTimeline()))
+               // .activityTimeline(mapActivityTimeline(candidate.getActivityTimeline()))
                 .build();
     }
     
@@ -115,7 +115,7 @@ public class CandidateDetailsMapper {
                // .location(company.getLocation())
                 .build();
     }
-    
+    /*
     private List<ActivityTimelineDTO> mapActivityTimeline(List<ActivityTimeline> activities) {
         if (activities == null || activities.isEmpty()) {
             return getMockActivityTimeline();
@@ -125,7 +125,7 @@ public class CandidateDetailsMapper {
                 .map(this::mapActivityTimelineItem)
                 .collect(Collectors.toList());
     }
-    
+    */
     private ActivityTimelineDTO mapActivityTimelineItem(ActivityTimeline activity) {
         return ActivityTimelineDTO.builder()
                 .id(activity.getId())
@@ -274,26 +274,5 @@ public class CandidateDetailsMapper {
         };
     }
     
-    private List<ActivityTimelineDTO> getMockActivityTimeline() {
-        return List.of(
-                ActivityTimelineDTO.builder()
-                        .id(1L)
-                        .title("Candidate Created")
-                        .description("Candidate profile was created in the system")
-                        .timestamp("16 Jan 2024 07:05 AM")
-                        .icon("👤")
-                        .status("completed")
-                        .type("SYSTEM")
-                        .build(),
-                ActivityTimelineDTO.builder()
-                        .id(2L)
-                        .title("Profile Updated")
-                        .description("Candidate updated their profile information")
-                        .timestamp("16 Jan 2024 02:25 PM")
-                        .icon("📝")
-                        .status("completed")
-                        .type("USER")
-                        .build()
-        );
-    }
+   
 }

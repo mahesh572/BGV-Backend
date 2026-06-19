@@ -2,6 +2,8 @@ package com.org.bgv.vendor.dto;
 
 import com.fasterxml.jackson.annotation.JsonInclude;
 import com.fasterxml.jackson.annotation.JsonProperty;
+import com.org.bgv.commom.dto.OptionDTO;
+import com.org.bgv.common.Option;
 import com.org.bgv.vendor.action.dto.ActionDTO;
 
 import lombok.AllArgsConstructor;
@@ -35,7 +37,9 @@ public class ObjectDTO {
     @JsonProperty("data")
     private Map<String, Object> data;
     
-    private List<ObjectFieldDTO> fields;
+   // private List<ObjectFieldDTO> fields;
+    
+    private List<ObjectComparisonFieldDTO> fields;
     
     
     @JsonProperty("documentTypes")
@@ -43,4 +47,6 @@ public class ObjectDTO {
     
     @JsonProperty("evidence")
     private List<EvidenceDTO> evidence;
+    
+    private List<OptionDTO> fieldSatusOptions;
 }

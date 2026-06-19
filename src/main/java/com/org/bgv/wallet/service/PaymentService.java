@@ -10,6 +10,7 @@ import com.org.bgv.constants.TransactionType;
 import com.org.bgv.entity.*;
 import com.org.bgv.enums.InvoiceStatus;
 import com.org.bgv.enums.PaymentMethod;
+import com.org.bgv.exceptions.BusinessException;
 import com.org.bgv.invoice.entity.CasePayment;
 import com.org.bgv.invoice.entity.Invoice;
 import com.org.bgv.invoice.repository.CasePaymentRepository;
@@ -587,7 +588,10 @@ public WalletBalanceResponseDto getWalletBalance(Long companyId) {
             log.info("Invoice marked PAID : {}",
                     invoice.getInvoiceNumber());
 
-            VerificationCase verificationCase = verificationCaseRepository.findById(requestDto.getCaseId()).orElseGet(null);
+            VerificationCase verificationCase =
+                    verificationCaseRepository.findById(requestDto.getCaseId())
+                            .orElseThrow(() ->
+                                    new BusinessException("Verification case not found"));
             
             
            // Optional: create CasePayment table entry
@@ -606,9 +610,15 @@ public WalletBalanceResponseDto getWalletBalance(Long companyId) {
             
             List<VerificationCaseCheck> caseChecks = verificationCaseCheckRepository
     				.findByVerificationCase_CaseId(verificationCase.getCaseId());
-            vendorAssignmentService.assignVendorsToCaseChecks(caseChecks);
             
-            verificationCase.setStatus(CaseStatus.ASSIGNED);
+            boolean assigned =
+                    vendorAssignmentService.assignVendorsToCaseChecks(caseChecks);
+
+            if (assigned) {
+                verificationCase.setStatus(CaseStatus.ASSIGNED);
+            } else {
+                verificationCase.setStatus(CaseStatus.PENDING_ASSIGNMENT);
+            }
             
             verificationCaseRepository.save(verificationCase);
             
