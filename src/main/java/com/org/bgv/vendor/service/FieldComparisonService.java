@@ -204,7 +204,7 @@ public class FieldComparisonService {
                 request.getSourceValue());
 
         VerificationObject object =
-                verificationObjectRepository.findBySourceId(request.getObjectId())
+                verificationObjectRepository.findBySourceIdAndVerificationCheck_CaseCheckId(request.getObjectId(),request.getCheckId())
                         .orElseThrow(() -> {
                             log.error(
                                     "Verification object not found for sourceId={}",

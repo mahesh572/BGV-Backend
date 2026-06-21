@@ -1,9 +1,9 @@
 package com.org.bgv.company.repository;
 
 import com.org.bgv.company.entity.EmployerDocumentPricing;
-import com.org.bgv.entity.Company;
 import com.org.bgv.entity.CheckCategory;
 import com.org.bgv.entity.DocumentType;
+import com.org.bgv.onboarding.entity.Company;
 
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.stereotype.Repository;

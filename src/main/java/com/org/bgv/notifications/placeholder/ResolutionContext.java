@@ -5,10 +5,10 @@ import java.util.Map;
 import com.org.bgv.candidate.entity.Candidate;
 import com.org.bgv.company.entity.CompanyEmailSettings;
 import com.org.bgv.company.entity.Employee;
-import com.org.bgv.entity.Company;
 import com.org.bgv.entity.PlatformConfig;
 import com.org.bgv.entity.PlatformEmailSettings;
 import com.org.bgv.notifications.dto.NotificationPlaceholder;
+import com.org.bgv.onboarding.entity.Company;
 
 import lombok.Builder;
 import lombok.Data;

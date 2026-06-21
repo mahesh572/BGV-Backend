@@ -13,6 +13,7 @@ import com.org.bgv.config.JwtUtil;
 import com.org.bgv.constants.Constants;
 import com.org.bgv.constants.UserStatus;
 import com.org.bgv.dto.UserDetailsDto;
+import com.org.bgv.entity.UserType;
 import com.org.bgv.service.UserService;
 
 import io.swagger.v3.oas.annotations.Operation;
@@ -59,7 +60,7 @@ public class UserController {
     public ResponseEntity<CustomApiResponse<UserDto>> create(@RequestBody UserDto userDto) {
         try {
         	logger.info("users/create::::::{}",userDto);
-        	userDto.setUserType(Constants.USER_TYPE_CANDIDATE);
+        	userDto.setUserType(UserType.CANDIDATE);
         	UserDto createdUser = userService.create(userDto);
             return ResponseEntity.status(HttpStatus.CREATED)
                     .body(CustomApiResponse.success("User created successfully", createdUser, HttpStatus.CREATED));

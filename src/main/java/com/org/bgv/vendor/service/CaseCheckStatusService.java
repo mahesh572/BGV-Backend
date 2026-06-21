@@ -96,7 +96,7 @@ public class CaseCheckStatusService {
     }
 
     private boolean isVendorAssigned(VerificationCaseCheck check) {
-        return check.getVendorId() != null;
+        return check.getAssignedVendorUser() != null;
     }
 
     private boolean isSubmitted(VerificationCaseCheck check) {

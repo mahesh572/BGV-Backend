@@ -15,6 +15,7 @@ import com.org.bgv.invoice.entity.CasePayment;
 import com.org.bgv.invoice.entity.Invoice;
 import com.org.bgv.invoice.repository.CasePaymentRepository;
 import com.org.bgv.invoice.repository.InvoiceRepository;
+import com.org.bgv.onboarding.entity.Company;
 import com.org.bgv.repository.*;
 import com.org.bgv.service.VendorAssignmentService;
 import com.org.bgv.wallet.dto.CreatePaymentRequestDto;
@@ -610,9 +611,8 @@ public WalletBalanceResponseDto getWalletBalance(Long companyId) {
             
             List<VerificationCaseCheck> caseChecks = verificationCaseCheckRepository
     				.findByVerificationCase_CaseId(verificationCase.getCaseId());
-            
-            boolean assigned =
-                    vendorAssignmentService.assignVendorsToCaseChecks(caseChecks);
+           
+            boolean assigned = vendorAssignmentService.assignVendorsToCaseChecks(caseChecks);
 
             if (assigned) {
                 verificationCase.setStatus(CaseStatus.ASSIGNED);

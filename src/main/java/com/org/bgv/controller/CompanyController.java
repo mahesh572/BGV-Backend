@@ -42,8 +42,8 @@ import com.org.bgv.company.dto.PersonDTO;
 import com.org.bgv.company.dto.VerificationCaseDetailsDTO;
 import com.org.bgv.config.SecurityUtils;
 import com.org.bgv.constants.Constants;
-import com.org.bgv.entity.Company;
 import com.org.bgv.entity.User;
+import com.org.bgv.onboarding.entity.Company;
 import com.org.bgv.role.dto.RoleResponse;
 import com.org.bgv.service.CandidateService;
 import com.org.bgv.service.CompanyService;
@@ -131,7 +131,7 @@ public class CompanyController {
                     ));
         }
     }
-
+/*
     // Update company status
     @PatchMapping("/{id}/status")
     public ResponseEntity<CustomApiResponse<Company>> updateCompanyStatus(
@@ -161,7 +161,7 @@ public class CompanyController {
         }
     }
     
-    
+    */
    
     
     @PostMapping("/{companyId}/candidate")

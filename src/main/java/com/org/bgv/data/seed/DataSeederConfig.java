@@ -3,10 +3,10 @@ package com.org.bgv.data.seed;
 import com.org.bgv.common.RoleConstants;
 import com.org.bgv.common.navigation.CreateNavigationMenuDto;
 import com.org.bgv.common.navigation.NavigationResponseDto;
+import com.org.bgv.company.dto.CompanyType;
 import com.org.bgv.entity.BGVCategory;
 import com.org.bgv.entity.CheckCategory;
 import com.org.bgv.entity.CheckType;
-import com.org.bgv.entity.Company;
 import com.org.bgv.entity.CompanyUser;
 import com.org.bgv.entity.DegreeDocumentType;
 import com.org.bgv.entity.DegreeType;
@@ -18,6 +18,8 @@ import com.org.bgv.entity.Role;
 import com.org.bgv.entity.RolePermission;
 import com.org.bgv.entity.User;
 import com.org.bgv.entity.UserRole;
+import com.org.bgv.entity.UserType;
+import com.org.bgv.onboarding.entity.Company;
 import com.org.bgv.repository.BGVCategoryRepository;
 import com.org.bgv.repository.CheckCategoryRepository;
 import com.org.bgv.repository.CheckTypeRepository;
@@ -88,6 +90,8 @@ public class DataSeederConfig implements CommandLineRunner {
 		seedSingleOtherRecord();
 		seedDefaultAdminUser();
 		seedDegreeDocumentMapping();
+		
+		
 
 		// seedBGVCategoriesAndCheckTypes();
 		// setdefaultnavigationSeed();
@@ -96,14 +100,13 @@ public class DataSeederConfig implements CommandLineRunner {
 	}
 
 	private void seedDefaultAdminUser() {
+		
 		if (userRepository.findByEmail("admin@example.com").isEmpty()) {
 			User adminUser = User.builder()
-					// .firstName("System Administrator")
-					.email("admin@example.com").password(passwordEncoder.encode("123456"))
-					// .firstName("System")
-					// .lastName("Administrator")
-					// .phoneNumber("+1234567890")
-					.userType("ADMIN").build();
+					.email("admin@example.com")
+					.password(passwordEncoder.encode("123456"))
+					.userType(UserType.ADMIN)
+					.build();
 
 			User savedAdmin = userRepository.save(adminUser);
 
@@ -111,9 +114,15 @@ public class DataSeederConfig implements CommandLineRunner {
 			Role adminRole = roleRepository.findByName("Administrator")
 					.orElseThrow(() -> new RuntimeException("Administrator not found"));
 
-			UserRole userRole = UserRole.builder().user(savedAdmin).role(adminRole).build();
+			UserRole userRole = UserRole.builder()
+					.user(savedAdmin)
+					.role(adminRole)
+					.build();
+			
 			userRoleRepository.save(userRole);
-			Boolean isExisted = companyRepository.existsByCompanyName("default");
+			
+			
+			Boolean isExisted = companyRepository.existsByCompanyType(CompanyType.DEFAULT);
 			if (!isExisted) {
 				Company defaultCompany = createDefaultCompany();
 				Company savedCompany = companyRepository.save(defaultCompany);
@@ -241,11 +250,11 @@ public class DataSeederConfig implements CommandLineRunner {
 				createRole("Vendor Agent", "Vendor Agent", RoleConstants.TYPE_VENDOR),
 				createRole("Field Agent", "Field Agent", RoleConstants.TYPE_VENDOR),
 				
-				createRole("Candidate", "Candidate", RoleConstants.TYPE_COMPANY),
-				createRole("Company Administrator", "Company Administrator", RoleConstants.TYPE_COMPANY),
-				createRole("Company HR Manager", "Company HR Manager", RoleConstants.TYPE_COMPANY),
-				createRole("Recruiter", "Recruiter", RoleConstants.TYPE_COMPANY),
-				createRole("Company", "Company", RoleConstants.TYPE_COMPANY)
+				createRole("Candidate", "Candidate", RoleConstants.TYPE_EMPLOYER),
+				createRole("Company Administrator", "Company Administrator", RoleConstants.TYPE_EMPLOYER),
+				createRole("Company HR Manager", "Company HR Manager", RoleConstants.TYPE_EMPLOYER),
+				createRole("Recruiter", "Recruiter", RoleConstants.TYPE_EMPLOYER),
+				createRole("Company", "Company", RoleConstants.TYPE_EMPLOYER)
 
 		);
 
@@ -415,7 +424,7 @@ public class DataSeederConfig implements CommandLineRunner {
 	private Company createDefaultCompany() {
 		Company company = new Company();
 		company.setCompanyName("default");
-		// company.setCompanyType("default");
+		 company.setCompanyType(CompanyType.DEFAULT);
 		// company.setRegistrationNumber("BGV-ADMIN-001");
 		// company.setTaxId("TAX-ADMIN-001");
 		// company.setIncorporationDate(LocalDate.now());

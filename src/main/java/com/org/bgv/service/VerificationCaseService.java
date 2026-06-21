@@ -77,6 +77,7 @@ import com.org.bgv.invoice.repository.CasePaymentRepository;
 import com.org.bgv.invoice.repository.InvoiceItemRepository;
 import com.org.bgv.invoice.repository.InvoiceRepository;
 import com.org.bgv.notifications.service.NotificationDispatcher;
+import com.org.bgv.onboarding.entity.Company;
 import com.org.bgv.repository.*;
 import com.org.bgv.vendor.repository.VendorNoteRepository;
 import com.org.bgv.vendor.repository.VerificationActionEvidenceRepository;
@@ -1496,36 +1497,50 @@ public class VerificationCaseService {
 				.build());
 	}
 
-	private List<VerificationCheckDTO> buildVerificationChecks(List<VerificationCaseCheck> caseChecks) {
+	private List<VerificationCheckDTO> buildVerificationChecks(
+	        List<VerificationCaseCheck> caseChecks) {
 
-		if (caseChecks == null || caseChecks.isEmpty()) {
-			return new ArrayList<>();
-		}
+	    if (caseChecks == null || caseChecks.isEmpty()) {
+	        return new ArrayList<>();
+	    }
 
-		return caseChecks.stream().map((VerificationCaseCheck check) -> {
+	    return caseChecks.stream()
+	            .map(check -> {
 
-			CheckCategory category = check.getCategory();
-			
-			Long vendorId = check.getVendorId();
-			String vendorname = "";
-			if(vendorId!=null) {
-				Vendor vendor = vendorRepository.findById(vendorId).orElseGet(null);
-				
-				if(vendor!=null && vendor.getUser()!=null) {
-					vendorname = vendor.getFirstName() + vendor.getLastName();
-				}
-			}
-			
+	                CheckCategory category = check.getCategory();
 
-			return VerificationCheckDTO.builder()
-					.id(check.getCaseCheckId())
-					.name(category != null ? category.getName() : "Unknown Check")
-					.description(category != null ? category.getDescription() : null)
-					.status(check.getStatus().name())
-					.icon(iconService.getIconForVerification(category.getName()))
-					.vendorName(vendorname)
-					.build();
-		}).collect(Collectors.toList());
+	                String vendorName = "";
+
+	                if (check.getAssignedVendorUser() != null) {
+
+	                    User vendorUser = check.getAssignedVendorUser();
+
+	                    if (vendorUser.getProfile() != null) {
+
+	                        vendorName =
+	                                vendorUser.getProfile().getFirstName()
+	                                + " "
+	                                + vendorUser.getProfile().getLastName();
+	                    }
+	                }
+
+	                return VerificationCheckDTO.builder()
+	                        .id(check.getCaseCheckId())
+	                        .name(category != null
+	                                ? category.getName()
+	                                : "Unknown Check")
+	                        .description(category != null
+	                                ? category.getDescription()
+	                                : null)
+	                        .status(check.getStatus().name())
+	                        .icon(category != null
+	                                ? iconService.getIconForVerification(category.getName())
+	                                : null)
+	                        .vendorName(vendorName)
+	                        .build();
+
+	            })
+	            .collect(Collectors.toList());
 	}
 /*
 	private List<ActivityTimelineDTO> buildActivityTimeline(VerificationCase verificationCase,

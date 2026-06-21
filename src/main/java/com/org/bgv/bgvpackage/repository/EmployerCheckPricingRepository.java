@@ -2,8 +2,8 @@ package com.org.bgv.bgvpackage.repository;
 
 import com.org.bgv.bgvpackage.entity.EmployerCheckPricing;
 import com.org.bgv.entity.CheckCategory;
-import com.org.bgv.entity.Company;
 import com.org.bgv.entity.RuleTypes;
+import com.org.bgv.onboarding.entity.Company;
 
 import org.springframework.data.jpa.repository.JpaRepository;
 

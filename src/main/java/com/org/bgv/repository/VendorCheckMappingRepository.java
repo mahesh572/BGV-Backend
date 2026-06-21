@@ -10,22 +10,34 @@ import org.springframework.stereotype.Repository;
 import com.org.bgv.entity.CheckCategory;
 import com.org.bgv.entity.Vendor;
 import com.org.bgv.entity.VendorCheckMapping;
+import com.org.bgv.onboarding.entity.Company;
 
 @Repository
-public interface VendorCheckMappingRepository extends JpaRepository<VendorCheckMapping, Long>{
-	
-	
-	@Query("""
-	        SELECT vcm.vendor
-	        FROM VendorCheckMapping vcm
-	        WHERE vcm.category.id = :categoryId
-	          AND vcm.isActive = true
-	          AND vcm.vendor.status = 'ACTIVE'
-	    """)
-	    List<Vendor> findActiveVendorsByCategory(@Param("categoryId") Long categoryId);
+public interface VendorCheckMappingRepository
+        extends JpaRepository<VendorCheckMapping, Long> {
 
-	boolean existsByVendorAndCategoryAndIsActiveTrue(
-		    Vendor vendor,
-		    CheckCategory category
-		);
+    @Query("""
+        SELECT vcm.vendorCompany
+        FROM VendorCheckMapping vcm
+        WHERE vcm.category.categoryId = :categoryId
+          AND vcm.isActive = true
+          AND vcm.vendorCompany.status = 'ACTIVE'
+    """)
+    List<Company> findActiveVendorCompaniesByCategory(
+            @Param("categoryId") Long categoryId);
+
+    boolean existsByVendorCompanyAndCategoryAndIsActiveTrue(
+            Company vendorCompany,
+            CheckCategory category);
+    
+    @Query("""
+    		SELECT vcm.vendorCompany
+    		FROM VendorCheckMapping vcm
+    		WHERE
+    		    vcm.category.categoryId=:categoryId
+    		    AND vcm.isActive=true
+    		""")
+    		List<Company> findCompaniesByCategory(
+    		        @Param("categoryId") Long categoryId);
+
 }

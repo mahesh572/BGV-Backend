@@ -5,6 +5,8 @@ import java.util.List;
 import java.util.ArrayList;
 import com.org.bgv.constants.CaseCheckStatus;
 import com.org.bgv.constants.CaseStatus;
+import com.org.bgv.onboarding.entity.Company;
+import com.org.bgv.vendor.entity.VendorUser;
 import com.org.bgv.vendor.entity.VerificationAction;
 
 import jakarta.persistence.*;
@@ -64,8 +66,14 @@ public class VerificationCaseCheck {
     @Builder.Default
     private LocalDateTime completedAt = LocalDateTime.now();
     
-    @Column(name = "vendor_id")
-    private Long vendorId;
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "vendor_company_id")
+    private Company vendorCompany;
+    
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "vendor_user_id")
+    private User assignedVendorUser;
+    
     
     @OneToMany(mappedBy = "verificationCaseCheck", cascade = CascadeType.ALL, fetch = FetchType.LAZY)
     @Builder.Default
@@ -81,5 +89,8 @@ public class VerificationCaseCheck {
     }
     
     private LocalDateTime assignedAt;
-    private Long assignedBy;
+   
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "assigned_by")
+    private User assignedBy;
 }

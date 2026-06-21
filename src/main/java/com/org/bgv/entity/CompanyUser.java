@@ -8,6 +8,8 @@ import lombok.NoArgsConstructor;
 
 import java.time.LocalDateTime;
 
+import com.org.bgv.onboarding.entity.Company;
+
 @Builder
 @Entity
 @Table(name = "company_users")

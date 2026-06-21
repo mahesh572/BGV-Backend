@@ -11,7 +11,10 @@ import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 import org.springframework.stereotype.Repository;
 
-import com.org.bgv.entity.Company;
+import com.org.bgv.onboarding.entity.Company;
+import com.org.bgv.company.dto.CompanyType;
+
+
 
 @Repository
 public interface CompanyRepository extends JpaRepository<Company, Long>, JpaSpecificationExecutor<Company> {
@@ -32,6 +35,7 @@ public interface CompanyRepository extends JpaRepository<Company, Long>, JpaSpec
     Optional<Company> findByContactEmail(@Param("email") String email);
     
     boolean existsByCompanyName(String companyName);
+    boolean existsByCompanyType(CompanyType companyType);
     
     boolean existsByRegistrationNumber(String registrationNumber);
     

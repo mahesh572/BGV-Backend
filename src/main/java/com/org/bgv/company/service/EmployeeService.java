@@ -34,7 +34,7 @@ import com.org.bgv.company.dto.EmployeeSearchRequest;
 import com.org.bgv.company.dto.UpdateEmployeeRequest;
 import com.org.bgv.company.entity.Employee;
 import com.org.bgv.company.repository.EmployeeRepository;
-import com.org.bgv.entity.Company;
+import com.org.bgv.constants.UserStatus;
 import com.org.bgv.entity.User;
 import com.org.bgv.entity.UserType;
 import com.org.bgv.notifications.NotificationEvent;
@@ -44,6 +44,7 @@ import com.org.bgv.notifications.service.NotificationDispatcher;
 import com.org.bgv.notifications.service.NotificationDispatcherService;
 import com.org.bgv.notifications.service.NotificationPolicyService;
 import com.org.bgv.notifications.service.SupportEmailResolver;
+import com.org.bgv.onboarding.entity.Company;
 import com.org.bgv.repository.CompanyRepository;
 import com.org.bgv.repository.UserRepository;
 import com.org.bgv.service.EmailService;
@@ -113,16 +114,14 @@ public class EmployeeService {
     
     private User createNewUser(CreateEmployeeRequest request,String tempPassword) {
     	
-    	
-
         User user = User.builder()
                 .email(request.getEmailAddress())
-                .userType(UserType.COMPANY.name()) // or COMPANY_USER
+                .userType(UserType.COMPANY) // or COMPANY_USER
                 .password(passwordEncoder.encode(tempPassword))
                 .isActive(true)
                 .isVerified(false)
                 .passwordResetrequired(true) // force reset on first login
-                .status("ACTIVE")
+                .status(UserStatus.ACTIVE)
                 .build();
 
         return userRepository.save(user);

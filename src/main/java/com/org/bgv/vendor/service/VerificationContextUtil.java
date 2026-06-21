@@ -10,10 +10,10 @@ import com.org.bgv.candidate.repository.AddressRepository;
 import com.org.bgv.candidate.repository.CandidateRepository;
 import com.org.bgv.candidate.repository.EducationHistoryRepository;
 import com.org.bgv.candidate.repository.WorkExperienceRepository;
-import com.org.bgv.entity.Company;
 import com.org.bgv.entity.Vendor;
 import com.org.bgv.entity.VerificationCase;
 import com.org.bgv.entity.VerificationCaseCheck;
+import com.org.bgv.onboarding.entity.Company;
 import com.org.bgv.repository.CompanyRepository;
 import com.org.bgv.repository.VendorRepository;
 import com.org.bgv.repository.VerificationCaseCheckRepository;
@@ -57,11 +57,14 @@ public class VerificationContextUtil {
                 companyRepository.findById(
                         verificationCase.getCompanyId())
                         .orElseThrow();
-
+/*
         Vendor vendor =
                 vendorRepository.findById(
-                        check.getVendorId())
+                        check.getAssignedVendorUser())
                         .orElse(null);
+                        
+                        */
+        Vendor vendor = null;
 
         Object verificationObject =
                 loadVerificationObject(

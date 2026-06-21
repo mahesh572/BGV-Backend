@@ -3,9 +3,9 @@ package com.org.bgv.bgvpackage.entity;
 import java.math.BigDecimal;
 
 import com.org.bgv.entity.CheckCategory;
-import com.org.bgv.entity.Company;
 import com.org.bgv.entity.RuleTypes;
 import com.org.bgv.enums.PricingType;
+import com.org.bgv.onboarding.entity.Company;
 
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;

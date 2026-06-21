@@ -7,10 +7,10 @@ import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
-import com.org.bgv.entity.Company;
 import com.org.bgv.entity.Job;
 import com.org.bgv.entity.User;
 import com.org.bgv.mapper.JobMapper;
+import com.org.bgv.onboarding.entity.Company;
 import com.org.bgv.recruitement.dto.JobPostDTO;
 import com.org.bgv.repository.CompanyRepository;
 import com.org.bgv.repository.JobRepository;

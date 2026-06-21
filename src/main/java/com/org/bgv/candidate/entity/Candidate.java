@@ -7,10 +7,10 @@ import java.util.List;
 
 import com.org.bgv.candidate.dto.CandidateStatus;
 import com.org.bgv.entity.ActivityTimeline;
-import com.org.bgv.entity.Company;
 import com.org.bgv.entity.JobApplication;
 import com.org.bgv.entity.Profile;
 import com.org.bgv.entity.User;
+import com.org.bgv.onboarding.entity.Company;
 
 import jakarta.persistence.CascadeType;
 import jakarta.persistence.Column;

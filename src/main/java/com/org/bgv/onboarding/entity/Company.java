@@ -1,4 +1,4 @@
-package com.org.bgv.entity;
+package com.org.bgv.onboarding.entity;
 
 import lombok.Data;
 import lombok.NoArgsConstructor;
@@ -61,6 +61,9 @@ public class Company {
     
     @Enumerated(EnumType.STRING)
     private CompanySize companySize;
+    
+    @Column(name = "tan_number", unique = true)
+    private String tanNumber;
     
        
     // Contact Information

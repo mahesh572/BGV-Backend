@@ -2,6 +2,7 @@ package com.org.bgv.onboarding.repository;
 
 
 import java.util.List;
+import java.util.Optional;
 
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.stereotype.Repository;
@@ -27,9 +28,12 @@ public interface CompanyAttributeDefinitionRepository
     /**
      * Find a particular attribute definition.
      */
+    
+    /*
     CompanyAttributeDefinition findByCompanyTypeAndAttributeCode(
             CompanyType companyType,
             String attributeCode);
+            */
 
     /**
      * Find all required attributes for a company type.
@@ -41,4 +45,8 @@ public interface CompanyAttributeDefinitionRepository
      * Find by attribute code.
      */
     List<CompanyAttributeDefinition> findByAttributeCode(String attributeCode);
+    
+    Optional<CompanyAttributeDefinition> findByCompanyTypeAndAttributeCode(
+            CompanyType companyType,
+            String attributeCode);
 }

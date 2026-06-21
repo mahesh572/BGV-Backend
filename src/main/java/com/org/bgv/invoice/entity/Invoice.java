@@ -7,9 +7,9 @@ import java.math.BigDecimal;
 import java.time.LocalDateTime;
 
 import com.org.bgv.candidate.entity.Candidate;
-import com.org.bgv.entity.Company;
 import com.org.bgv.entity.VerificationCase;
 import com.org.bgv.enums.InvoiceStatus;
+import com.org.bgv.onboarding.entity.Company;
 
 @Entity
 @Table(name = "invoices")

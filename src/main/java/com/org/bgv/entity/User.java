@@ -7,6 +7,8 @@ import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.util.List;
 
+import com.org.bgv.constants.UserStatus;
+
 @Entity
 @Table(name = "users")
 @Getter
@@ -27,8 +29,9 @@ public class User {
     @Column(name = "password")
     private String password;
     
+    @Enumerated(EnumType.STRING)
     @Column(name = "user_type")
-    private String userType;
+    private UserType userType;
     
     
     @Column(name = "is_active")
@@ -46,9 +49,9 @@ public class User {
     @Column(name = "updated_at")
     private LocalDateTime updatedAt;
     
-    
+    @Enumerated(EnumType.STRING)
     @Column(name = "status")
-    private String status;
+    private UserStatus status;
     
     @Column(name = "date_of_birth")
     private LocalDate dateOfBirth;

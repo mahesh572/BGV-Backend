@@ -8,6 +8,8 @@ import lombok.Data;
 
 @Data
 public class UpdateFieldComparisonRequest {
+	
+	private Long checkId;
 
     @NotNull
     private Long objectId;    // this is education,work objectId

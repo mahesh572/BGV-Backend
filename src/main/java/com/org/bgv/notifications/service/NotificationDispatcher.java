@@ -14,7 +14,6 @@ import com.org.bgv.candidate.entity.Candidate;
 import com.org.bgv.company.entity.Employee;
 import com.org.bgv.company.repository.CompanyEmailSettingsRepository;
 import com.org.bgv.company.repository.EmployeeRepository;
-import com.org.bgv.entity.Company;
 import com.org.bgv.entity.Profile;
 import com.org.bgv.entity.User;
 import com.org.bgv.notifications.NotificationEvent;
@@ -22,6 +21,7 @@ import com.org.bgv.notifications.dto.NotificationContext;
 import com.org.bgv.notifications.dto.NotificationPlaceholder;
 import com.org.bgv.notifications.placeholder.PlaceholderEngine;
 import com.org.bgv.notifications.placeholder.ResolutionContext;
+import com.org.bgv.onboarding.entity.Company;
 import com.org.bgv.repository.PlatformConfigRepository;
 import com.org.bgv.repository.PlatformEmailSettingsRepository;
 

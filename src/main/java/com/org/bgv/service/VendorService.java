@@ -11,6 +11,7 @@ import com.org.bgv.entity.Profile;
 import com.org.bgv.entity.Role;
 import com.org.bgv.entity.User;
 import com.org.bgv.entity.UserRole;
+import com.org.bgv.entity.UserType;
 import com.org.bgv.entity.Vendor;
 import com.org.bgv.entity.VendorCheckMapping;
 import com.org.bgv.repository.CheckCategoryRepository;
@@ -50,7 +51,7 @@ public class VendorService {
             User user = User.builder()
                 .email(vendorDTO.getEmail())
                 .password(passwordEncoder.encode("123456"))
-                .userType(Status.USER_TYPE_VENDOR)
+                .userType(UserType.VENDOR)
                 .dateOfBirth(vendorDTO.getDateOfBirth())
                 .build();
             
@@ -115,6 +116,8 @@ public class VendorService {
     }
     
     // Alternative solution using stream with effectively final variable
+    
+    /*
     private void saveVendorServicesWithStream(final Vendor vendor, List<Long> serviceIds) {
         List<VendorCheckMapping> mappings = serviceIds.stream()
             .map(checkTypeId -> {
@@ -132,5 +135,5 @@ public class VendorService {
         vendorCheckMappingRepository.saveAll(mappings);
     }
     
-    
+    */
 }

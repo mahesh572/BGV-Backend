@@ -1,8 +1,9 @@
 package com.org.bgv.company.dto;
 
-import com.org.bgv.entity.Company;
 import lombok.Data;
 import java.util.List;
+
+import com.org.bgv.onboarding.entity.Company;
 
 @Data
 public class CompanyListResponse {

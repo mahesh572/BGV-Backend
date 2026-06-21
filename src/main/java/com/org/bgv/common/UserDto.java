@@ -3,6 +3,8 @@ package com.org.bgv.common;
 import java.time.LocalDate;
 import java.util.List;
 
+import com.org.bgv.entity.UserType;
+
 import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Data;
@@ -15,7 +17,7 @@ import lombok.NoArgsConstructor;
 public class UserDto {
     private Long userId;
     private String email;
-    private String userType;
+    private UserType userType;
     private String firstName;
     private String lastName;
     private String name; // firstName + lastName
@@ -32,7 +34,7 @@ public class UserDto {
     private Boolean hasConsentProvided;
     private Long candidateId;
     private Boolean passwordResetrequired;
-    private Long vendorId;
+  //  private Long vendorId;
   //  private Long caseId;
     
 }

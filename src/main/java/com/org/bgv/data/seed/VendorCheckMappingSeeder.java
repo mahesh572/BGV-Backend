@@ -32,6 +32,8 @@ public class VendorCheckMappingSeeder implements CommandLineRunner {
    // @EventListener(ApplicationReadyEvent.class)
     public void run(String... args) {
         log.info("🌱 VendorCheckMapping seeding started...");
+        
+        /*
 
         List<Vendor> vendors = vendorRepository.findAll();
         List<CheckCategory> categories = checkCategoryRepository.findAll();
@@ -68,5 +70,9 @@ public class VendorCheckMappingSeeder implements CommandLineRunner {
         }
 
         log.info("🌱 VendorCheckMapping seeding completed.");
+        
+         */
     }
+    
+   
 }

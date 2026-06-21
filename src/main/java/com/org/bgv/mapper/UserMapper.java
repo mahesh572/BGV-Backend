@@ -81,7 +81,7 @@ public class UserMapper implements BaseMapper<User, UserDto> {
 	            .profilePictureUrl(user.getProfilePictureUrl())
 	            .isActive(user.getIsActive())
 	            .isVerified(user.getIsVerified())
-	            .status(user.getStatus())
+	            .status(user.getStatus()!=null?user.getStatus().name():"")
 	            .dateOfBirth(user.getDateOfBirth())
 	            .build();
 	}

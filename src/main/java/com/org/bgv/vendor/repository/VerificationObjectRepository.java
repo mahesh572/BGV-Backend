@@ -33,6 +33,8 @@ public interface VerificationObjectRepository extends JpaRepository<Verification
     // Find by source ID
     Optional<VerificationObject> findBySourceId(Long sourceId);
     
+    Optional<VerificationObject> findBySourceIdAndVerificationCheck_CaseCheckId(Long sourceId,Long caseCheckId);
+    
     // Find by candidate submitted flag
     List<VerificationObject> findByCandidateSubmitted(Boolean candidateSubmitted);
     

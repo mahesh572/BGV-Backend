@@ -24,7 +24,6 @@ import com.org.bgv.company.repository.EmployeeRepository;
 import com.org.bgv.config.JwtUtil;
 import com.org.bgv.controller.UserController;
 import com.org.bgv.dto.UserDetailsDto;
-import com.org.bgv.entity.Company;
 import com.org.bgv.entity.CompanyUser;
 import com.org.bgv.entity.Profile;
 import com.org.bgv.entity.Role;
@@ -33,6 +32,7 @@ import com.org.bgv.entity.UserRole;
 import com.org.bgv.entity.UserType;
 import com.org.bgv.entity.Vendor;
 import com.org.bgv.mapper.UserMapper;
+import com.org.bgv.onboarding.entity.Company;
 import com.org.bgv.repository.CompanyRepository;
 import com.org.bgv.repository.CompanyUserRepository;
 import com.org.bgv.repository.ProfileRepository;
@@ -449,7 +449,7 @@ public class UserService {
     
     public UserDto getUserFromToken(String token) {
     	UserDto userDto = null;
-try {
+    	try {
         if (jwtUtil.validateToken(token)) {
             String email = jwtUtil.getUsernameFromToken(token);
             userDto = getUserByEmail(email);
@@ -483,11 +483,13 @@ try {
             }
             
             logger.info("############################################################################:::::::::::::{}",UserType.VENDOR.name());
-            if(userDto.getUserType()!=null && userDto.getUserType().equalsIgnoreCase(UserType.VENDOR.name())) {
+            /*
+            if(userDto.getUserType()!=null && userDto.getUserType().equals(UserType.VENDOR)) {
             	Vendor vendor = vendorRepository.findByUser_userId(userDto.getUserId());
             	logger.info("in user service:::::::::::{}",vendor);
             	userDto.setVendorId(vendor.getId());
             }
+            */
         }
 			}catch (Exception e) {
 				e.printStackTrace();
@@ -638,6 +640,8 @@ try {
 
         return hasUpper && hasLower && hasDigit && hasSpecial;
     }
+    
+    
 /*
     @Transactional
     public void assignUsersToCompany(List<Long> userIds, Long companyId) {

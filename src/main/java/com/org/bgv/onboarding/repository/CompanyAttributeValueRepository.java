@@ -7,7 +7,7 @@ import java.util.Optional;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.stereotype.Repository;
 
-import com.org.bgv.entity.Company;
+import com.org.bgv.onboarding.entity.Company;
 import com.org.bgv.onboarding.entity.CompanyAttributeDefinition;
 import com.org.bgv.onboarding.entity.CompanyAttributeValue;
 
@@ -59,4 +59,9 @@ public interface CompanyAttributeValueRepository
     List<CompanyAttributeValue>
     findByAttributeDefinition_AttributeCode(
             String attributeCode);
+    
+    
+    
+
+    
 }

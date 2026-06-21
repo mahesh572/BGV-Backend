@@ -7,6 +7,7 @@ import org.hibernate.annotations.CreationTimestamp;
 import org.hibernate.annotations.UpdateTimestamp;
 
 import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
+import com.org.bgv.onboarding.entity.Company;
 
 import jakarta.persistence.*;
 import java.time.LocalDateTime;

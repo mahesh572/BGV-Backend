@@ -49,12 +49,13 @@ import com.org.bgv.company.dto.EmployerDTO;
 import com.org.bgv.company.dto.EnumOptionDTO;
 import com.org.bgv.company.dto.PersonDTO;
 import com.org.bgv.dto.document.CompanyDto;
-import com.org.bgv.entity.Company;
 import com.org.bgv.entity.CompanyUser;
 import com.org.bgv.entity.Profile;
 import com.org.bgv.entity.Role;
 import com.org.bgv.entity.User;
 import com.org.bgv.entity.UserRole;
+import com.org.bgv.entity.UserType;
+import com.org.bgv.onboarding.entity.Company;
 import com.org.bgv.repository.CompanyRepository;
 import com.org.bgv.repository.CompanyUserRepository;
 import com.org.bgv.repository.EmailTemplateRepository;
@@ -195,76 +196,8 @@ public class CompanyService {
 	    /**
 	     * Update company status
 	     */
-	    @Transactional
-	    public Company updateCompanyStatus(Long id, String status) {
-	        log.info("Updating company status - ID: {}, new status: {}", id, status);
-	        
-	        Optional<Company> companyOpt = companyRepository.findById(id);
-	        
-	        if (companyOpt.isEmpty()) {
-	            throw new RuntimeException("Company not found with ID: " + id);
-	        }
-	        
-	        Company company = companyOpt.get();
-	        company.setStatus(status);
-	        
-	        Company updatedCompany = companyRepository.save(company);
-	        log.info("Company status updated successfully - ID: {}, new status: {}", id, status);
-	        
-	        return updatedCompany;
-	    }
-	    /*
-	    public Boolean addEmployee(Long companyId, EmployeeDTO employeeDTO,String type) {
-	    	log.info("addEmployee::::::::::::::::::::::STARTED");
-	    	   	    		    	
-	    	String tempPassword = CommonUtils.generateTempPassword();
-	    	User user = User.builder()
-	              //  .firstName(employeeDTO.getFirstName())
-	              //  .lastName(employeeDTO.getLastName())
-	             //   .phoneNumber(employeeDTO.getMobileNo())
-	                .email(employeeDTO.getEmail())
-	             //   .gender(employeeDTO.getGender())
-	               // .password(UUID.randomUUID().toString())
-	                .password(passwordEncoder.encode(tempPassword))
-	                .userType(type)
-	                .passwordResetrequired(Boolean.TRUE)
-	                .status(employeeDTO.getStatus())
-	                .build();
-
-	        // Save user first (if User is a new entity)
-	        userRepository.save(user);
-	        // Find Company
-	        Company company = companyRepository.findById(companyId)
-	                .orElseThrow(() -> new RuntimeException("Company not found with ID: " + companyId));
-
-	        // Create CompanyUser mapping
-	        CompanyUser companyUser = new CompanyUser();
-	        companyUser.setCompany(company);
-	        companyUser.setUser(user);
-
-	        companyUserRepository.save(companyUser);
-
-	        Profile profile =  Profile.builder()
-            //  .profileId(dto.getBasicDetails().getProfileId())
-              .firstName(employeeDTO.getFirstName())
-              .lastName(employeeDTO.getLastName())
-              .emailAddress(employeeDTO.getEmail())
-              .phoneNumber(employeeDTO.getMobileNo())
-             // .dateOfBirth(employeeDTO.getDateOfBirth())
-              .gender(employeeDTO.getGender())
-             // .userId(dto.getUser_id())
-              .user(user)
-              .status(employeeDTO.getStatus())
-              .build();
-			
-	        profileRepository.save(profile);
-	        
-	        emailService.sendEmailToEmployeeRegistrationSuccess(user,tempPassword);
-
-	        return true;
-	    }
-
-*/
+	    
+	   
 	    public Boolean addCandidate(Long companyId, PersonDTO employeeDTO) {
 	    	log.info("addCandidate::::::::::::::::::::::STARTED");
 	    	
@@ -283,8 +216,8 @@ public class CompanyService {
 	    	             //   .gender(employeeDTO.getGender())
 	    	               // .password(UUID.randomUUID().toString())
 	    	                .password(passwordEncoder.encode("123456"))
-	    	                .userType(Status.USER_TYPE_CANDIDATE)
-	    	                .status(employeeDTO.getStatus())
+	    	                .userType(UserType.CANDIDATE)
+	    	               // .status(employeeDTO.getStatus())
 	    	                .build();
 
 	    	        // Save user first (if User is a new entity)
@@ -359,8 +292,8 @@ public class CompanyService {
     	             //   .gender(employeeDTO.getGender())
     	               // .password(UUID.randomUUID().toString())
     	                .password(passwordEncoder.encode("123456"))
-    	                .userType(Status.USER_TYPE_CANDIDATE)
-    	                .status(employeeDTO.getStatus())
+    	                .userType(UserType.CANDIDATE)
+    	              //  .status(employeeDTO.getStatus())
     	                .build();
 
     	        // Save user first (if User is a new entity)
@@ -967,6 +900,12 @@ public class CompanyService {
 	                )
 	                .toList();
 	    }
+	    
+	    
+	    
+	    // New Implementation for company registration...
+	    
+	    
 	    
 	    
 }

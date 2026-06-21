@@ -6,9 +6,9 @@ import org.springframework.stereotype.Component;
 
 import com.org.bgv.candidate.entity.Candidate;
 import com.org.bgv.common.CandidateDTO;
-import com.org.bgv.entity.Company;
 import com.org.bgv.entity.Profile;
 import com.org.bgv.entity.User;
+import com.org.bgv.onboarding.entity.Company;
 import com.org.bgv.repository.CompanyRepository;
 import com.org.bgv.repository.EmailTemplateRepository;
 import com.org.bgv.repository.ProfileRepository;

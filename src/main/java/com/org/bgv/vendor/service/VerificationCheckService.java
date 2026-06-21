@@ -20,6 +20,7 @@ import com.org.bgv.dto.CheckCategoryEnum;
 import com.org.bgv.entity.*;
 import com.org.bgv.enums.ComparisonStatus;
 import com.org.bgv.enums.VendorNoteType;
+import com.org.bgv.onboarding.entity.Company;
 import com.org.bgv.repository.*;
 import com.org.bgv.vendor.action.dto.ActionDTO;
 import com.org.bgv.vendor.action.dto.VendorActionCatalog;
@@ -113,11 +114,11 @@ public class VerificationCheckService {
 
 		log.info("Fetching verification check {} for vendor {}", checkId, vendorId);
 
-		VerificationCaseCheck check = verificationCaseCheckRepository.findByVendorIdAndCaseCheckId(vendorId, checkId);
+		VerificationCaseCheck check = verificationCaseCheckRepository.findByAssignedVendorUser_UserIdAndCaseCheckId(vendorId, checkId).get();
 		// .orElseThrow(() -> new RuntimeException("Verification check not found"));
 
 		// 1️⃣ Vendor authorization
-		if (!Objects.equals(check.getVendorId(), vendorId)) {
+		if (!Objects.equals(check.getAssignedVendorUser().getUserId(), vendorId)) {
 			throw new RuntimeException("Vendor not authorized to access this check");
 		}
 
@@ -645,7 +646,7 @@ public class VerificationCheckService {
 		VerificationCaseCheck check = verificationCaseCheckRepository.findById(checkId)
 				.orElseThrow(() -> new RuntimeException("Verification check not found"));
 
-		if (!check.getVendorId().equals(vendorId)) {
+		if (!check.getAssignedVendorUser().getUserId().equals(vendorId)) {
 			throw new RuntimeException("Vendor not authorized");
 		}
 
@@ -667,7 +668,7 @@ public class VerificationCheckService {
 		VerificationCaseCheck check = verificationCaseCheckRepository.findById(checkId)
 				.orElseThrow(() -> new RuntimeException("Verification check not found"));
 
-		if (!check.getVendorId().equals(vendorId)) {
+		if (!check.getAssignedVendorUser().getUserId().equals(vendorId)) {
 			throw new RuntimeException("Vendor not authorized");
 		}
 
@@ -707,7 +708,7 @@ public class VerificationCheckService {
 		VerificationCaseCheck check = verificationCaseCheckRepository.findById(checkId)
 				.orElseThrow(() -> new RuntimeException("Verification check not found"));
 
-		if (!check.getVendorId().equals(vendorId)) {
+		if (!check.getAssignedVendorUser().getUserId().equals(vendorId)) {
 			throw new RuntimeException("Vendor not authorized");
 		}
 
@@ -950,7 +951,7 @@ public class VerificationCheckService {
 	                            new RuntimeException("Verification check not found"));
 
 	    // Optional ownership validation
-	    if (!check.getVendorId().equals(vendorId)) {
+	    if (!check.getAssignedVendorUser().getUserId().equals(vendorId)) {
 	        throw new RuntimeException(
 	                "Vendor not authorized for this verification check");
 	    }
@@ -1078,7 +1079,7 @@ public class VerificationCheckService {
 				.orElseThrow(() -> new RuntimeException("Verification check not found"));
 
 		// Verify vendor has access
-		if (!check.getVendorId().equals(vendorId)) {
+		if (!check.getAssignedVendorUser().getUserId().equals(vendorId)) {
 			throw new RuntimeException("Vendor not authorized to add notes");
 		}
 
@@ -1111,7 +1112,7 @@ public class VerificationCheckService {
 				.orElseThrow(() -> new RuntimeException("Verification check not found"));
 
 		// Verify vendor has access
-		if (!check.getVendorId().equals(vendorId)) {
+		if (!check.getAssignedVendorUser().getUserId().equals(vendorId)) {
 			throw new RuntimeException("Vendor not authorized to update requirements");
 		}
 
@@ -1135,7 +1136,7 @@ public class VerificationCheckService {
 				.orElseThrow(() -> new RuntimeException("Verification check not found"));
 
 		// Verify vendor has access
-		if (!check.getVendorId().equals(vendorId)) {
+		if (!check.getAssignedVendorUser().getUserId().equals(vendorId)) {
 			throw new RuntimeException("Vendor not authorized to complete verification");
 		}
 

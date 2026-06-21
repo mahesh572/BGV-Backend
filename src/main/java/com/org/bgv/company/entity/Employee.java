@@ -3,8 +3,8 @@ package com.org.bgv.company.entity;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
 
-import com.org.bgv.entity.Company;
 import com.org.bgv.entity.User;
+import com.org.bgv.onboarding.entity.Company;
 
 import jakarta.persistence.*;
 import lombok.*;

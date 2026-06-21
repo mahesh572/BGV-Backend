@@ -14,6 +14,7 @@ import org.springframework.stereotype.Service;
 import com.org.bgv.candidate.entity.Candidate;
 import com.org.bgv.candidate.repository.CandidateRepository;
 import com.org.bgv.common.RoleConstants;
+import com.org.bgv.company.dto.CompanyType;
 import com.org.bgv.config.SecurityUtils;
 import com.org.bgv.constants.CandidateStatus;
 import com.org.bgv.constants.Constants;
@@ -22,6 +23,7 @@ import com.org.bgv.entity.Role;
 import com.org.bgv.entity.User;
 import com.org.bgv.entity.UserRole;
 import com.org.bgv.mapper.RoleMapper;
+import com.org.bgv.onboarding.entity.Company;
 import com.org.bgv.repository.CompanyRepository;
 import com.org.bgv.repository.CompanyUserRepository;
 import com.org.bgv.repository.ProfileRepository;
@@ -50,6 +52,7 @@ public class RoleService {
     private final UserRepository userRepository;
     private final CandidateRepository candidateRepository;
     private final CompanyUserRepository companyUserRepository;
+    private final CompanyRepository companyRepository;
 
     
     public RoleDto createRole(RoleCreateRequest request) {
@@ -160,7 +163,7 @@ public class RoleService {
         if (isSystemAdmin) {
             allRoles = roleRepository.findAll();
         } else if (isCompanyAdmin) {
-            allRoles = roleRepository.findByType(RoleConstants.TYPE_COMPANY);
+            allRoles = roleRepository.findByType(RoleConstants.TYPE_EMPLOYER);
         } else {
             return Collections.emptyList();
         }
@@ -248,6 +251,7 @@ public class RoleService {
         
         return roleDetailDtos;
     }
+    
 
     public Optional<RoleDto> getRoleById(Long id) {
         return roleRepository.findById(id)
@@ -258,8 +262,8 @@ public class RoleService {
         switch (roleType.toLowerCase()) {
             case "regular":
                 return RoleConstants.TYPE_REGULAR;
-            case "company":
-                return RoleConstants.TYPE_COMPANY;
+            case "employer":
+                return RoleConstants.TYPE_EMPLOYER;
             case "vendor":
                 return RoleConstants.TYPE_VENDOR;
             default:
@@ -271,8 +275,8 @@ public class RoleService {
         switch (roleType.toLowerCase()) {
             case "regular":
                 return RoleConstants.TYPE_REGULAR_LABEL;
-            case "company":
-                return RoleConstants.TYPE_COMPANY_LABEL;
+            case "employer":
+                return RoleConstants.TYPE_EMPLOYER_LABEL;
             case "vendor":
                 return RoleConstants.TYPE_VENDOR_LABEL;
             default:
@@ -282,7 +286,7 @@ public class RoleService {
     private String mapConstantToRoleType(Long type) {
         if (RoleConstants.TYPE_REGULAR.equals(type)) {
             return "regular";
-        } else if (RoleConstants.TYPE_COMPANY.equals(type)) {
+        } else if (RoleConstants.TYPE_EMPLOYER.equals(type)) {
             return "company";
         } else if (RoleConstants.TYPE_VENDOR.equals(type)) {
             return "vendor";
@@ -293,8 +297,8 @@ public class RoleService {
     private String getTypeLabelByConstant(Long type) {
         if (RoleConstants.TYPE_REGULAR.equals(type)) {
             return RoleConstants.TYPE_REGULAR_LABEL;
-        } else if (RoleConstants.TYPE_COMPANY.equals(type)) {
-            return RoleConstants.TYPE_COMPANY_LABEL;
+        } else if (RoleConstants.TYPE_EMPLOYER.equals(type)) {
+            return RoleConstants.TYPE_EMPLOYER_LABEL;
         } else if (RoleConstants.TYPE_VENDOR.equals(type)) {
             return RoleConstants.TYPE_VENDOR_LABEL;
         } else {
@@ -442,6 +446,52 @@ public class RoleService {
                 roleName
                 
         );
+    }
+    
+    
+    public List<RoleDetailDto> getRolesByType(Long type) {
+
+        return roleRepository.findByType(type)
+                .stream()
+                .map(role -> RoleDetailDto.builder()
+                		.roleid(role.getId())
+                        .name(role.getName())
+                        .label(role.getLabel())
+                       // .type(role.getType())
+                        .build())
+                .toList();
+    }
+    
+    public List<RoleDetailDto> getRolesByCompany(Long companyId) {
+
+        Company company = companyRepository.findById(companyId)
+                .orElseThrow(() ->
+                        new RuntimeException("Company not found"));
+
+        Long roleType;
+
+        switch (company.getCompanyType()) {
+
+            case EMPLOYER:
+                roleType = RoleConstants.TYPE_EMPLOYER;
+                break;
+
+            case VENDOR:
+                roleType = RoleConstants.TYPE_VENDOR;
+                break;
+
+            default:
+                roleType = RoleConstants.TYPE_REGULAR;
+        }
+
+        return roleRepository.findByType(roleType)
+                .stream()
+                .map(role -> RoleDetailDto.builder()
+                        .roleid(role.getId())
+                        .name(role.getName())
+                        .label(role.getLabel())
+                        .build())
+                .toList();
     }
 
 }

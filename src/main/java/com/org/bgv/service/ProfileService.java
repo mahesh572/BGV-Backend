@@ -1,7 +1,6 @@
 package com.org.bgv.service;
 
 import com.org.bgv.dto.ProfileDTO;
-import com.org.bgv.entity.Company;
 import com.org.bgv.entity.Profile;
 import com.org.bgv.entity.User;
 import com.org.bgv.repository.ProfileRepository;

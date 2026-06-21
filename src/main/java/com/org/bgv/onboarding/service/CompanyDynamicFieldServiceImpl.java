@@ -7,9 +7,9 @@ import java.util.stream.Collectors;
 import org.springframework.stereotype.Service;
 
 import com.org.bgv.company.dto.CompanyType;
-import com.org.bgv.entity.Company;
 import com.org.bgv.onboarding.dto.CompanyDynamicFieldDto;
 import com.org.bgv.onboarding.dto.CompanyDynamicFieldOptionDto;
+import com.org.bgv.onboarding.entity.Company;
 import com.org.bgv.onboarding.entity.CompanyAttributeDefinition;
 import com.org.bgv.onboarding.entity.CompanyAttributeValue;
 import com.org.bgv.onboarding.repository.CompanyAttributeDefinitionRepository;

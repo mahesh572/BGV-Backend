@@ -10,14 +10,15 @@ import com.org.bgv.common.CommonUtils;
 import com.org.bgv.common.entity.StateRegion;
 import com.org.bgv.common.repository.StateRegionRepository;
 import com.org.bgv.config.SecurityUtils;
+import com.org.bgv.constants.UserStatus;
 import com.org.bgv.dto.CreateVendorUserRequest;
-import com.org.bgv.entity.Company;
 import com.org.bgv.entity.CompanyUser;
 import com.org.bgv.entity.Profile;
 import com.org.bgv.entity.Role;
 import com.org.bgv.entity.User;
 import com.org.bgv.entity.UserRole;
 import com.org.bgv.notifications.service.NotificationDispatcher;
+import com.org.bgv.onboarding.entity.Company;
 import com.org.bgv.repository.CompanyRepository;
 import com.org.bgv.repository.CompanyUserRepository;
 import com.org.bgv.repository.ProfileRepository;
@@ -69,7 +70,7 @@ public class VendorUserService {
         // Create user
         User user = User.builder()
                 .email(request.getEmail())
-                .status(request.getStatus())
+                .status(UserStatus.PENDING_ACTIVATION)
                 .passwordResetrequired(request.getPasswordResetRequired())
                 .password(passwordEncoder.encode(tempPassword))
                 .build();
@@ -140,7 +141,7 @@ public class VendorUserService {
                 .vehicleAvailable(request.getVehicleAvailable())
                 .maxDailyCapacity(request.getMaxDailyCapacity())
                 .regions(regions)
-                .user(user)
+               // .user(user)
                 .build();
 
         VendorUser savedVendorUser = vendorUserRepository.save(vendorUser);

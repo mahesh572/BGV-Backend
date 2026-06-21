@@ -9,8 +9,13 @@ public class RoleConstants {
 	public static final Long TYPE_REGULAR = 1L;
 	public static final String TYPE_REGULAR_LABEL = "Regular";
 	
-	public static final Long TYPE_COMPANY = 2L;
-	public static final String TYPE_COMPANY_LABEL = "Company";
+	//public static final Long TYPE_COMPANY = 2L;
+	//public static final String TYPE_COMPANY_LABEL = "Company";
+	
+	public static final Long TYPE_EMPLOYER = 2L;
+	public static final String TYPE_EMPLOYER_LABEL = "Employer";
+		
+		
 
 	public static final Long TYPE_VENDOR = 3L;
 
@@ -31,8 +36,8 @@ public class RoleConstants {
 	
 
 	public static String getTypeLabel(int type) {
-		if (type == TYPE_COMPANY) {
-			return TYPE_COMPANY_LABEL;
+		if (type == TYPE_EMPLOYER) {
+			return TYPE_EMPLOYER_LABEL;
 		}
 		else if (type == TYPE_VENDOR) {
 			return TYPE_VENDOR_LABEL;

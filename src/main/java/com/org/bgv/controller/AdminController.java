@@ -45,8 +45,12 @@ import com.org.bgv.dto.BasicDetailsDTO;
 import com.org.bgv.dto.PlatformConfigResponse;
 import com.org.bgv.dto.PlatformConfigSaveRequest;
 import com.org.bgv.dto.UserDetailsDto;
-import com.org.bgv.entity.Company;
+import com.org.bgv.enums.CompanyAddressType;
+import com.org.bgv.enums.CompanyStatus;
 import com.org.bgv.mapper.UserMapper;
+import com.org.bgv.onboarding.dto.ContactType;
+import com.org.bgv.onboarding.dto.CreateCompanyRequest;
+import com.org.bgv.onboarding.service.CompanyRegistrationService;
 import com.org.bgv.service.CompanyService;
 import com.org.bgv.service.PlatformConfigService;
 import com.org.bgv.service.ProfileService;
@@ -70,6 +74,7 @@ public class AdminController {
 	  private final CompanyService companyService;
 	  private final EmployeeService employeeService;
 	  private final PlatformConfigService platformConfigService;
+	  private final CompanyRegistrationService companyRegistrationService;
 	
 	private static final Logger logger = LoggerFactory.getLogger(AdminController.class);
 	
@@ -297,6 +302,8 @@ public class AdminController {
 	         }
 	     }
 	 	 
+	 	 /*
+	 	 
 	 	@PostMapping("/company/register")
 	    public ResponseEntity<CustomApiResponse<CompanyRegistrationResponse>> registerCompany(
 	    		@RequestBody CompanyRegistrationRequestDTO request) {
@@ -325,7 +332,38 @@ public class AdminController {
 	                    ));
 	        }
 	    }
+	    
+	    */
 	 	
+	 	 /*
+	 	@PostMapping("/company/register")
+	    public ResponseEntity<CustomApiResponse<CompanyRegistrationResponse>>
+	    registerCompany(
+	            @RequestBody CreateCompanyRequest request) {
+
+	        Long companyId =
+	                companyRegistrationService.createCompany(request);
+
+	        CompanyRegistrationResponse response =
+	                CompanyRegistrationResponse.builder()
+	                        .companyId(companyId)
+	                        .companyName(request.getCompanyName())
+	                        .status(CompanyStatus.DRAFT)
+	                        .nextStep("CONTACTS")
+	                        .build();
+
+	        return ResponseEntity.status(HttpStatus.CREATED)
+	                .body(
+	                        CustomApiResponse.success(
+	                                "Company created successfully",
+	                                response,
+	                                HttpStatus.CREATED
+	                        )
+	                );
+	    }
+	 	 
+	 	 */
+	 	 
 	 	@GetMapping("/company/meta")
 	 	public ResponseEntity<CustomApiResponse<Map<String, List<EnumOptionDTO>>>> getCompanyEnums() {
 
@@ -333,7 +371,9 @@ public class AdminController {
 	 	        "companyTypes", companyService.toOptions(CompanyType.values()),
 	 	        "legalTypes", companyService.toOptions(CompanyLegalType.values()),
 	 	        "companySizes", companyService.toOptions(CompanySize.values()),
-	 	        "industryTypes",companyService.toOptions(IndustryType.values())
+	 	        "industryTypes",companyService.toOptions(IndustryType.values()),
+	 	        "companyAddressTypes",companyService.toOptions(CompanyAddressType.values()),
+	 	        "contactTypes",companyService.toOptions(ContactType.values())
 	 	    );
 
 	 	    return ResponseEntity.ok(

@@ -7,14 +7,8 @@ import java.util.Optional;
 
 import org.springframework.stereotype.Service;
 
-import com.org.bgv.bgvpackage.entity.EmployerCheckPricing;
-import com.org.bgv.bgvpackage.entity.PlatformCheckPricing;
 import com.org.bgv.bgvpackage.repository.EmployerCheckPricingRepository;
 import com.org.bgv.bgvpackage.repository.PlatformCheckPricingRepository;
-import com.org.bgv.entity.CheckCategory;
-import com.org.bgv.entity.Company;
-import com.org.bgv.entity.RuleTypes;
-import com.org.bgv.enums.PricingType;
 
 import lombok.RequiredArgsConstructor;
 

@@ -9,6 +9,7 @@ import com.org.bgv.invoice.entity.Invoice;
 import com.org.bgv.invoice.entity.InvoiceItem;
 import com.org.bgv.invoice.repository.InvoiceItemRepository;
 import com.org.bgv.invoice.repository.InvoiceRepository;
+import com.org.bgv.onboarding.entity.Company;
 import com.org.bgv.repository.*;
 import com.org.bgv.service.ReferenceNumberGenerator;
 

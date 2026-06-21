@@ -19,6 +19,7 @@ import com.org.bgv.api.response.CustomApiResponse;
 import com.org.bgv.enums.VendorNoteType;
 import com.org.bgv.service.VendorDashboardService;
 import com.org.bgv.vendor.dto.AddVendorNoteRequest;
+import com.org.bgv.vendor.dto.VendorDashboardResponse;
 import com.org.bgv.vendor.dto.VendorNoteDTO;
 import com.org.bgv.vendor.dto.VendorVerificationCheckDTO;
 import com.org.bgv.vendor.dto.VerificationCheckResponseDTO;
@@ -39,8 +40,8 @@ public class VendorDashboardController {
     
    
    @GetMapping
-    public ResponseEntity<Map<String, Object>> getDashboardData(@RequestParam Long vendorId) {
-        Map<String, Object> dashboardData = vendorDashboardService.getVendorDashboardData(vendorId);
+    public ResponseEntity<VendorDashboardResponse> getDashboardData(@RequestParam Long vendorUserId) {
+	   VendorDashboardResponse dashboardData = vendorDashboardService.getVendorDashboardData(vendorUserId);
         return ResponseEntity.ok(dashboardData);
     }
     

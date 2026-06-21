@@ -5,6 +5,7 @@ import java.util.List;
 
 import com.org.bgv.common.entity.StateRegion;
 import com.org.bgv.entity.User;
+import com.org.bgv.onboarding.entity.Company;
 
 import jakarta.persistence.Entity;
 import jakarta.persistence.EnumType;
@@ -15,6 +16,7 @@ import jakarta.persistence.Id;
 import jakarta.persistence.JoinColumn;
 import jakarta.persistence.JoinTable;
 import jakarta.persistence.ManyToMany;
+import jakarta.persistence.ManyToOne;
 import jakarta.persistence.OneToOne;
 import jakarta.persistence.Table;
 import lombok.AllArgsConstructor;
@@ -37,6 +39,10 @@ public class VendorUser {
     @OneToOne(optional = false)
     @JoinColumn(name = "user_id")
     private User user;
+    
+    @ManyToOne
+    @JoinColumn(name = "company_id")
+    private Company company;
 
     private String operationalRole;
 

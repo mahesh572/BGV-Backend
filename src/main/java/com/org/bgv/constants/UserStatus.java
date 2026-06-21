@@ -1,11 +1,13 @@
 package com.org.bgv.constants;
 
 public enum UserStatus {
-    PENDING_VERIFICATION,
+	
+	PENDING_ACTIVATION,
     ACTIVE,
     INACTIVE,
     LOCKED,
     SUSPENDED,
-    DELETED
+    DELETED,
+    CREATED
 }
 

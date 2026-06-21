@@ -9,6 +9,7 @@ import jakarta.persistence.GeneratedValue;
 import jakarta.persistence.GenerationType;
 import jakarta.persistence.Id;
 import jakarta.persistence.Table;
+import jakarta.persistence.UniqueConstraint;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Data;
@@ -19,7 +20,17 @@ import lombok.NoArgsConstructor;
 @Builder
 @Data
 @Entity
-@Table(name = "company_attribute_definitions")
+@Table(
+        name = "company_attribute_definitions",
+        uniqueConstraints = {
+                @UniqueConstraint(
+                        columnNames = {
+                                "company_type",
+                                "attribute_code"
+                        }
+                )
+        }
+)
 public class CompanyAttributeDefinition {
 
     @Id

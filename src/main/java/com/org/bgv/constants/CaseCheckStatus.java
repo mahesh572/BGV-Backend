@@ -18,6 +18,8 @@ public enum CaseCheckStatus {
     ACTION_REQUIRED,
     ASSIGNED,
     PENDING_VENDOR_ASSIGNMENT,
+    PENDING_AGENT_ASSIGNMENT,
+    AGENT_ASSIGNED,
     ESCALATED;
 	
 //	CANDIDATE_PENDING("Candidate Pending"),  // Waiting for initial submission

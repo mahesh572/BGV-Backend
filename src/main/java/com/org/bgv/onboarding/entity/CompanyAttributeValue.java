@@ -1,26 +1,36 @@
 package com.org.bgv.onboarding.entity;
 
-import com.org.bgv.entity.Company;
-
-import jakarta.persistence.Entity;
-import jakarta.persistence.Id;
-import jakarta.persistence.ManyToOne;
-import jakarta.persistence.Table;
+import jakarta.persistence.*;
 import lombok.Data;
 
 @Data
 @Entity
-@Table(name = "company_attribute_values")
+@Table(
+        name = "company_attribute_values",
+        uniqueConstraints = {
+                @UniqueConstraint(
+                        columnNames = {
+                                "company_id",
+                                "attribute_definition_id"
+                        }
+                )
+        }
+)
 public class CompanyAttributeValue {
 
     @Id
+    @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
+    
 
-    @ManyToOne
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "company_id")
     private Company company;
 
-    @ManyToOne
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "attribute_definition_id")
     private CompanyAttributeDefinition attributeDefinition;
 
+    @Column(length = 500)
     private String attributeValue;
 }

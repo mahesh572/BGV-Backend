@@ -3,8 +3,8 @@ package com.org.bgv.notifications.placeholder;
 import org.springframework.stereotype.Component;
 
 import com.org.bgv.company.entity.CompanyEmailSettings;
-import com.org.bgv.entity.Company;
 import com.org.bgv.notifications.dto.NotificationPlaceholder;
+import com.org.bgv.onboarding.entity.Company;
 
 @Component
 public class EmployerPlaceholderResolver implements PlaceholderResolver {

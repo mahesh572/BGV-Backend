@@ -19,7 +19,6 @@ import com.org.bgv.common.navigation.NavigationResponseDto;
 import com.org.bgv.common.navigation.NavigationType;
 import com.org.bgv.common.navigation.UpdateNavigationMenuDto;
 import com.org.bgv.config.SecurityUtils;
-import com.org.bgv.entity.Company;
 import com.org.bgv.entity.NavigationMenu;
 import com.org.bgv.entity.User;
 import com.org.bgv.entity.UserType;
@@ -86,7 +85,7 @@ public class NavigationMenuService {
             User user = userRepository.findById(userId)
                     .orElseThrow(() -> new EntityNotFoundException("User not found"));
 
-            if (!UserType.CANDIDATE.name().equalsIgnoreCase(user.getUserType())) {
+            if (!UserType.CANDIDATE.name().equalsIgnoreCase(user.getUserType().name())) {
                 return;
             }
 

@@ -2,6 +2,8 @@ package com.org.bgv.entity;
 
 import java.time.LocalDateTime;
 
+import com.org.bgv.onboarding.entity.Company;
+
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
 import jakarta.persistence.FetchType;
@@ -25,10 +27,7 @@ import lombok.NoArgsConstructor;
 @NoArgsConstructor
 @AllArgsConstructor
 @Table(
-	    name = "vendor_check_mapping",
-	    uniqueConstraints = {
-	        @UniqueConstraint(columnNames = {"vendor_id", "category_id"})
-	    }
+	    name = "vendor_check_mapping"
 	)
 public class VendorCheckMapping {
 
@@ -36,9 +35,16 @@ public class VendorCheckMapping {
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
 
+    /*
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "vendor_id", nullable = false)
     private Vendor vendor;
+    */
+    
+    
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "vendor_company_id")
+    private Company vendorCompany;
 
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "category_id", nullable = false)

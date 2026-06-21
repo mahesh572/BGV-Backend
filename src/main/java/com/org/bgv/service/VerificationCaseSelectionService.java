@@ -409,94 +409,166 @@ public class VerificationCaseSelectionService {
 	    }
 	}
 
-	private void processWorkRules(VerificationCase verificationCase, CandidatePackageRule rule,VerificationCaseCheck verificationCaseCheck) {
-	    RuleTypes ruleType = ruleTypesRepository.findById(rule.getRuleTypeId()).orElse(null);
-	    if (ruleType == null) return;
+	private void processWorkRules(
+	        VerificationCase verificationCase,
+	        CandidatePackageRule rule,
+	        VerificationCaseCheck verificationCaseCheck) {
 
-	    CheckCategory checkCategory = checkCategoryRepository.findByCategoryId(rule.getCheckCategoryId());
-	    
+	    log.info("========== PROCESS WORK RULE START ==========");
+
+	    RuleTypes ruleType =
+	            ruleTypesRepository.findById(rule.getRuleTypeId())
+	                    .orElse(null);
+
+	    if (ruleType == null) {
+	        log.error("Rule type not found for ruleTypeId={}", rule.getRuleTypeId());
+	        return;
+	    }
+
+	    log.info("RuleTypeId={} RuleCode={} RuleLabel={}",
+	            rule.getRuleTypeId(),
+	            ruleType.getCode(),
+	            ruleType.getName());
+
+	    CheckCategory checkCategory =
+	            checkCategoryRepository.findByCategoryId(rule.getCheckCategoryId());
+
+	    log.info("Category={}",
+	            checkCategory != null ? checkCategory.getName() : "NULL");
+
 	    List<WorkExperience> selectedWork = new ArrayList<>();
-	    String ruleCode = ruleType.getCode();
-	    int maxCount = rule.getSelectedCount() != null ? rule.getSelectedCount() : 2;
-	    boolean isAddon = rule.getIncludedInPackage() != null && !rule.getIncludedInPackage();
 
-	    // LAST N COMPANIES
+	    String ruleCode = ruleType.getCode();
+
+	    int maxCount =
+	            rule.getSelectedCount() != null
+	                    ? rule.getSelectedCount()
+	                    : 2;
+
+	    boolean isAddon =
+	            rule.getIncludedInPackage() != null
+	                    && !rule.getIncludedInPackage();
+
+	    log.info("ruleCode={}, maxCount={}, isAddon={}",
+	            ruleCode,
+	            maxCount,
+	            isAddon);
+
+	    // LAST N
 	    if ("LAST_N".equalsIgnoreCase(ruleCode)) {
-	        selectedWork.addAll(selectLatestWork(verificationCase.getCaseId(), maxCount));
+
+	        log.info("Executing LAST_N logic");
+
+	        selectedWork.addAll(
+	                selectLatestWork(
+	                        verificationCase.getCaseId(),
+	                        maxCount));
+
 	    }
-	    // ALL COMPANIES
+
+	    // ALL
 	    else if ("ALL".equalsIgnoreCase(ruleCode)) {
-	        selectedWork.addAll(workExperienceRepository.findByVerificationCaseCaseId(verificationCase.getCaseId()));
+
+	        log.info("Executing ALL logic");
+
+	        selectedWork.addAll(
+	                workExperienceRepository
+	                        .findByVerificationCaseCaseId(
+	                                verificationCase.getCaseId()));
 	    }
+	    else {
+
+	        log.warn("No matching logic found for ruleCode={}", ruleCode);
+	    }
+
+	    log.info("Selected work count={}", selectedWork.size());
+
+	    selectedWork.forEach(work ->
+	            log.info("WorkId={} Company={}",
+	                    work.getExperienceId(),
+	                    work.getCompanyName()));
 
 	    for (WorkExperience work : selectedWork) {
-	        VerificationCaseSelection existingSelection = verificationCaseSelectionRepository
-	                .findByVerificationCaseAndTypeAndReferenceId(verificationCase, CheckCategoryEnum.WORK_EXPERIENCE, work.getExperienceId())
-	                .orElse(null);
-	        
+
+	        log.info("Processing workId={} company={}",
+	                work.getExperienceId(),
+	                work.getCompanyName());
+
+	        VerificationCaseSelection existingSelection =
+	                verificationCaseSelectionRepository
+	                        .findByVerificationCaseAndTypeAndReferenceId(
+	                                verificationCase,
+	                                CheckCategoryEnum.WORK_EXPERIENCE,
+	                                work.getExperienceId())
+	                        .orElse(null);
+
 	        if (existingSelection == null) {
-	            // Create new selection only if it doesn't exist
-	            VerificationCaseSelection selection = createSelection(verificationCase, CheckCategoryEnum.WORK_EXPERIENCE, work.getExperienceId());
-	            
+
+	            log.info("Selection does not exist. Creating.");
+
+	            VerificationCaseSelection selection =
+	                    createSelection(
+	                            verificationCase,
+	                            CheckCategoryEnum.WORK_EXPERIENCE,
+	                            work.getExperienceId());
+
 	            if (isAddon) {
+
+	                log.info("Marking as ADDON");
+
 	                selection.setIncludedInBase(false);
-	                selection.setUnitPrice(rule.getUnitPrice() != null ? rule.getUnitPrice() : BigDecimal.ZERO);
+	                selection.setUnitPrice(
+	                        rule.getUnitPrice() != null
+	                                ? rule.getUnitPrice()
+	                                : BigDecimal.ZERO);
+
 	            } else {
+
+	                log.info("Marking as BASE");
+
 	                selection.setIncludedInBase(true);
 	                selection.setUnitPrice(BigDecimal.ZERO);
 	            }
-	            
+
 	            verificationCaseSelectionRepository.save(selection);
-	            
+
+	            log.info("Saved VerificationCaseSelection");
+
 	            work.setVerificationCase(verificationCase);
 	            workExperienceRepository.save(work);
-	            
+
+	            log.info("Saved WorkExperience");
+
 	            verificationObjectService.create(
-	            		verificationCaseCheck,
+	                    verificationCaseCheck,
 	                    CheckCategoryEnum.WORK_EXPERIENCE,
 	                    work.getExperienceId(),
 	                    work.getCompanyName());
-	            
-	            attachDocumentsToSelection(selection, work.getExperienceId(), checkCategory.getCategoryId());
-	            updateSelectionStatus(selection);
-	        }
-	        // REMOVED the else-if block that was converting base to add-on!
-	        // If selection already exists, we DO NOT modify it - it's already handled by base rule
-	    }
-	    
-	    // Special handling: For ALL add-on, ensure ALL experiences are selected
-	    // but only those NOT already selected by base rules
-	    if ("ALL".equalsIgnoreCase(ruleCode) && isAddon) {
-	        List<WorkExperience> allWork = workExperienceRepository.findByVerificationCaseCaseId(verificationCase.getCaseId());
-	        for (WorkExperience work : allWork) {
-	            boolean alreadySelected = verificationCaseSelectionRepository
-	                    .findByVerificationCaseAndTypeAndReferenceId(verificationCase, CheckCategoryEnum.WORK_EXPERIENCE, work.getExperienceId())
-	                    .isPresent();
-	            
-	            if (!alreadySelected) {
-	                // This work experience was NOT selected by base rule (e.g., candidate has 3+ experiences
-	                // but base rule only selected last 2)
-	                VerificationCaseSelection selection = createSelection(verificationCase, CheckCategoryEnum.WORK_EXPERIENCE, work.getExperienceId());
-	                selection.setIncludedInBase(false);
-	                selection.setUnitPrice(rule.getUnitPrice() != null ? rule.getUnitPrice() : BigDecimal.ZERO);
-	                verificationCaseSelectionRepository.save(selection);
-	                
-	                work.setVerificationCase(verificationCase);
-	                workExperienceRepository.save(work);
-	                
-	                verificationObjectService.create(
-		            		verificationCaseCheck,
-		                    CheckCategoryEnum.WORK_EXPERIENCE,
-		                    work.getExperienceId(),
-		                    work.getCompanyName());
-	                
-	                attachDocumentsToSelection(selection, work.getExperienceId(), checkCategory.getCategoryId());
-	                updateSelectionStatus(selection);
-	            }
-	        }
-	    }
-	}
 
+	            log.info("Created Verification Object");
+
+	            attachDocumentsToSelection(
+	                    selection,
+	                    work.getExperienceId(),
+	                    checkCategory.getCategoryId());
+
+	            log.info("Attached documents");
+
+	            updateSelectionStatus(selection);
+
+	            log.info("Updated selection status");
+	        }
+	        else {
+
+	            log.warn(
+	                    "Selection already exists for workId={} company={}",
+	                    work.getExperienceId(),
+	                    work.getCompanyName());
+	        }
+	    }
+
+	    log.info("========== PROCESS WORK RULE END ==========");
+	}
 	private void processAddressRules(VerificationCase verificationCase, CandidatePackageRule rule,VerificationCaseCheck verificationCaseCheck) {
 	    RuleTypes ruleType = ruleTypesRepository.findById(rule.getRuleTypeId()).orElse(null);
 	    if (ruleType == null) return;
