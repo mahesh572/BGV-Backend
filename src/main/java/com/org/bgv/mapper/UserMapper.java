@@ -19,135 +19,120 @@ import com.org.bgv.service.WorkExperienceService;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 
+import java.util.Objects;
 import java.util.Optional;
 import java.util.stream.Collectors;
+import java.util.stream.Stream;
 
 import org.springframework.stereotype.Component;
 
 
 @Component
 @RequiredArgsConstructor
-@Slf4j
 public class UserMapper implements BaseMapper<User, UserDto> {
-   
-	 private final ProfileRepository profileRepository;
-	
-	@Override
-    public UserDto toDto(User entity) {
-		UserDto dto = new UserDto();
-		try {
-		log.info("UserMapper:::::::::::::{}",entity);
-		
-		Profile profile = profileRepository.findByUserUserId(entity.getUserId());
-		
-        dto.setUserId(entity.getUserId());
-        dto.setFirstName(profile.getFirstName());
-        dto.setLastName(profile.getLastName());
-        dto.setEmail(entity.getEmail());
-        dto.setUserType(entity.getUserType());
-        dto.setPhoneNumber(profile.getPhoneNumber());
-        dto.setPasswordResetrequired(entity.getPasswordResetrequired()==null?Boolean.FALSE:entity.getPasswordResetrequired());
-		}catch (Exception e) {
-			log.error(e.getMessage());
-		}
-        return dto;
+
+    @Override
+    public UserDto toDto(User user) {
+
+        if (user == null) {
+            return null;
+        }
+
+        Profile profile = user.getProfile();
+
+        return UserDto.builder()
+                .userId(user.getUserId())
+                .email(user.getEmail())
+                .userType(user.getUserType())
+                .firstName(profile != null ? profile.getFirstName() : null)
+                .lastName(profile != null ? profile.getLastName() : null)
+                .fullName(getFullName(profile))
+                .phoneNumber(profile != null ? profile.getPhoneNumber() : null)
+                .gender(profile != null ? profile.getGender() : null)
+                .profilePictureUrl(user.getProfilePictureUrl())
+                .isActive(user.getIsActive())
+                .isVerified(user.getIsVerified())
+                .status(user.getStatus() != null ? user.getStatus().name() : null)
+                .dateOfBirth(user.getDateOfBirth())
+                .passwordResetrequired(
+                        Boolean.TRUE.equals(user.getPasswordResetrequired()))
+                .build();
     }
-	
-	public UserDto toUserDto(User user) {
-	    if (user == null) {
-	        return null;
-	    }
-
-	    Profile profile = profileRepository.findByUserUserId(user.getUserId());
-
-	    String firstName = profile != null ? profile.getFirstName() : null;
-	    String lastName  = profile != null ? profile.getLastName()  : null;
-
-	    String fullName = null;
-	    if (firstName != null || lastName != null) {
-	        fullName = ((firstName != null ? firstName : "") +
-	                    (lastName  != null ? " " + lastName : "")).trim();
-	    }
-
-	    return UserDto.builder()
-	            .userId(user.getUserId())
-	            .email(user.getEmail())
-	            .userType(user.getUserType())
-	            .firstName(firstName)
-	            .lastName(lastName)
-	            .name(fullName)
-	            .phoneNumber(profile != null ? profile.getPhoneNumber() : null)
-	            .gender(profile != null ? profile.getGender() : null)
-	            .profilePictureUrl(user.getProfilePictureUrl())
-	            .isActive(user.getIsActive())
-	            .isVerified(user.getIsVerified())
-	            .status(user.getStatus()!=null?user.getStatus().name():"")
-	            .dateOfBirth(user.getDateOfBirth())
-	            .build();
-	}
-
-
 
     @Override
     public User toEntity(UserDto dto) {
-        User user = new User();
-        user.setUserId(dto.getUserId());
-       // user.setFirstName(dto.getFirstName());
-      //  user.setLastName(dto.getLastName());
-        user.setEmail(dto.getEmail());
-      //  user.setPhoneNumber(dto.getPhoneNumber());
-       // user.setDateOfBirth(dto.getDateOfBirth());
-        user.setUserType(dto.getUserType());
-        user.setIsVerified(Boolean.FALSE);
-        /*
-        if (dto.getAddresses() != null && !dto.getAddresses().isEmpty()) {
-            user.setAddresses(dto.getAddresses().stream()
-                .map(addr -> mapAddressToEntity(addr, user))
-                .collect(Collectors.toList()));
+
+        if (dto == null) {
+            return null;
         }
-         */
-        return user;
+
+        return User.builder()
+                .userId(dto.getUserId())
+                .email(dto.getEmail())
+                .userType(dto.getUserType())
+                .isVerified(Boolean.FALSE)
+                .build();
     }
-    
-    private Address mapAddressToEntity(AddressDTO addr, User user) {
+
+    public BasicDetailsDTO mapUserDtoToBasicDetails(UserDto userDto) {
+
+        if (userDto == null) {
+            return null;
+        }
+
+        return BasicDetailsDTO.builder()
+                .user_id(userDto.getUserId())
+                .firstName(userDto.getFirstName())
+                .lastName(userDto.getLastName())
+                .gender(userDto.getGender())
+                .phone(userDto.getPhoneNumber())
+                .dateOfBirth(userDto.getDateOfBirth())
+                .email(userDto.getEmail())
+                .build();
+    }
+
+    public AddressDTO mapAddressDto(Address address) {
+
+        if (address == null) {
+            return null;
+        }
+
+        return AddressDTO.builder()
+                .addressLine1(address.getAddressLine1())
+                .addressLine2(address.getAddressLine2())
+                .city(address.getCity())
+                .state(address.getState())
+                .country(address.getCountry())
+                .zipCode(address.getZipCode())
+                .isDefault(address.isDefault())
+                .addressType(address.getAddressType())
+                .build();
+    }
+
+    public Address mapAddressToEntity(AddressDTO dto, User user) {
+
+        if (dto == null) {
+            return null;
+        }
+
         return Address.builder()
-            .addressLine1(addr.getAddressLine1())
-            .addressLine2(addr.getAddressLine2())
-            .city(addr.getCity())
-            .state(addr.getState())
-            .country(addr.getCountry())
-            .zipCode(addr.getZipCode())
-            .isDefault(addr.isDefault())
-            .addressType(addr.getAddressType())
-            .user(user)
-            .build();
-    }
-    private AddressDTO mapAddressDto(Address address) {
-        AddressDTO addrDto = new AddressDTO();
-        addrDto.setAddressLine1(address.getAddressLine1());
-        addrDto.setAddressLine2(address.getAddressLine2());
-        addrDto.setCity(address.getCity());
-        addrDto.setState(address.getState());
-        addrDto.setCountry(address.getCountry());
-        addrDto.setZipCode(address.getZipCode());
-        addrDto.setDefault(address.isDefault());
-        addrDto.setAddressType(address.getAddressType());
-        return addrDto;
+                .addressLine1(dto.getAddressLine1())
+                .addressLine2(dto.getAddressLine2())
+                .city(dto.getCity())
+                .state(dto.getState())
+                .country(dto.getCountry())
+                .zipCode(dto.getZipCode())
+                .isDefault(dto.isDefault())
+                .addressType(dto.getAddressType())
+                .user(user)
+                .build();
     }
     
-    public BasicDetailsDTO mapUserDTOToBasicdetails(UserDto userDto) {
-    	
-    	return BasicDetailsDTO.builder()
-    			.firstName(userDto.getFirstName())
-    			.lastName(userDto.getLastName())
-    			.gender(userDto.getGender())
-    			.phone(userDto.getPhoneNumber())
-    			.dateOfBirth(userDto.getDateOfBirth())
-    			.email(userDto.getEmail())
-    			.user_id(userDto.getUserId())
-    			.build();
-    	
-    	
-    	
+    public String getFullName(Profile profile) {
+        return Stream.of(profile != null ? profile.getFirstName() : null, profile != null ? profile.getLastName() : null)
+                .filter(Objects::nonNull)
+                .filter(s -> !s.isBlank())
+                .collect(Collectors.joining(" "));
     }
 }
+

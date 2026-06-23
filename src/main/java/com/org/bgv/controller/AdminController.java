@@ -87,7 +87,7 @@ public class AdminController {
 	        	logger.info("AdminController:::::createdUser::{}",createdUser);
 	        	userDto.setUserId(createdUser.getUserId());
 	        	// Profile creation
-	        	BasicDetailsDTO basicDetailsDTO = userMapper.mapUserDTOToBasicdetails(userDto);
+	        	BasicDetailsDTO basicDetailsDTO = userMapper.mapUserDtoToBasicDetails(userDto);
 	        	logger.info("AdminController::::::profileservice:::::START:::::{}",basicDetailsDTO);
 	        //	basicDetailsDTO = profileService.createProfile(basicDetailsDTO);
 	        	

@@ -739,7 +739,7 @@ public class UserService {
     private PaginationResponse<UserDto> buildCompletePaginationResponse(Page<User> userPage, UserSearchRequest searchRequest) {
         List<UserDto> userDtos = userPage.getContent()
                 .stream()
-                .map(userMapper::toUserDto)
+                .map(userMapper::toDto)
                 .collect(Collectors.toList());
 
         // Build pagination metadata

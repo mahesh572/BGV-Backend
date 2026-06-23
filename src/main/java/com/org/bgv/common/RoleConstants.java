@@ -15,15 +15,16 @@ public class RoleConstants {
 	public static final Long TYPE_EMPLOYER = 2L;
 	public static final String TYPE_EMPLOYER_LABEL = "Employer";
 		
-		
 
 	public static final Long TYPE_VENDOR = 3L;
-
 	public static final String TYPE_VENDOR_LABEL = "Vendor";
+	
 
 	public static final String ROLE_CANDIDATE = "Candidate";
 	
 	public static final String ROLE_COMAPNY_ADMINISTRATOR = "Company Administrator";
+	
+	public static final String ROLE_VENDOR_ADMINISTRATOR = "Vendor Administrator";
 	
 	public static final String ROLE_USER = "User";
 	

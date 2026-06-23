@@ -2,6 +2,9 @@ package com.org.bgv.common;
 
 import java.time.LocalDate;
 import java.util.List;
+import java.util.Objects;
+import java.util.stream.Collectors;
+import java.util.stream.Stream;
 
 import com.org.bgv.entity.UserType;
 
@@ -20,7 +23,8 @@ public class UserDto {
     private UserType userType;
     private String firstName;
     private String lastName;
-    private String name; // firstName + lastName
+    private String fullName;
+  //  private String name; // firstName + lastName
     private String phoneNumber;
     private Boolean isActive;
     private Boolean isVerified;
@@ -36,5 +40,12 @@ public class UserDto {
     private Boolean passwordResetrequired;
   //  private Long vendorId;
   //  private Long caseId;
+    
+    public String getFullName() {
+        return Stream.of(firstName, lastName)
+                .filter(Objects::nonNull)
+                .filter(s -> !s.isBlank())
+                .collect(Collectors.joining(" "));
+    }
     
 }

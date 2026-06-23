@@ -106,7 +106,13 @@ public class VerificationActionService {
 	
 	public EvidenceUploadResponse createUploadedEvidence(EvidenceUploadRequest request) {
         // Create evidence entity
+		
+		VerificationCaseCheck check =
+                verificationCaseCheckRepository.getReferenceById(request.getCheckId());
+		
         VerificationActionEvidence evidence = VerificationActionEvidence.builder()
+        	.verificationCaseCheck(check)
+        	.objectId(request.getObjectId())
             .source(EvidenceSource.VENDOR_UPLOAD)
             .fileName(request.getFileName())
             .originalFileName(request.getOriginalFileName())
@@ -149,6 +155,8 @@ public class VerificationActionService {
             .orElseThrow(() -> new EntityNotFoundException("Action not found: " + actionId));
         
         evidence.setAction(action);
+        evidence.setObjectId(action.getObjectId());
+        evidence.setVerificationCaseCheck(action.getVerificationCaseCheck());
         evidenceRepository.save(evidence);
         
         log.info("Evidence {} linked to action {}", evidenceId, actionId);
@@ -361,6 +369,7 @@ public class VerificationActionService {
 	                                    "Evidence not found: " + evReq.getEvidenceId()
 	                                )
 	                            );
+	                evidence.setObjectId(action.getObjectId());
 	                evidence.setAction(action);
 	            }
 
@@ -368,6 +377,8 @@ public class VerificationActionService {
 	                evidenceRepository.save(
 	                        VerificationActionEvidence.builder()
 	                            .action(action)
+	                            .objectId(action.getObjectId())
+	                            .verificationCaseCheck(action.getVerificationCaseCheck())
 	                            .source(EvidenceSource.CANDIDATE_DOCUMENT)
 	                            .documentId(evReq.getDocumentId())
 	                            .uploadedBy(SecurityUtils.getCurrentUserId())

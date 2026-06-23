@@ -17,6 +17,7 @@ public interface VerificationCaseCheckRepository
         extends JpaRepository<VerificationCaseCheck, Long> {
 	
 	List<VerificationCaseCheck> findByVerificationCase(VerificationCase verificationCase);
+	
 
     List<VerificationCaseCheck>
     findByVerificationCase_CaseId(Long caseId);

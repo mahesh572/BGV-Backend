@@ -615,7 +615,7 @@ public WalletBalanceResponseDto getWalletBalance(Long companyId) {
             boolean assigned = vendorAssignmentService.assignVendorsToCaseChecks(caseChecks);
 
             if (assigned) {
-                verificationCase.setStatus(CaseStatus.ASSIGNED);
+                verificationCase.setStatus(CaseStatus.VENDOR_ASSIGNED);
             } else {
                 verificationCase.setStatus(CaseStatus.PENDING_ASSIGNMENT);
             }

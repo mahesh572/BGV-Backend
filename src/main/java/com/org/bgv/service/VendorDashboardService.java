@@ -2,12 +2,15 @@ package com.org.bgv.service;
 
 import com.org.bgv.candidate.entity.Candidate;
 import com.org.bgv.candidate.repository.CandidateRepository;
+import com.org.bgv.common.RoleConstants;
+import com.org.bgv.config.SecurityUtils;
 import com.org.bgv.constants.CaseCheckStatus;
 import com.org.bgv.constants.CaseStatus;
 import com.org.bgv.constants.CaseStatus;
 import com.org.bgv.entity.*;
 import com.org.bgv.onboarding.entity.Company;
 import com.org.bgv.repository.*;
+import com.org.bgv.service.util.UserServiceUtil;
 import com.org.bgv.vendor.dto.ActiveCaseDto;
 import com.org.bgv.vendor.dto.CheckSummaryDto;
 import com.org.bgv.vendor.dto.VendorDashboardResponse;
@@ -35,6 +38,7 @@ public class VendorDashboardService {
     private final CheckCategoryRepository checkCategoryRepository;
     private final CompanyRepository companyRepository;
     private final CandidateRepository candidateRepository;
+    private final UserServiceUtil userServiceUtil;
     
     
     private static final int DEFAULT_SLA_DAYS = 14;
@@ -42,10 +46,17 @@ public class VendorDashboardService {
    
     @Transactional(readOnly = true)
     public VendorDashboardResponse getVendorDashboardData(Long vendorUserId) {
-
-        
-        List<VerificationCaseCheck> checks =
-                verificationCaseCheckRepository.findByAssignedVendorUser_UserId(vendorUserId);
+    	
+    	Boolean isVendorAdmin = userServiceUtil.hasRole(vendorUserId, RoleConstants.ROLE_VENDOR_ADMINISTRATOR);
+    	
+    	log.info("isVendorAdmin:::::::::::::::::::::{}",isVendorAdmin);
+    	 List<VerificationCaseCheck> checks = new ArrayList<>();
+    	if(isVendorAdmin) {
+    		checks = verificationCaseCheckRepository.findByVendorCompany_IdOrderByUpdatedAtDesc(SecurityUtils.getCurrentUserCompanyId());
+    	}else {
+    		checks = verificationCaseCheckRepository.findByAssignedVendorUser_UserId(vendorUserId);
+    	}
+    	
         
      // Extract unique cases from checks
         List<VerificationCase> vendorCases = checks.stream()
@@ -170,7 +181,8 @@ public class VendorDashboardService {
                                             .checkId(check.getCaseCheckId())
                                             .checkRef(check.getCheckRef())
                                             .checkType(check.getCategory() != null ? check.getCategory().getCode().toLowerCase(): "unknown")
-                                            .status(getStatusMapping(check.getStatus()))
+                                           // .status(getStatusMapping(check.getStatus()))
+                                            .status(check.getStatus().name())
                                             .slaStatus(calculateSlaStatus(check))
                                             .build())
                                     .toList();
@@ -300,6 +312,7 @@ public class VendorDashboardService {
           //  case DELAYED: return "delayed";
             case INSUFFICIENT: return "insufficient";
             case ASSIGNED: return "assigned";
+            case AGENT_ASSIGNED: return "AGENT_ASSIGNED";
             default: return "pending";
         }
     }

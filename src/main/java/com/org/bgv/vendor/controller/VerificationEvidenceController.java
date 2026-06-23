@@ -1,4 +1,4 @@
-package com.org.bgv.controller;
+package com.org.bgv.vendor.controller;
 
 import org.springframework.http.HttpStatus;
 import org.springframework.http.MediaType;

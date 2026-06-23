@@ -49,6 +49,15 @@ public class VerificationActionEvidence {
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "action_id")
     private VerificationAction action;
+    
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "case_check_id")
+    private VerificationCaseCheck verificationCaseCheck;
+    
+    @Column(name = "object_id")
+    private Long objectId;
+    
+    private String objectType;
 
     /* =====================
        Evidence Source
