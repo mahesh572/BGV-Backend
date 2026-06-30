@@ -10,6 +10,7 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
+import org.springframework.web.bind.annotation.PutMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
@@ -17,8 +18,10 @@ import org.springframework.web.bind.annotation.RestController;
 import org.springframework.web.multipart.MultipartFile;
 
 import com.org.bgv.api.response.CustomApiResponse;
+import com.org.bgv.common.UserDto;
 import com.org.bgv.config.JwtUtil;
 import com.org.bgv.config.SecurityUtils;
+import com.org.bgv.exceptions.ResourceNotFoundException;
 import com.org.bgv.s3.S3StorageService;
 import com.org.bgv.service.UserService;
 import com.org.bgv.vendor.action.dto.PresignedUrlResponse;
@@ -29,6 +32,8 @@ import com.org.bgv.vendor.dto.ActionType;
 import com.org.bgv.vendor.dto.VendorNotificationRequest;
 import com.org.bgv.vendor.evidence.dto.EvidenceUploadRequest;
 import com.org.bgv.vendor.evidence.dto.EvidenceUploadResponse;
+import com.org.bgv.vendor.service.VendorActionService;
+import com.org.bgv.vendor.service.VendorUserService;
 import com.org.bgv.vendor.service.VerificationActionService;
 
 import jakarta.persistence.EntityNotFoundException;
@@ -43,6 +48,8 @@ public class VendorActionController {
 
     private final VerificationActionService verificationActionService;
     private final S3StorageService s3StorageService;
+    private final VendorUserService vendorUserService;
+    private final VendorActionService vendorActionService;
     
 
     @GetMapping("/action-reasons")
@@ -357,6 +364,109 @@ public class VendorActionController {
                     );
         }
     }
+    
+    @GetMapping("/{companyId}/vendor-agents")
+    public ResponseEntity<CustomApiResponse<?>> getVendorAgentUsers(
+            @PathVariable Long companyId) {
+
+        try {
+
+            log.info("GET_VENDOR_AGENTS | companyId={}", companyId);
+
+            List<UserDto> vendorAgents =
+            		vendorUserService.getVendorAgentUsersToAssign(companyId);
+
+            return ResponseEntity.ok(
+                    CustomApiResponse.success(
+                            "Vendor agent users fetched successfully",
+                            vendorAgents,
+                            HttpStatus.OK
+                    )
+            );
+
+        } catch (ResourceNotFoundException e) {
+
+            log.error("Company not found | companyId={}", companyId, e);
+
+            return ResponseEntity.status(HttpStatus.NOT_FOUND)
+                    .body(
+                            CustomApiResponse.failure(
+                                    e.getMessage(),
+                                    HttpStatus.NOT_FOUND
+                            )
+                    );
+
+        } catch (Exception e) {
+
+            log.error("Failed to fetch vendor agents | companyId={}", companyId, e);
+
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
+                    .body(
+                            CustomApiResponse.failure(
+                                    "Failed to fetch vendor agents: " + e.getMessage(),
+                                    HttpStatus.INTERNAL_SERVER_ERROR
+                            )
+                    );
+        }
+    }
+	
+	
+	
+	 @PutMapping("/{companyId}/assign-vendor-agent")
+    public ResponseEntity<CustomApiResponse<?>> assignVendorAgent(
+            @PathVariable Long companyId,
+            @RequestParam Long checkId,
+            @RequestParam Long vendorAgentUserId) {
+
+        try {
+
+            log.info("ASSIGN_VENDOR_AGENT | companyId={} | checkId={} | vendorAgentUserId={}",
+                    companyId, checkId, vendorAgentUserId);
+
+            vendorActionService.assignVendorAgent(
+                    companyId, checkId, vendorAgentUserId);
+
+            return ResponseEntity.ok(
+                    CustomApiResponse.success(
+                            "Vendor agent assigned successfully",
+                            null,
+                            HttpStatus.OK
+                    )
+            );
+
+        } catch (ResourceNotFoundException e) {
+
+            log.error("Resource not found | companyId={} | checkId={} | vendorAgentUserId={}",
+                    companyId, checkId, vendorAgentUserId, e);
+
+            return ResponseEntity.status(HttpStatus.NOT_FOUND)
+                    .body(CustomApiResponse.failure(
+                            e.getMessage(),
+                            HttpStatus.NOT_FOUND
+                    ));
+
+        } catch (IllegalStateException e) {
+
+            log.warn("Assignment validation failed | {}", e.getMessage());
+
+            return ResponseEntity.status(HttpStatus.BAD_REQUEST)
+                    .body(CustomApiResponse.failure(
+                            e.getMessage(),
+                            HttpStatus.BAD_REQUEST
+                    ));
+
+        } catch (Exception e) {
+
+            log.error("Failed to assign vendor agent", e);
+
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
+                    .body(CustomApiResponse.failure(
+                            "Failed to assign vendor agent: " + e.getMessage(),
+                            HttpStatus.INTERNAL_SERVER_ERROR
+                    ));
+        }
+    }
+    
     
 }
 

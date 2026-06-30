@@ -9,9 +9,14 @@ import com.org.bgv.service.UserService;
 import com.org.bgv.vendor.dto.CompleteFieldVisitRequest;
 import com.org.bgv.vendor.dto.ExecutionActionDto;
 import com.org.bgv.vendor.dto.FieldAssignmentDTO;
+import com.org.bgv.vendor.dto.UpdateExecutionStatusRequest;
 import com.org.bgv.vendor.entity.FieldVisitAssignment;
+import com.org.bgv.vendor.entity.FieldVisitLocation;
 import com.org.bgv.vendor.entity.VerificationMethodExecution;
+import com.org.bgv.vendor.enums.LocationSource;
+import com.org.bgv.vendor.enums.VisitLocationType;
 import com.org.bgv.vendor.repository.FieldVisitAssignmentRepository;
+import com.org.bgv.vendor.repository.FieldVisitLocationRepository;
 import com.org.bgv.vendor.repository.VerificationMethodExecutionRepository;
 import com.org.bgv.vendor.verification.methods.service.VerificationMethodTrackingService;
 
@@ -25,6 +30,7 @@ import java.time.LocalDateTime;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Objects;
 import java.util.stream.Collectors;
 
 @Service
@@ -37,6 +43,7 @@ public class FieldAgentService {
  private final UserService userService;
  private final ExecutionActionConfigService executionActionConfigService;
  private final VerificationMethodTrackingService  verificationMethodTrackingService;
+ private final FieldVisitLocationRepository fieldVisitLocationRepository;
 
  /**
   * Get dashboard summary for field agent
@@ -84,6 +91,7 @@ public class FieldAgentService {
    
      return assignments.stream()
          .map(this::convertToDTO)
+         .filter(Objects::nonNull)
          .collect(Collectors.toList());
  }
 
@@ -132,33 +140,74 @@ public class FieldAgentService {
   * Start a field visit
   */
  @Transactional
- public FieldAssignmentDTO startVisit(Long assignmentId, User fieldAgent, Double latitude, Double longitude, String address) {
-     FieldVisitAssignment assignment = assignmentRepository.findById(assignmentId)
-         .orElseThrow(() -> new RuntimeException("Assignment not found"));
-     
+ public FieldAssignmentDTO startVisit(
+         Long executionId,
+         UpdateExecutionStatusRequest request) {
+	 
+	 User fieldAgent = userService.getUserById(SecurityUtils.getCurrentUserId());
+	 
+	 FieldVisitAssignment assignment =
+             assignmentRepository.findByExecutionExecutionId(executionId)
+             .orElseThrow(() -> new RuntimeException("Assignment not found"));
+
      // Verify ownership
      if (!assignment.getFieldAgent().getUserId().equals(fieldAgent.getUserId())) {
          throw new RuntimeException("Unauthorized access to assignment");
      }
-     
-     // Validate status
-     VerificationExecutionStatus currentStatus = assignment.getExecution().getStatus();
-     if (currentStatus != VerificationExecutionStatus.VISIT_ASSIGNED && 
-         currentStatus != VerificationExecutionStatus.INITIATED) {
-         throw new RuntimeException("Cannot start visit from current status: " + currentStatus);
-     }
-     
-     // Update assignment
-     assignment.setStartedAt(LocalDateTime.now());
-     assignment.setLatitude(latitude);
-     assignment.setLongitude(longitude);
-     
-     // Update execution status
+
      VerificationMethodExecution execution = assignment.getExecution();
+
+     // Validate current execution status
+     VerificationExecutionStatus currentStatus = execution.getStatus();
+/*
+     if (currentStatus != VerificationExecutionStatus.VISIT_ASSIGNED
+             && currentStatus != VerificationExecutionStatus.INITIATED) {
+
+         throw new RuntimeException(
+                 "Cannot start visit from current status : " + currentStatus);
+     }
+*/
+     LocalDateTime now = LocalDateTime.now();
+
+     /*
+      * Update Assignment
+      */
+     assignment.setStartedAt(now);
+
+     FieldVisitAssignment savedAssignment =
+             assignmentRepository.save(assignment);
+
+     /*
+      * Capture Start Location
+      */
+     FieldVisitLocation location = FieldVisitLocation.builder()
+             .assignment(savedAssignment)
+             .latitude(request.getLatitude())
+             .longitude(request.getLongitude())
+             .accuracy(request.getAccuracy())
+             .address(request.getAddress())
+             .visitType(VisitLocationType.START)
+             .source(LocationSource.GPS)
+             .capturedAt(now)
+             .capturedBy(fieldAgent.getUserId())
+             .build();
+
+     fieldVisitLocationRepository.save(location);
+
+     /*
+      * Update Execution
+      */
      execution.setStatus(VerificationExecutionStatus.VISIT_IN_PROGRESS);
+
+     if (request.getNotes() != null && !request.getNotes().isBlank()) {
+         execution.setOutcomeRemarks(request.getNotes());
+     }
+
      executionRepository.save(execution);
-     
-     FieldVisitAssignment savedAssignment = assignmentRepository.save(assignment);
+
+     /*
+      * Return latest assignment DTO
+      */
      return convertToDTO(savedAssignment);
  }
 
@@ -176,15 +225,32 @@ public class FieldAgentService {
 
      assignment.setOutcome(request.getOutcome());
      assignment.setRemarks(request.getRemarks());
-     assignment.setLatitude(request.getLatitude());
-     assignment.setLongitude(request.getLongitude());
+    // assignment.setLatitude(request.getLatitude());
+    // assignment.setLongitude(request.getLongitude());
      assignment.setCompletedAt(LocalDateTime.now());
 
      VerificationMethodExecution execution = assignment.getExecution();
-     execution.setStatus(VerificationExecutionStatus.VISIT_COMPLETED);
+    // execution.setStatus(VerificationExecutionStatus.VISIT_COMPLETED);
+     execution.setStatus(VerificationExecutionStatus.PENDING_REVIEW);
+     execution.setOutcomeCode(request.getOutcome());
+     execution.setOutcomeRemarks(request.getRemarks());
      execution.setCompletedAt(LocalDateTime.now());
 
      executionRepository.save(execution);
+     
+     FieldVisitLocation location = FieldVisitLocation.builder()
+    	        .assignment(assignment)
+    	        .latitude(request.getLatitude())
+    	        .longitude(request.getLongitude())
+    	        .address(request.getAddress())
+    	       // .accuracy(request.getAccuracy())
+    	        .visitType(VisitLocationType.COMPLETION)
+    	        .capturedAt(LocalDateTime.now())
+    	        .capturedBy(SecurityUtils.getCurrentUserId())
+    	        .source(LocationSource.GPS)
+    	        .build();
+
+    	fieldVisitLocationRepository.save(location);
 
      return convertToDTO(
              assignmentRepository.save(assignment));
@@ -202,10 +268,10 @@ public class FieldAgentService {
          throw new RuntimeException("Unauthorized access to assignment");
      }
      
-     assignment.setLatitude(latitude);
-     assignment.setLongitude(longitude);
-     assignment.setLocationCapturedAt(LocalDateTime.now());
-     assignment.setLocationUpdatedBy(fieldAgent.getUserId());
+   //  assignment.setLatitude(latitude);
+   //  assignment.setLongitude(longitude);
+   //  assignment.setLocationCapturedAt(LocalDateTime.now());
+   //  assignment.setLocationUpdatedBy(fieldAgent.getUserId());
      
      assignmentRepository.save(assignment);
  }
@@ -230,6 +296,31 @@ public class FieldAgentService {
      
     // boolean canComplete = execution.getStatus() == VerificationExecutionStatus.VISIT_IN_PROGRESS;
      
+     if(execution.getVerificationCheck()==null) {
+    	 return null;
+     }
+     
+    /* 
+     FieldVisitLocation startLocation =
+    		    repository.findByAssignmentAndVisitType(
+    		        assignment,
+    		        VisitLocationType.START)
+    		    .orElse(null);
+
+    		FieldVisitLocation completionLocation =
+    		    repository.findByAssignmentAndVisitType(
+    		        assignment,
+    		        VisitLocationType.COMPLETION)
+    		    .orElse(null);
+     
+     */
+     FieldVisitLocation latestLocation =
+    	        fieldVisitLocationRepository
+    	            .findTopByAssignmentAssignmentIdOrderByCapturedAtDesc(assignment.getAssignmentId())
+    	            .orElse(null);
+     
+     log.info("execution::::::::::::::::::::::::::::{}",execution.toString());
+     
      return FieldAssignmentDTO.builder()
     		 .checkId(execution.getVerificationCheck().getCaseCheckId())
          .assignmentId(assignment.getAssignmentId())
@@ -238,8 +329,8 @@ public class FieldAgentService {
          .verificationMethodCode(execution.getVerificationMethod().getCode().name())
          .status(execution.getStatus().name())
          .visitAddress(assignment.getVisitAddress())
-         .latitude(assignment.getLatitude())
-         .longitude(assignment.getLongitude())
+         .latitude(latestLocation != null ? latestLocation.getLatitude() : null)
+         .longitude(latestLocation != null ? latestLocation.getLongitude() : null)
          .scheduledDate(assignment.getScheduledDate())
          .assignedAt(assignment.getAssignedAt())
          .startedAt(assignment.getStartedAt())

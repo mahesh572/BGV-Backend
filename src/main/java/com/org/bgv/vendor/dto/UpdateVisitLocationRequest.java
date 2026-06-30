@@ -1,6 +1,8 @@
 package com.org.bgv.vendor.dto;
 
 
+import com.org.bgv.vendor.enums.LocationSource;
+
 import lombok.Data;
 
 @Data
@@ -17,7 +19,7 @@ public class UpdateVisitLocationRequest {
     private Double accuracy;
 
     // GPS / MANUAL / HYBRID
-    private String source;
+    private LocationSource source;
 
     // START / DURING / END
   //  private VisitLocationType visitType;

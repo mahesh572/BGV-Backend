@@ -5,6 +5,7 @@ import static java.util.Map.entry;
 import java.util.*;
 import java.util.stream.Collectors;
 
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.boot.CommandLineRunner;
 import org.springframework.boot.context.event.ApplicationReadyEvent;
 import org.springframework.context.annotation.DependsOn;
@@ -30,6 +31,9 @@ import org.springframework.context.event.EventListener;
 @Slf4j
 @DependsOn("entityManagerFactory") // ensure JPA tables are ready
 public class ActionReasonSeeder implements CommandLineRunner {
+	
+	    @Value("${app.seed.enabled:false}")
+	    private boolean seedEnabled;
 
     private final ActionReasonRepository actionReasonRepo;
     private final CategoryActionReasonRepository categoryActionReasonRepo;
@@ -39,6 +43,11 @@ public class ActionReasonSeeder implements CommandLineRunner {
     @Override
     @Transactional
     public void run(String... args) {
+    	
+    	if (!seedEnabled) {
+            System.out.println("Database seeding is disabled.");
+            return;
+        }
 
         log.info("🔹 ActionReasonSeeder started");
 

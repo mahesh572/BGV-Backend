@@ -644,7 +644,7 @@ public class VerificationActionService {
 	            .orElseThrow(() -> new EntityNotFoundException(
 	                    "Verification Check not found: " + checkId));
 
-	    if (check.getStatus() != CaseCheckStatus.ASSIGNED) {
+	    if (check.getStatus() != CaseCheckStatus.AGENT_ASSIGNED) {
 	        throw new IllegalStateException(
 	                "Only assigned checks can be started");
 	    }

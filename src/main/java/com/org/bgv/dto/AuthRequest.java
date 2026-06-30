@@ -1,6 +1,7 @@
 package com.org.bgv.dto;
 
 import com.fasterxml.jackson.annotation.JsonProperty;
+import com.org.bgv.common.navigation.PortalType;
 
 import lombok.Builder;
 import lombok.Data;
@@ -15,5 +16,5 @@ public class AuthRequest {
     private String password;
     
     @JsonProperty("portal")
-    private String portal;
+    private PortalType portal;
 }

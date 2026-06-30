@@ -5,6 +5,7 @@ public enum NotificationEvent {
  // ======================
     // ACCOUNT / AUTH
     // ======================
+	ACCOUNT_ACTIVATION_REQUESTED,
     USER_REGISTERED,
     USER_ACTIVATED,
     USER_DEACTIVATED,

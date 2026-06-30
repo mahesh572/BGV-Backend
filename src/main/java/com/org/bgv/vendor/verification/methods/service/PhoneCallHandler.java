@@ -20,7 +20,7 @@ public class PhoneCallHandler
             VerificationMethodExecution execution,VerificationContext context) {
 
         execution.setStatus(
-                VerificationExecutionStatus.PHONE_CALL_INITIATED);
+                VerificationExecutionStatus.INITIATED);
 
         executionRepository.save(execution);
     }

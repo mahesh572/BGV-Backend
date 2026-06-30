@@ -1,4 +1,4 @@
-package com.org.bgv.controller;
+package com.org.bgv.vendor.controller;
 
 import java.util.List;
 
@@ -319,7 +319,7 @@ public class VerificationMethodsController {
 	        @PathVariable Long executionId,
 	        @RequestBody UpdateExecutionStatusRequest request
 	) {
-
+		 try {
 		service.updateStatus(executionId, request);
 
 	    return ResponseEntity.ok(
@@ -329,6 +329,26 @@ public class VerificationMethodsController {
 	                    HttpStatus.OK
 	            )
 	    );
+		 } catch (BusinessException ex) {
+
+		        return ResponseEntity.badRequest().body(
+		                CustomApiResponse.failure(
+		                        ex.getMessage(),
+		                        HttpStatus.BAD_REQUEST
+		                )
+		        );
+
+		    } catch (Exception ex) {
+		    	
+		    	log.error("Failed to delete evidence {}",  ex);
+
+		        return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(
+		                CustomApiResponse.failure(
+		                        "Something went wrong",
+		                        HttpStatus.INTERNAL_SERVER_ERROR
+		                )
+		        );
+		    }
 	}
 	
 	@DeleteMapping("/evidence/{evidenceId}")

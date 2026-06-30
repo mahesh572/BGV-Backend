@@ -2,6 +2,7 @@ package com.org.bgv.data.seed;
 
 import java.util.List;
 
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.boot.CommandLineRunner;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
@@ -16,11 +17,17 @@ import lombok.RequiredArgsConstructor;
 @Configuration
 @RequiredArgsConstructor
 public class NavigationSeeder {
+	
+	 @Value("${app.seed.enabled:false}")
+	    private boolean seedEnabled;
 
     private final NavigationMenuRepository navigationMenuRepository;
 
     @Bean
     CommandLineRunner seedVendorNavigation() {
+    	
+    	
+    	
         return args -> {
 
             // Dashboard

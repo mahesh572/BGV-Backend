@@ -10,6 +10,7 @@ import com.fasterxml.jackson.annotation.JsonInclude;
 import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.org.bgv.candidate.dto.CandidateStatus;
+import com.org.bgv.user.enums.Gender;
 
 @Data
 @Builder
@@ -32,7 +33,7 @@ public class CandidateDTO {
     @JsonAlias({"phoneNumber", "phone_number", "mobile", "mobile_no"})
     private String phoneNumber;
 
-    private String gender;
+    private Gender gender;
     private String role;
    
     private String name;

@@ -18,5 +18,9 @@ public interface FieldVisitLocationRepository
     Optional<FieldVisitLocation>
     findTopByAssignmentAssignmentIdOrderByCapturedAtDesc(
             Long assignmentId);
+    
+    
+    
+    
 
 }

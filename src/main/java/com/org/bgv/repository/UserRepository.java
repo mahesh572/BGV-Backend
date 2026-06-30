@@ -11,10 +11,11 @@ import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 
 import com.org.bgv.entity.User;
+import com.org.bgv.user.enums.UserStatus;
 
 public interface UserRepository extends JpaRepository<User, Long>, JpaSpecificationExecutor<User> {
 	
-	
+	    Optional<User> findByEmailAndIsActiveTrueAndStatus(String email, UserStatus status);
 	    Optional<User> findByEmail(String email);
 	    boolean existsByEmail(String email);
 	    boolean existsByEmailAndUserIdNot(String email, Long userId);

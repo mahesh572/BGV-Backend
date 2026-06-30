@@ -7,6 +7,7 @@ import java.util.stream.Collectors;
 import java.util.stream.Stream;
 
 import com.org.bgv.entity.UserType;
+import com.org.bgv.user.enums.Gender;
 
 import lombok.AllArgsConstructor;
 import lombok.Builder;
@@ -29,7 +30,7 @@ public class UserDto {
     private Boolean isActive;
     private Boolean isVerified;
     private String profilePictureUrl;
-    private String gender;
+    private Gender gender;
     private String status;
     private LocalDate dateOfBirth;
     private Long profileId;
@@ -38,6 +39,7 @@ public class UserDto {
     private Boolean hasConsentProvided;
     private Long candidateId;
     private Boolean passwordResetrequired;
+    private String landingPage;
   //  private Long vendorId;
   //  private Long caseId;
     

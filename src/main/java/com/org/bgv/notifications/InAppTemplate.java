@@ -37,11 +37,13 @@ public class InAppTemplate {
 
     private String message;
     
+    @Enumerated(EnumType.STRING)
     @Column(name = "type", length = 50)
     private InAppNotificationType type; // e.g., "account_creation", "password_reset"
 
     private String deepLink;
     
+    @Enumerated(EnumType.STRING)
     private NotificationPriority priority;
 
     @Enumerated(EnumType.STRING)

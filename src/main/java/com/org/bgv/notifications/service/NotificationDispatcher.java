@@ -14,6 +14,7 @@ import com.org.bgv.candidate.entity.Candidate;
 import com.org.bgv.company.entity.Employee;
 import com.org.bgv.company.repository.CompanyEmailSettingsRepository;
 import com.org.bgv.company.repository.EmployeeRepository;
+import com.org.bgv.dto.ProfileDTO;
 import com.org.bgv.entity.Profile;
 import com.org.bgv.entity.User;
 import com.org.bgv.notifications.NotificationEvent;
@@ -24,6 +25,7 @@ import com.org.bgv.notifications.placeholder.ResolutionContext;
 import com.org.bgv.onboarding.entity.Company;
 import com.org.bgv.repository.PlatformConfigRepository;
 import com.org.bgv.repository.PlatformEmailSettingsRepository;
+import com.org.bgv.service.ProfileService;
 
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -37,6 +39,7 @@ public class NotificationDispatcher {
     private final NotificationDispatcherService dispatcher;
     private final SupportEmailResolver supportEmailResolver;
     private final PlaceholderEngine placeholderEngine;
+    private final ProfileService profileService;
 
     private final CompanyEmailSettingsRepository companyEmailSettingsRepository;
     private final PlatformEmailSettingsRepository platformEmailSettingsRepository;
@@ -97,6 +100,57 @@ public class NotificationDispatcher {
         );
     }
     
+    
+    public void dispatchUserAccountActivationNotification(
+            User user,
+            Company company
+    ) {
+        log.info(
+                "📨 Dispatching USER_ACCOUNT_ACTIVATION_REQUESTED notification | userId={} | email={}",
+                user.getUserId(), user.getEmail()
+        );
+
+        // Generate activation token/link (you need similar service as reset password)
+        String activationLink = resetTokenService.generateAccountActivationLink(user.getUserId());
+        ProfileDTO profileDTO = profileService.getProfileByUserId(user.getUserId());
+        
+        var platformConfig = platformConfigRepository.findById(1L)
+                .orElseThrow(() ->
+                        new IllegalStateException("PlatformConfig not initialized"));
+
+        log.debug("🔗 Generated account activation link for userId={}", user.getUserId());
+
+        NotificationContext context = NotificationContext.builder()
+                .event(NotificationEvent.ACCOUNT_ACTIVATION_REQUESTED)
+                .companyId(company != null ? company.getId() : null)
+                .userEmailAddress(user.getEmail())
+                .variables(Map.of(
+                        NotificationPlaceholder.USER_FULL_NAME.key(),
+                        profileDTO.getFirstName() +" "+ profileDTO.getLastName(),
+
+                        NotificationPlaceholder.USER_ACCOUNT_ACTIVATION_LINK.key(),
+                        activationLink,
+
+                        NotificationPlaceholder.PASSWORD_LINK_EXPIRY_DURATION.key(),
+                        "24 hours",
+                        NotificationPlaceholder.PLATFORM_BRAND_NAME.key(),platformConfig.getPlatformBrandName()
+                        
+                ))
+                .build();
+
+        log.debug(
+                "🧩 Activation notification placeholders resolved: {}",
+                context.getVariables().keySet()
+        );
+
+        dispatcher.dispatch(NotificationEvent.ACCOUNT_ACTIVATION_REQUESTED, context);
+
+        log.info(
+                "✅ USER_ACCOUNT_ACTIVATION_REQUESTED notification dispatched | userId={} | email={}",
+                user.getUserId(), user.getEmail()
+        );
+    }
+    
     public void dispatchUserCreatedNotification(
             Company company,
             Profile profile,
@@ -110,6 +164,8 @@ public class NotificationDispatcher {
 
         String resetLink = resetTokenService.generateResetLink(user.getUserId());
         log.debug("🔗 Generated reset password link for userId={}", user.getUserId());
+        
+        
 
         NotificationContext context = NotificationContext.builder()
                 .event(NotificationEvent.EMPLOYEE_ACCOUNT_CREATED)

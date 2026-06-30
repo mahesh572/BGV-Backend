@@ -14,6 +14,9 @@ public interface UserRoleRepository extends JpaRepository<UserRole, Long> {
 	
 	List<UserRole> findByRole(Role role);
 	
+	boolean existsByUserUserIdAndRoleId(
+	        Long userId,
+	        Long roleId);
     
  // Find UserRole entities by user and role IDs
     @Query("SELECT ur FROM UserRole ur WHERE ur.user.userId = :userId AND ur.role.id IN :roleIds")

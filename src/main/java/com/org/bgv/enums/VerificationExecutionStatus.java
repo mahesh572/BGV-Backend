@@ -30,6 +30,8 @@ public enum VerificationExecutionStatus {
     NO_RESPONSE,
 
     PHONE_CALL_INITIATED,
+    
+    PHONE_CALL_IN_PROGRESS,
 
     PHONE_RESPONSE_RECEIVED,
 
@@ -46,5 +48,10 @@ public enum VerificationExecutionStatus {
     VISIT_IN_PROGRESS,
     VISIT_COMPLETED,
 
-    COMPLETED
+    COMPLETED,
+    
+    PENDING_REVIEW,
+    APPROVED,
+    SEND_EMAIL,
+    RESEND_EMAIL
 }

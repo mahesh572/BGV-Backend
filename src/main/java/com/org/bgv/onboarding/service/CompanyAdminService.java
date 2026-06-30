@@ -3,7 +3,6 @@ package com.org.bgv.onboarding.service;
 import org.springframework.stereotype.Service;
 
 import com.org.bgv.common.RoleConstants;
-import com.org.bgv.constants.UserStatus;
 import com.org.bgv.entity.CompanyUser;
 import com.org.bgv.entity.Profile;
 import com.org.bgv.entity.Role;
@@ -18,6 +17,7 @@ import com.org.bgv.repository.ProfileRepository;
 import com.org.bgv.repository.RoleRepository;
 import com.org.bgv.repository.UserRepository;
 import com.org.bgv.repository.UserRoleRepository;
+import com.org.bgv.user.enums.UserStatus;
 
 import jakarta.transaction.Transactional;
 import lombok.AllArgsConstructor;

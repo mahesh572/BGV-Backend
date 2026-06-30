@@ -4,6 +4,7 @@ import com.fasterxml.jackson.annotation.JsonInclude;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.org.bgv.common.DocumentTypeInfo;
 import com.org.bgv.dto.CheckCategoryEnum;
+import com.org.bgv.ui.Button;
 import com.org.bgv.vendor.action.dto.ActionDTO;
 
 import lombok.AllArgsConstructor;
@@ -76,4 +77,6 @@ public class VerificationCheckResponseDTO {
     
     @JsonProperty("audit")
     private AuditDTO audit;
+    
+    List<Button> buttons;
 }

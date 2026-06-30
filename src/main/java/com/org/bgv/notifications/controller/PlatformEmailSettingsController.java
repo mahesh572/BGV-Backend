@@ -118,5 +118,14 @@ public class PlatformEmailSettingsController {
                     ));
         }
     }
+    
+    @PostMapping("/test")
+    public ResponseEntity<?> testEmail(
+            ) {
+
+      //  emailSettingsService.testEmail(request);
+
+        return ResponseEntity.ok("Test email sent successfully.");
+    }
 }
 

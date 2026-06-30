@@ -31,6 +31,7 @@ import com.org.bgv.entity.User;
 import com.org.bgv.entity.UserRole;
 import com.org.bgv.entity.UserType;
 import com.org.bgv.entity.Vendor;
+import com.org.bgv.exceptions.BusinessException;
 import com.org.bgv.mapper.UserMapper;
 import com.org.bgv.onboarding.entity.Company;
 import com.org.bgv.repository.CompanyRepository;
@@ -40,6 +41,9 @@ import com.org.bgv.repository.RoleRepository;
 import com.org.bgv.repository.UserRepository;
 import com.org.bgv.repository.UserRoleRepository;
 import com.org.bgv.repository.VendorRepository;
+import com.org.bgv.user.enums.UserStatus;
+import com.org.bgv.user.requests.RegistrationContext;
+import com.org.bgv.user.requests.UserRegistrationRequest;
 
 import jakarta.persistence.criteria.Join;
 import jakarta.persistence.criteria.JoinType;
@@ -88,6 +92,29 @@ public class UserService {
     private final EmployeeRepository employeeRepository;
     
     private static final Logger logger = LoggerFactory.getLogger(UserService.class);
+    
+    
+    @Transactional
+    public User createUser(UserRegistrationRequest request,
+                           RegistrationContext context) {
+
+        if (userRepository.findByEmail(request.getEmail()).isPresent()) {
+            throw new BusinessException("Email already registered");
+        }
+
+        User user = User.builder()
+                .email(request.getEmail())
+                .password(passwordEncoder.encode(request.getPassword()))
+                // New user lifecycle
+                .status(UserStatus.PENDING_ACTIVATION)
+                .isActive(false)
+                //.isVerified(false)
+                .passwordResetrequired(true)
+                .build();
+
+        return userRepository.save(user);
+    }
+
 
     public List<UserDto> getAll() {
         try {
@@ -680,44 +707,51 @@ public class UserService {
     public void assignUsersToCompany(List<Long> userIds, Long companyId) {
 
         Company company = companyRepository.findById(companyId)
-            .orElseThrow(() -> new RuntimeException("Company not found"));
+                .orElseThrow(() -> new RuntimeException("Company not found"));
 
         List<User> users = userRepository.findAllById(userIds);
+
         if (users.size() != userIds.size()) {
             throw new RuntimeException("One or more users not found");
         }
 
         for (User user : users) {
 
-            // ❌ already employee? skip
+            // Create company-user mapping
+            if (!companyUserRepository.existsByCompanyIdAndUserId(
+                    companyId,
+                    user.getUserId())) {
+
+                CompanyUser companyUser = CompanyUser.builder()
+                        .company(company)
+                        .user(user)
+                        .build();
+
+                companyUserRepository.save(companyUser);
+            }
+
+            // Create employee record
             if (employeeRepository.existsByUserUserIdAndCompanyId(
-                    user.getUserId(), companyId)) {
+                    user.getUserId(),
+                    companyId)) {
                 continue;
             }
 
-            // ✅ Fetch profile
-            Profile profile = profileRepository.findByUser_UserId(user.getUserId())
-                .orElseThrow(() -> new RuntimeException(
-                    "Profile not found for userId: " + user.getUserId()));
+            Profile profile = profileRepository
+                    .findByUser_UserId(user.getUserId())
+                    .orElse(null);
 
-            // ✅ Create employee from profile
             Employee employee = Employee.builder()
-                .user(user)
-                .company(company)
-
-                // Copy from profile
-                .firstName(profile.getFirstName())
-                .lastName(profile.getLastName())
-               // .emailAddress(profile.getEmailAddress())
-                .phoneNumber(profile.getPhoneNumber())
-                .gender(profile.getGender())
-                .nationality(profile.getNationality())
-                .dateOfBirth(profile.getDateOfBirth())
-                .maritalStatus(profile.getMaritalStatus())
-
-                // Employment defaults
-                .status("ACTIVE")
-                .build();
+                    .user(user)
+                    .company(company)
+                    .firstName(profile != null ? profile.getFirstName() : "")
+                    .lastName(profile != null ? profile.getLastName() : "")
+                    .phoneNumber(profile != null ? profile.getPhoneNumber() : "")
+                    .gender(profile != null ? profile.getGender() : null)
+                    .nationality(profile != null ? profile.getNationality() : "")
+                    .maritalStatus(profile != null ? profile.getMaritalStatus() : "")
+                    .status("ACTIVE")
+                    .build();
 
             employeeRepository.save(employee);
         }

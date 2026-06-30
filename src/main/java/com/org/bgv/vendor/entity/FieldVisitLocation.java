@@ -2,6 +2,9 @@ package com.org.bgv.vendor.entity;
 
 import java.time.LocalDateTime;
 
+import com.org.bgv.vendor.enums.LocationSource;
+import com.org.bgv.vendor.enums.VisitLocationType;
+
 import jakarta.persistence.Entity;
 import jakarta.persistence.EnumType;
 import jakarta.persistence.Enumerated;
@@ -36,10 +39,11 @@ public class FieldVisitLocation {
 
     private Double accuracy;
 
-    private String source; // GPS, MANUAL, HYBRID
+    @Enumerated(EnumType.STRING)
+    private LocationSource source; // GPS, MANUAL, HYBRID
 
-    //@Enumerated(EnumType.STRING)
-   // private VisitLocationType visitType;
+    @Enumerated(EnumType.STRING)
+    private VisitLocationType visitType;
 
     private LocalDateTime capturedAt;
 

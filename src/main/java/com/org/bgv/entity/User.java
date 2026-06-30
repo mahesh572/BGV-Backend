@@ -7,7 +7,8 @@ import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.util.List;
 
-import com.org.bgv.constants.UserStatus;
+import com.org.bgv.user.enums.UserStatus;
+
 
 @Entity
 @Table(name = "users")

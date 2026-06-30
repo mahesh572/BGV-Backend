@@ -19,6 +19,9 @@ public interface CompanyUserRepository extends JpaRepository<CompanyUser, Long> 
     // Method 1: Using property path (if User entity has userId field)
     List<CompanyUser> findByUserUserId(Long userId);
     
+    Optional<CompanyUser> findByUser(User user);
+
+    
     // Method 2: Using @Query (more explicit)
     @Query("SELECT cu FROM CompanyUser cu WHERE cu.user.userId = :userId")
     List<CompanyUser> findByUserId(@Param("userId") Long userId);
@@ -51,12 +54,12 @@ public interface CompanyUserRepository extends JpaRepository<CompanyUser, Long> 
     
     
     @Query("""
-            select cu.user
-            from CompanyUser cu
-            join UserRole ur on ur.user = cu.user
-            where cu.companyId = :companyId
-            and ur.role.name = :roleName
-            """)
+    	    SELECT cu.user
+    	    FROM CompanyUser cu
+    	    JOIN UserRole ur ON ur.user.userId = cu.user.userId
+    	    WHERE cu.company.id = :companyId
+    	      AND ur.role.name = :roleName
+    	""")
     List<User> findUsersByCompanyIdAndRole(
             @Param("companyId") Long companyId,
             @Param("roleName") String roleName

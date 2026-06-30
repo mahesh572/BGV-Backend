@@ -2,6 +2,7 @@ package com.org.bgv.data.seed;
 
 import java.util.List;
 
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.boot.CommandLineRunner;
 import org.springframework.stereotype.Component;
 
@@ -19,12 +20,20 @@ import lombok.extern.slf4j.Slf4j;
 @RequiredArgsConstructor
 @Slf4j
 public class RuleTypeSeeder implements CommandLineRunner {
+	
+	 @Value("${app.seed.enabled:false}")
+	    private boolean seedEnabled;
 
     private final RuleTypesRepository ruleRepo;
     private final CheckCategoryRepository categoryRepo;
 
     @Override
     public void run(String... args) {
+    	
+    	if (!seedEnabled) {
+            System.out.println("Database seeding is disabled.");
+            return;
+        }
 
         CheckCategory education = categoryRepo.findByName(CheckCategoryEnum.EDUCATION.getName()).orElseThrow();
         CheckCategory work = categoryRepo.findByName(CheckCategoryEnum.WORK_EXPERIENCE.getName()).orElseThrow();

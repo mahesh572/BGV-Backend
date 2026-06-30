@@ -4,6 +4,8 @@ import com.org.bgv.common.entity.FieldConfiguration;
 import com.org.bgv.common.repository.FieldConfigurationRepository;
 import com.org.bgv.dto.CheckCategoryEnum;
 import lombok.RequiredArgsConstructor;
+
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.boot.CommandLineRunner;
 import org.springframework.stereotype.Component;
 
@@ -12,11 +14,20 @@ import java.util.List;
 @Component
 @RequiredArgsConstructor
 public class FieldConfigurationSeeder implements CommandLineRunner {
+	
+	 @Value("${app.seed.enabled:false}")
+	    private boolean seedEnabled;
 
     private final FieldConfigurationRepository repository;
 
     @Override
     public void run(String... args) {
+    	
+    	
+    	if (!seedEnabled) {
+            System.out.println("Database seeding is disabled.");
+            return;
+        }
 
         if (repository.count() > 0) {
             return;

@@ -2,6 +2,7 @@ package com.org.bgv.data.seed;
 
 import java.util.List;
 
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.boot.CommandLineRunner;
 import org.springframework.boot.context.event.ApplicationReadyEvent;
 import org.springframework.context.annotation.Configuration;
@@ -22,6 +23,9 @@ import lombok.extern.slf4j.Slf4j;
 @RequiredArgsConstructor
 @Slf4j
 public class VendorCheckMappingSeeder implements CommandLineRunner {
+	
+	 @Value("${app.seed.enabled:false}")
+	    private boolean seedEnabled;
 
     private final VendorRepository vendorRepository;
     private final CheckCategoryRepository checkCategoryRepository;
@@ -32,6 +36,11 @@ public class VendorCheckMappingSeeder implements CommandLineRunner {
    // @EventListener(ApplicationReadyEvent.class)
     public void run(String... args) {
         log.info("🌱 VendorCheckMapping seeding started...");
+        
+        if (!seedEnabled) {
+            System.out.println("Database seeding is disabled.");
+            return;
+        }
         
         /*
 

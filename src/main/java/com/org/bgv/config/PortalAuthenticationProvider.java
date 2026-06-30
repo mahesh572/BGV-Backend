@@ -7,9 +7,11 @@ import org.springframework.security.core.Authentication;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Component;
 
+import com.org.bgv.common.RoleConstants;
 import com.org.bgv.common.navigation.PortalType;
 import com.org.bgv.company.repository.EmployeeRepository;
 import com.org.bgv.service.CustomUserDetailsService;
+import com.org.bgv.service.util.UserServiceUtil;
 
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -22,6 +24,7 @@ public class PortalAuthenticationProvider implements AuthenticationProvider {
     private final CustomUserDetailsService userDetailsService;
     private final PasswordEncoder passwordEncoder;
     private final EmployeeRepository employeeRepository;
+    private final UserServiceUtil userServiceUtil;
 
     @Override
     public Authentication authenticate(Authentication authentication) {
@@ -44,9 +47,17 @@ public class PortalAuthenticationProvider implements AuthenticationProvider {
 
         // 🔐 PORTAL RULES — SINGLE SOURCE OF TRUTH
         switch (portal) {
+            case USER:
+            	break;
             case COMPANY:
             case EMPLOYER:
-                employeeRepository
+                
+            	if (!userServiceUtil.hasRole(user, RoleConstants.ROLE_COMAPNY_ADMINISTRATOR)
+                        ) {
+                    throw new AccessDeniedException("Not authorized for Company Portal");
+                }
+            	
+            	employeeRepository
                     .findByUserUserIdAndStatus(user.getUserId(), "ACTIVE")
                     .orElseThrow(() -> {
                         log.warn("❌ Not active employee | userId={}", user.getUserId());
@@ -54,11 +65,25 @@ public class PortalAuthenticationProvider implements AuthenticationProvider {
                     });
                 break;
 
-            case USER:
+           // case USER:
             case ADMIN:
+            	if (!userServiceUtil.hasRole(user, RoleConstants.ADMINISTRATOR)) {
+                    throw new AccessDeniedException("Not authorized for Admin Portal");
+                }
+            	break;
             case VENDOR:
+            	 if (!userServiceUtil.hasRole(user, RoleConstants.ROLE_VENDOR_ADMINISTRATOR)
+                         && !userServiceUtil.hasRole(user, RoleConstants.ROLE_VENDOR_AGENT)
+                         && !userServiceUtil.hasRole(user, RoleConstants.ROLE_FIELD_AGENT)) {
+
+                     throw new AccessDeniedException("Not authorized for Vendor Portal");
+                 }
+            	 break;
+
             case CANDIDATE:
-                // allowed (future validation here)
+            	if (!userServiceUtil.hasRole(user, RoleConstants.ROLE_CANDIDATE)) {
+                    throw new AccessDeniedException("Not authorized for Candidate Portal");
+                }
                 break;
 
             default:

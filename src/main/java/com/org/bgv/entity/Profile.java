@@ -6,6 +6,8 @@ import lombok.*;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
 
+import com.org.bgv.user.enums.Gender;
+
 @Entity
 @Table(
     name = "profile"
@@ -54,8 +56,12 @@ public class Profile {
     @Column(name = "nationality")
     private String nationality;
 
-    @Column(name = "gender")
-    private String gender;
+   // @Column(name = "gender")
+   // private String gender;
+    
+    @Enumerated(EnumType.STRING)
+    @Column(name = "gender", length = 30)
+    private Gender gender;
 
     @Column(name = "date_of_birth")
     private LocalDate dateOfBirth;

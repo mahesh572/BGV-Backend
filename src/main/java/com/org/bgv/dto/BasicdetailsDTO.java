@@ -6,6 +6,7 @@ import java.util.List;
 
 import com.fasterxml.jackson.annotation.JsonFormat;
 import com.fasterxml.jackson.annotation.JsonInclude;
+import com.org.bgv.user.enums.Gender;
 
 import jakarta.validation.constraints.NotNull;
 import lombok.AllArgsConstructor;
@@ -30,7 +31,7 @@ public class BasicDetailsDTO {
     private String email;
     private String phone;
     private LocalDate dateOfBirth;
-    private String gender;
+    private Gender gender;
     private String linkedIn;
     private String nationality;
     private String passportNumber;

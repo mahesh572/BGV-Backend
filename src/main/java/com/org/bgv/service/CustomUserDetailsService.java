@@ -15,8 +15,10 @@ import com.org.bgv.common.RoleConstants;
 import com.org.bgv.config.CustomUserDetails;
 import com.org.bgv.entity.CompanyUser;
 import com.org.bgv.entity.User;
+import com.org.bgv.exceptions.BusinessException;
 import com.org.bgv.repository.CompanyUserRepository;
 import com.org.bgv.repository.UserRepository;
+import com.org.bgv.user.enums.UserStatus;
 
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -35,50 +37,34 @@ public class CustomUserDetailsService implements UserDetailsService {
 
         log.info("Loading user by email: {}", email);
 
-        try {
-            User user = userRepository.findByEmailWithRoles(email)
-                    .orElseThrow(() ->
-                            new UsernameNotFoundException(
-                                    "User not found with email: " + email
-                            )
-                    );
+        User user = userRepository.findByEmailWithRoles(email)
+                .orElseThrow(() ->
+                        new UsernameNotFoundException(
+                                "User not found with email: " + email
+                        )
+                );
 
-            log.info("User found: {}", user.getEmail());
-
-            // 🔐 Map roles → authorities
-            List<GrantedAuthority> authorities = user.getRoles().stream()
-                    .map(userRole -> {
-                        String roleName = userRole.getRole().getName();
-                        log.debug("Mapping role: {}", roleName);
-                        return new SimpleGrantedAuthority(roleName);
-                    })
-                    .collect(Collectors.toList());
-
-            boolean isAdmin = authorities.stream()
-                    .anyMatch(a -> a.getAuthority().equals(RoleConstants.ADMINISTRATOR));
-
-            Long companyId = null;
-
-            // 🏢 Resolve company ONLY if needed
-            if (!isAdmin) {
-                companyId = getCompanyIdForUser(user);
-            }
-
-            log.info(
-                "User authenticated | email={} | admin={} | companyId={}",
-                email, isAdmin, companyId
-            );
-
-            return buildCustomUserDetails(user, authorities, companyId);
-
-        } catch (UsernameNotFoundException e) {
-            throw e;
-        } catch (Exception e) {
-            log.error("Error loading user by email: {}", email, e);
-            throw new UsernameNotFoundException(
-                    "Error loading user: " + e.getMessage(), e
-            );
+        // Account disabled
+        if (Boolean.FALSE.equals(user.getIsActive())) {
+            throw new BusinessException("Your account has been deactivated. Please contact the administrator.");
         }
+
+       
+        // Business status check
+        if (user.getStatus() != UserStatus.ACTIVE) {
+            throw new BusinessException("Your account is currently " + user.getStatus().name().toLowerCase() + ".");
+        }
+
+        List<GrantedAuthority> authorities = user.getRoles().stream()
+                .map(userRole -> new SimpleGrantedAuthority(userRole.getRole().getName()))
+                .collect(Collectors.toList());
+
+        boolean isAdmin = authorities.stream()
+                .anyMatch(a -> a.getAuthority().equals(RoleConstants.ADMINISTRATOR));
+
+        Long companyId = isAdmin ? null : getCompanyIdForUser(user);
+
+        return buildCustomUserDetails(user, authorities, companyId);
     }
 
     private Long getCompanyIdForUser(User user) {
@@ -104,7 +90,7 @@ public class CustomUserDetailsService implements UserDetailsService {
                 .companyId(companyId)
                 .userId(user.getUserId())
                 .username(user.getEmail())
-                .userType(user.getUserType()!=null?user.getUserType().name():"")
+               // .userType(user.getUserType()!=null?user.getUserType().name():"")
              //   .enabled(user.isActive()) // Make sure you have this field in User entity
                 .build();
     }

@@ -29,6 +29,7 @@ import com.org.bgv.service.ActivityFactory;
 import com.org.bgv.service.ActivityTimelineService;
 import com.org.bgv.service.RoleService;
 import com.org.bgv.vendor.dto.AssignFieldAgentRequest;
+import com.org.bgv.vendor.dto.AttemptStatus;
 import com.org.bgv.vendor.dto.CreateVerificationExecutionNoteRequest;
 import com.org.bgv.vendor.dto.FieldAgentDto;
 import com.org.bgv.vendor.dto.StartVerificationMethodRequest;
@@ -36,6 +37,8 @@ import com.org.bgv.vendor.dto.UpdateExecutionStatusRequest;
 import com.org.bgv.vendor.dto.UpdateVisitLocationRequest;
 import com.org.bgv.vendor.entity.FieldVisitAssignment;
 import com.org.bgv.vendor.entity.FieldVisitLocation;
+import com.org.bgv.vendor.entity.VerificationAttempt;
+import com.org.bgv.vendor.entity.VerificationAttemptRepository;
 import com.org.bgv.vendor.entity.VerificationExecutionNote;
 import com.org.bgv.vendor.entity.VerificationMethod;
 import com.org.bgv.vendor.entity.VerificationMethodExecution;
@@ -46,15 +49,18 @@ import com.org.bgv.vendor.repository.VerificationExecutionNoteRepository;
 import com.org.bgv.vendor.repository.VerificationMethodExecutionFieldRepository;
 import com.org.bgv.vendor.repository.VerificationMethodExecutionRepository;
 import com.org.bgv.vendor.repository.VerificationMethodRepository;
+import com.org.bgv.vendor.verification.methods.service.EmailVerificationService;
 import com.org.bgv.vendor.verification.methods.service.VerificationContext;
 import com.org.bgv.vendor.verification.methods.service.VerificationWorkflowDispatcher;
 
 import jakarta.transaction.Transactional;
 import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 
 @Service
 @RequiredArgsConstructor
 @Transactional
+@Slf4j
 public class VerificationMethodExecutionService {
 
     private final VerificationCaseCheckRepository checkRepository;
@@ -76,6 +82,9 @@ public class VerificationMethodExecutionService {
     private final FieldVisitAssignmentRepository fieldVisitAssignmentRepository;
     private final UserRepository userRepository;
     private final FieldVisitLocationRepository fieldVisitLocationRepository;
+    private final VerificationAttemptRepository verificationAttemptRepository;
+    private final VerificationAttemptService verificationAttemptService;
+    private final EmailVerificationService emailVerificationService;
    
 
     
@@ -96,23 +105,13 @@ public class VerificationMethodExecutionService {
                                         "Verification method not found: "
                                                 + request.getMethodId()));
         
-        /*
-        List<VerificationExecutionStatus> activeStatuses =
-                List.of(
-                        VerificationExecutionStatus.IN_PROGRESS,
-                        VerificationExecutionStatus.WAITING_FOR_RESPONSE,
-                        VerificationExecutionStatus.RESPONSE_RECEIVED,
-                        VerificationExecutionStatus.UNDER_REVIEW,
-                        VerificationExecutionStatus.INITIATED,
-                        VerificationExecutionStatus.RESPONSE_RECEIVED
-                       
-                );
-*/
+        
         
         List<VerificationExecutionStatus> terminalStatuses = List.of(
                 VerificationExecutionStatus.COMPLETED,
                 VerificationExecutionStatus.CANCELLED,
-                VerificationExecutionStatus.VISIT_COMPLETED
+                VerificationExecutionStatus.VISIT_COMPLETED,
+                VerificationExecutionStatus.VERIFIED
         );
         boolean alreadyRunning =
                 executionRepository
@@ -128,12 +127,7 @@ public class VerificationMethodExecutionService {
                     "Verification method is already running for this object");
         }
 
-        if (alreadyRunning) {
-            throw new BusinessException(
-                    "Verification method is already running for this object"
-            );
-        }
-
+       
         VerificationMethodExecution execution =
                 new VerificationMethodExecution();
 
@@ -211,33 +205,25 @@ public class VerificationMethodExecutionService {
     public void updateStatus(Long executionId,
                              UpdateExecutionStatusRequest request) {
 
+        log.info("Updating execution status. ExecutionId={}, RequestedStatus={}",
+                executionId, request.getStatus());
+
         VerificationMethodExecution execution =
                 executionRepository.findById(executionId)
-                        .orElseThrow(() ->
-                                new RuntimeException(
-                                        "Execution not found: " + executionId));
+                        .orElseThrow(() -> {
+                            log.error("Execution not found. ExecutionId={}", executionId);
+                            return new RuntimeException("Execution not found : " + executionId);
+                        });
 
-        // Capture old status BEFORE changing
         VerificationExecutionStatus oldStatus = execution.getStatus();
 
-        // Validate transition
+        log.info("Current execution status. ExecutionId={}, OldStatus={}, NewStatus={}",
+                executionId, oldStatus, request.getStatus());
+
         validateStatusTransition(oldStatus, request.getStatus());
-
-        // Update status
+        
         execution.setStatus(request.getStatus());
-
-        // Timestamp logic
-        if (request.getStatus() == VerificationExecutionStatus.RESPONSE_RECEIVED) {
-            // execution.setResponseReceivedAt(LocalDateTime.now());
-        }
-
-        if (request.getStatus() == VerificationExecutionStatus.COMPLETED) {
-            execution.setCompletedAt(LocalDateTime.now());
-        }
-
-        // Save execution
-        executionRepository.save(execution);
-
+        
         VerificationContext context =
                 verificationContextUtil.build(
                         execution.getVerificationCheck().getCaseCheckId(),
@@ -246,13 +232,70 @@ public class VerificationMethodExecutionService {
                                 execution.getVerificationCheck()
                                         .getCategory()
                                         .getName())
-                                .name()
-                );
+                                .name());
 
-        // Create activity timeline entry
+        if (request.getStatus() == VerificationExecutionStatus.PHONE_CALL_IN_PROGRESS) {
+
+            log.info("Starting new verification attempt. ExecutionId={}", executionId);
+
+            verificationAttemptService.startNewAttempt(executionId);
+
+            log.info("Verification attempt started successfully. ExecutionId={}", executionId);
+        }
+
+        else if (request.getStatus() == VerificationExecutionStatus.COMPLETED) {
+
+            log.info("Completing verification attempt. ExecutionId={}, Outcome={}",
+                    executionId, request.getOutcome());
+
+            verificationAttemptService.completeAttempt(
+                    executionId,
+                    request.getOutcome(),
+                    request.getNotes());
+
+            log.info("Verification attempt completed. ExecutionId={}", executionId);
+
+            if ("VERIFIED".equalsIgnoreCase(request.getOutcome())) {
+
+                log.info("Verification successful. ExecutionId={}", executionId);
+
+                execution.setStatus(VerificationExecutionStatus.COMPLETED);
+                execution.setOutcomeCode(request.getOutcome());
+                execution.setOutcomeRemarks(request.getNotes());
+                execution.setCompletedAt(LocalDateTime.now());
+
+            } else if (!verificationAttemptService.hasAttemptsRemaining(execution)) {
+
+                log.info("Maximum attempts exhausted. ExecutionId={}", executionId);
+
+                execution.setStatus(VerificationExecutionStatus.COMPLETED);
+               // execution.setOutcomeCode("UNABLE_TO_VERIFY");
+                execution.setOutcomeRemarks(request.getNotes());
+                execution.setCompletedAt(LocalDateTime.now());
+
+            } else {
+
+                log.info("Attempts remaining. Moving execution back to IN_PROGRESS. ExecutionId={}",
+                        executionId);
+
+              //  execution.setStatus(VerificationExecutionStatus.IN_PROGRESS);
+            }
+        }else if(request.getStatus() == VerificationExecutionStatus.SEND_EMAIL || request.getStatus() == VerificationExecutionStatus.RESEND_EMAIL) {
+        	
+        	emailVerificationService.sendEmail(execution, context);
+        	verificationAttemptService.startNewAttempt(executionId);
+        	
+        }
+
+        executionRepository.save(execution);
+
+        log.info("Execution saved. ExecutionId={}, FinalStatus={}",
+                executionId, execution.getStatus());
+
+        
+
         activityTimelineService.log(
                 ActivityFactory.create(
-
                         execution.getVerificationCheck()
                                 .getVerificationCase()
                                 .getCaseId(),
@@ -273,43 +316,45 @@ public class VerificationMethodExecutionService {
                         String.format(
                                 "Status changed from %s to %s by vendor",
                                 oldStatus,
-                                request.getStatus()
-                        ),
+                                request.getStatus()),
 
                         SecurityUtils.getCurrentUserId(),
 
                         "VENDOR",
 
-                        oldStatus.name(),              // statusFrom
+                        oldStatus.name(),
 
-                        request.getStatus().name(),    // statusTo
+                        request.getStatus().name(),
 
                         Map.of(
                                 "executionId", executionId,
                                 "oldStatus", oldStatus.name(),
-                                "newStatus", request.getStatus().name()
-                        ),
+                                "newStatus", request.getStatus().name()),
 
                         context.getCandidate(),
-                        execution.getObjectId()
-                )
-        );
+                        execution.getObjectId()));
 
-        // Add note if provided
+        log.info("Activity timeline created. ExecutionId={}", executionId);
+
         if (request.getNotes() != null &&
                 !request.getNotes().isBlank()) {
 
+            log.info("Adding execution note. ExecutionId={}", executionId);
+
             addExecutionNote(execution, request.getNotes());
+
+            log.info("Execution note added. ExecutionId={}", executionId);
         }
+
+        log.info("Execution status update completed successfully. ExecutionId={}", executionId);
     }
-    
     private void validateStatusTransition(
             VerificationExecutionStatus current,
             VerificationExecutionStatus target
     ) {
 
-        if (current == VerificationExecutionStatus.COMPLETED) {
-            throw new IllegalStateException("Cannot change status of completed execution");
+        if (current == VerificationExecutionStatus.VERIFIED && target!=VerificationExecutionStatus.UNDER_REVIEW) {
+            throw new IllegalStateException("Cannot change status of Verified execution");
         }
 
         if (current == VerificationExecutionStatus.CANCELLED) {
@@ -361,26 +406,45 @@ public class VerificationMethodExecutionService {
     
     
     public List<FieldAgentDto> getFieldAgents() {
-    	
-    	
-    	Long companyId = SecurityUtils.getCurrentUserCompanyId();
-    	
-    	List<User> userList = roleService.getusersByCompanyIdAndRoleName(companyId, RoleConstants.ROLE_FIELD_AGENT);
 
-        
+        Long companyId = SecurityUtils.getCurrentUserCompanyId();
 
-        return userList.stream()
+        log.info("Fetching field agents for companyId={}", companyId);
+
+        List<User> userList = roleService.getusersByCompanyIdAndRoleName(
+                companyId,
+                RoleConstants.ROLE_FIELD_AGENT);
+
+        log.info("Found {} field agent(s) for companyId={}",
+                userList.size(), companyId);
+
+        List<FieldAgentDto> fieldAgents = userList.stream()
                 .map(user -> {
-                  Profile profile = user.getProfile();
+
+                    Profile profile = user.getProfile();
+
+                    String firstName = profile != null ? profile.getFirstName() : "";
+                    String lastName = profile != null ? profile.getLastName() : "";
+
+                    log.info(
+                            "Mapping Field Agent -> userId={}, email={}, firstName={}, lastName={}",
+                            user.getUserId(),
+                            user.getEmail(),
+                            firstName,
+                            lastName
+                    );
+
                     return FieldAgentDto.builder()
                             .userId(user.getUserId())
-                           // .employeeCode(user.getEmployeeCode())
-                            .name(profile.getFirstName()+profile.getLastName())
+                            .name((firstName + " " + lastName).trim())
                             .email(user.getEmail())
-                          //  .phone(user.getPhoneNumber())
                             .build();
                 })
                 .toList();
+
+        log.info("Returning {} field agent DTO(s)", fieldAgents.size());
+
+        return fieldAgents;
     }
     
     @Transactional

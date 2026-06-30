@@ -2,6 +2,7 @@ package com.org.bgv.data.seed;
 
 import java.util.List;
 
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.boot.ApplicationArguments;
 import org.springframework.boot.ApplicationRunner;
 import org.springframework.boot.context.event.ApplicationReadyEvent;
@@ -20,12 +21,20 @@ import lombok.RequiredArgsConstructor;
 @RequiredArgsConstructor
 @DependsOn("entityManagerFactory") // ensure JPA tables are ready
 public class NotificationEventSeeder implements ApplicationRunner {
+	
+	 @Value("${app.seed.enabled:false}")
+	    private boolean seedEnabled;
 
     private final NotificationEventMasterRepository repository;
 
     @Override
    // @EventListener(ApplicationReadyEvent.class)
     public void run(ApplicationArguments args) {
+    	
+    	if (!seedEnabled) {
+            System.out.println("Database seeding is disabled.");
+            return;
+        }
         seed();
     }
 
@@ -33,6 +42,15 @@ public class NotificationEventSeeder implements ApplicationRunner {
     private void seed() {
 
         // ================= ACCOUNT =================
+    	create(NotificationEvent.ACCOUNT_ACTIVATION_REQUESTED,
+    	        "Account Activation Requested",
+    	        "Account",
+    	        "Triggered when a user registers and activation email is sent",
+    	        "INFO",
+    	        List.of("EMAIL"),
+    	        List.of(RecipientType.USER));
+    	
+    	
         create(NotificationEvent.USER_REGISTERED,
                 "User Registered", "Account",
                 "Triggered when a user registers",

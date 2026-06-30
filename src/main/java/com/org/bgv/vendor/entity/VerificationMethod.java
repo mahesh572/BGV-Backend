@@ -29,6 +29,12 @@ public class VerificationMethod {
     private String name;
 
     private String description;
+    
+    private Integer maxAttempts;
+
+    private Integer retryIntervalHours;
+
+    private Boolean retryAllowed;
 
     private Boolean active = true;
 }

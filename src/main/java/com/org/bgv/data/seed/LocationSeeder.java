@@ -1,12 +1,15 @@
 package com.org.bgv.data.seed;
 
 
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.boot.CommandLineRunner;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 
+import com.org.bgv.common.entity.City;
 import com.org.bgv.common.entity.Country;
 import com.org.bgv.common.entity.StateRegion;
+import com.org.bgv.common.repository.CityRepository;
 import com.org.bgv.common.repository.CountryRepository;
 import com.org.bgv.common.repository.StateRegionRepository;
 
@@ -16,9 +19,13 @@ import lombok.RequiredArgsConstructor;
 @Configuration
 @RequiredArgsConstructor
 public class LocationSeeder {
+	
+	 @Value("${app.seed.enabled:false}")
+	    private boolean seedEnabled;
 
     private final CountryRepository countryRepository;
     private final StateRegionRepository stateRegionRepository;
+    private final CityRepository cityRepository;
 
     @Bean
     CommandLineRunner seedLocations() {
@@ -87,5 +94,19 @@ public class LocationSeeder {
         state.setName(name);
 
         stateRegionRepository.save(state);
+    }
+    
+    private void saveCity(StateRegion state, String code, String name) {
+
+        if (cityRepository.existsByStateAndName(state, name)) {
+            return;
+        }
+
+        City city = new City();
+        city.setState(state);
+        city.setCode(code);
+        city.setName(name);
+
+        cityRepository.save(city);
     }
 }

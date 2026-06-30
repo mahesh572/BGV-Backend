@@ -5,6 +5,7 @@ import com.org.bgv.candidate.repository.CandidateRepository;
 import com.org.bgv.common.DocumentStatus;
 import com.org.bgv.common.DocumentTypeInfo;
 import com.org.bgv.common.RoleConstants;
+import com.org.bgv.config.SecurityUtils;
 import com.org.bgv.constants.CaseCheckStatus;
 import com.org.bgv.constants.CaseStatus;
 import com.org.bgv.dto.CheckCategoryEnum;
@@ -12,6 +13,10 @@ import com.org.bgv.entity.*;
 import com.org.bgv.enums.VendorNoteType;
 import com.org.bgv.repository.*;
 import com.org.bgv.service.util.UserServiceUtil;
+import com.org.bgv.ui.Button;
+import com.org.bgv.ui.ButtonActionTypes;
+import com.org.bgv.ui.ButtonColor;
+import com.org.bgv.ui.ButtonStyle;
 import com.org.bgv.vendor.action.dto.ActionDTO;
 import com.org.bgv.vendor.action.dto.VendorActionCatalog;
 import com.org.bgv.vendor.builder.ObjectBuilderRegistry;
@@ -138,6 +143,13 @@ public class VerificationCheckService {
 
 	private VerificationCheckResponseDTO buildVerificationCheckResponse(VerificationCaseCheck check,
 			VerificationCase verificationCase, Candidate candidate) {
+		
+		List<Button> buttons = new ArrayList<>();
+		
+		addSendNotificationButton(buttons, check, SecurityUtils.getCurrentUserId());
+		addAssignAgentButton(buttons, check, SecurityUtils.getCurrentUserId());
+		startVerificationButton(buttons, check, SecurityUtils.getCurrentUserId());
+		reAssignAgentButton(buttons, check, SecurityUtils.getCurrentUserId());
 
 		return VerificationCheckResponseDTO.builder()
 				.caseId(String.valueOf(verificationCase.getCaseId()))
@@ -149,7 +161,8 @@ public class VerificationCheckService {
 				.checkName(check.getCategory().getName())
 				.status(check.getStatus().name())
 				.candidate(mapCandidateInfo(candidate))
-				.sendNotification(check.getStatus().name().equalsIgnoreCase(CaseCheckStatus.ACTION_REQUIRED.name()))
+				//.sendNotification(check.getStatus().name().equalsIgnoreCase(CaseCheckStatus.ACTION_REQUIRED.name()))
+				.buttons(buttons)
 				// .audit(buildAudit(check))
 				 .actions(resolveCheckActions(check.getStatus())) 
 				 
@@ -427,7 +440,7 @@ public class VerificationCheckService {
 		        userServiceUtil.hasRole(
 		                vendorId,
 		                RoleConstants.ROLE_VENDOR_ADMINISTRATOR);
-
+/*
 		if (!isVendorAdmin &&
 		    (check.getAssignedVendorUser() == null ||
 		     !Objects.equals(
@@ -437,6 +450,7 @@ public class VerificationCheckService {
 		    throw new AccessDeniedException(
 		            "Vendor not authorized to access this check");
 		}
+		*/
 
 	    return vendorNoteRepository
 	            .findByVerificationCaseCheck_CaseCheckIdOrderByCreatedAtDesc(checkId)
@@ -673,5 +687,130 @@ public class VerificationCheckService {
 	    return dto;
 	}
 	
+	
+	private void addSendNotificationButton(
+	        List<Button> buttons,
+	        VerificationCaseCheck check,
+	        Long vendorId) {
+
+	    boolean isVendorAgent = userServiceUtil.hasRole(
+	            vendorId,
+	            RoleConstants.ROLE_VENDOR_AGENT
+	    );
+
+	    boolean isActionRequired =
+	            CaseCheckStatus.ACTION_REQUIRED.name()
+	                    .equalsIgnoreCase(check.getStatus().name());
+
+	    if (isVendorAgent && isActionRequired) {
+	        buttons.add(Button.builder()
+	                .code("SEND_NOTIFICATION")
+	                .label("Notify")
+	                .visible(true)
+	                .enabled(true)
+	                .style(ButtonStyle.OUTLINED)
+	                .color(ButtonColor.PRIMARY)
+	                .icon("NotificationsActive")
+	                .action(ButtonActionTypes.SEND_NOTIFICATION)
+	                .tooltip("Notify candidate and employer about missing documents/information")
+	                .build());
+	    }
+	}
+	
+	private void addAssignAgentButton(
+	        List<Button> buttons,
+	        VerificationCaseCheck check,
+	        Long vendorId) {
+
+	    boolean isVendorAdmin = userServiceUtil.hasRole(
+	            vendorId,
+	            RoleConstants.ROLE_VENDOR_ADMINISTRATOR
+	    );
+
+	    boolean isPendingAgentAssignment =
+	            CaseCheckStatus.PENDING_AGENT_ASSIGNMENT
+	                    .equals(check.getStatus());
+
+	    if (isVendorAdmin && isPendingAgentAssignment) {
+	        buttons.add(Button.builder()
+	                .code("ASSIGN_AGENT")
+	                .label("Assign Agent")
+	                .visible(true)
+	                .enabled(true)
+	                .style(ButtonStyle.OUTLINED)
+	                .color(ButtonColor.PRIMARY)
+	                .icon("PersonAdd")
+	                .action(ButtonActionTypes.ASSIGN_AGENT)
+	                .tooltip("Assign this verification check to a vendor agent")
+	                .build());
+	    }
+	}
+	
+	
+	private void reAssignAgentButton(
+	        List<Button> buttons,
+	        VerificationCaseCheck check,
+	        Long vendorId) {
+
+	    boolean isVendorAdmin = userServiceUtil.hasRole(
+	            vendorId,
+	            RoleConstants.ROLE_VENDOR_ADMINISTRATOR
+	    );
+
+	    boolean isAgentAssigned =
+	            CaseCheckStatus.AGENT_ASSIGNED
+	                    .equals(check.getStatus());
+
+	    if (isVendorAdmin && isAgentAssigned) {
+	    	buttons.add(Button.builder()
+                    .code("REASSIGN")
+                    .label("Reassign Agent")
+                    .visible(true)
+                    .enabled(true)
+                    .style(ButtonStyle.OUTLINED)
+                    .color(ButtonColor.WARNING)
+                    .icon("Replay")
+                    .action(ButtonActionTypes.REASSIGN)
+                    .tooltip("Reassign this check to another vendor agent")
+                    .build());
+	    }
+	}
+	
+	private void startVerificationButton(List<Button> buttons,
+	        VerificationCaseCheck check,
+	        Long vendorId){
+	    
+	    boolean isVendorAdmin = userServiceUtil.hasRole(
+	                vendorId,
+	                RoleConstants.ROLE_VENDOR_ADMINISTRATOR
+	        );
+	    
+	    boolean isAgentAssigned = CaseCheckStatus.AGENT_ASSIGNED
+	                    .equals(check.getStatus());
+	    
+	    boolean isVendorAgent = userServiceUtil.hasRole(
+                vendorId,
+                RoleConstants.ROLE_VENDOR_AGENT
+        );
+	    
+	    // For Vendor Agents: Show Start Verification when agent is assigned
+	    if(!isVendorAdmin && isAgentAssigned && isVendorAgent) {
+	        buttons.add(Button.builder()
+	                .code("START_VERIFICATION")
+	                .label("Start Verification")
+	                .visible(true)
+	                .enabled(true)
+	                .style(ButtonStyle.CONTAINED)  // Changed to CONTAINED
+	                .color(ButtonColor.PRIMARY)
+	                .icon("PlayArrow")
+	                .action(ButtonActionTypes.START_VERIFICATION)
+	                .tooltip("Start the verification process")
+	                .build());
+	    }
+	    
+	    // For Vendor Admin: Show Assign Agent and Start Verification
+	   
+	    
+	}
 	
 }

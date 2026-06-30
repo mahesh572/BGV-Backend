@@ -82,6 +82,8 @@ import com.org.bgv.repository.*;
 import com.org.bgv.vendor.repository.VendorNoteRepository;
 import com.org.bgv.vendor.repository.VerificationActionEvidenceRepository;
 import com.org.bgv.vendor.repository.VerificationActionRepository;
+import com.org.bgv.vendor.repository.VerificationFieldComparisonRepository;
+import com.org.bgv.vendor.repository.VerificationObjectRepository;
 import com.org.bgv.vendor.repository.VerificationTimelineRepository;
 import com.org.bgv.wallet.service.PaymentService;
 
@@ -162,6 +164,8 @@ public class VerificationCaseService {
 	private final VendorRepository vendorRepository;
 	private final InvoiceItemRepository invoiceItemRepository;
 	private final CasePaymentRepository casePaymentRepository;
+	private final VerificationObjectRepository verificationObjectRepository;
+	private final VerificationFieldComparisonRepository verificationFieldComparisonRepository;
 
 	private static final DateTimeFormatter DATE_FORMATTER = DateTimeFormatter.ofPattern("dd MMM yyyy");
 	private static final DateTimeFormatter TIMESTAMP_FORMATTER = DateTimeFormatter.ofPattern("dd MMM yyyy HH:mm");
@@ -1739,6 +1743,10 @@ public class VerificationCaseService {
 	    // Payments
 	    // ==========================================================
 	    casePaymentRepository.deleteByVerificationCase_CaseId(caseId);
+	    
+	    verificationFieldComparisonRepository.deleteByVerificationObjectVerificationCheckVerificationCaseCaseId(caseId);
+	    
+	    verificationObjectRepository.deleteByVerificationCheckVerificationCaseCaseId(caseId);
 
 	    // ==========================================================
 	    // Finally delete case

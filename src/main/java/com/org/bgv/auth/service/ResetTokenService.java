@@ -25,6 +25,11 @@ public class ResetTokenService {
 
     @Value("${app.reset-password.expiry-hours:24}")
     private int expiryHours;
+    
+    @Value("${app.user.account.activation.link}")
+    private String accountActivationLink;
+    
+    
 
     /**
      * Generates reset link and persists token
@@ -47,6 +52,26 @@ public class ResetTokenService {
         repository.save(resetToken);
 
         return resetBaseUrl + "?token=" + token;
+    }
+    
+    @Transactional
+    public String generateAccountActivationLink(Long userId) {
+
+        // Invalidate previous tokens
+        repository.deleteByUserId(userId);
+
+        String token = UUID.randomUUID().toString();
+
+        PasswordResetToken resetToken = PasswordResetToken.builder()
+                .userId(userId)
+                .token(token)
+                .expiresAt(LocalDateTime.now().plusHours(expiryHours))
+                .used(false)
+                .build();
+
+        repository.save(resetToken);
+
+        return accountActivationLink + "?token=" + token;
     }
 
     /**

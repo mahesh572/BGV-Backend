@@ -21,6 +21,8 @@ public interface CompanyRepository extends JpaRepository<Company, Long>, JpaSpec
     
     Optional<Company> findByCompanyName(String companyName);
     
+    Optional<Company> findByCompanyType(CompanyType companyType);
+    
  // Count companies by status
     long countByStatus(String status);
     

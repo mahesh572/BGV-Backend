@@ -44,6 +44,7 @@ import com.org.bgv.company.dto.CompanyDetailsDTO;
 import com.org.bgv.company.dto.CompanyListResponseDTO;
 import com.org.bgv.company.dto.CompanyRegistrationRequestDTO;
 import com.org.bgv.company.dto.CompanyRegistrationResponse;
+import com.org.bgv.company.dto.CompanyType;
 import com.org.bgv.company.dto.EmployeeDTO;
 import com.org.bgv.company.dto.EmployerDTO;
 import com.org.bgv.company.dto.EnumOptionDTO;
@@ -55,6 +56,7 @@ import com.org.bgv.entity.Role;
 import com.org.bgv.entity.User;
 import com.org.bgv.entity.UserRole;
 import com.org.bgv.entity.UserType;
+import com.org.bgv.exceptions.BusinessException;
 import com.org.bgv.onboarding.entity.Company;
 import com.org.bgv.repository.CompanyRepository;
 import com.org.bgv.repository.CompanyUserRepository;
@@ -903,9 +905,29 @@ public class CompanyService {
 	    
 	    
 	    
-	    // New Implementation for company registration...
+	    @Transactional(readOnly = true)
+	    public Company getCurrentCompany(User currentUser) {
+
+	        if (currentUser == null) {
+	            throw new BusinessException("Current user is required.");
+	        }
+
+	        CompanyUser companyUser = companyUserRepository
+	                .findByUser(currentUser)
+	                .orElseThrow(() ->
+	                        new BusinessException("No company assigned to current user."));
+
+	        return companyUser.getCompany();
+	    }
 	    
-	    
+	    @Transactional(readOnly = true)
+	    public Company getDefaultCompany() {
+
+	        return companyRepository
+	                .findByCompanyType(CompanyType.DEFAULT)
+	                .orElseThrow(() ->
+	                        new BusinessException("Default company not configured."));
+	    }
 	    
 	    
 }

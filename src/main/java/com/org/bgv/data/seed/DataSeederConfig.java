@@ -38,9 +38,11 @@ import com.org.bgv.repository.UserRepository;
 import com.org.bgv.repository.UserRoleRepository;
 import com.org.bgv.service.EmailService;
 import com.org.bgv.service.NavigationMenuService;
+import com.org.bgv.user.enums.UserStatus;
 
 import lombok.RequiredArgsConstructor;
 
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.boot.CommandLineRunner;
 import org.springframework.boot.context.event.ApplicationReadyEvent;
 import org.springframework.context.event.EventListener;
@@ -57,6 +59,9 @@ import java.util.Optional;
 @Component
 @RequiredArgsConstructor
 public class DataSeederConfig implements CommandLineRunner {
+	
+	 @Value("${app.seed.enabled:false}")
+	    private boolean seedEnabled;
 
 	private final CheckCategoryRepository categoryRepo;
 	private final DocumentTypeRepository docTypeRepo;
@@ -106,6 +111,7 @@ public class DataSeederConfig implements CommandLineRunner {
 					.email("admin@example.com")
 					.password(passwordEncoder.encode("123456"))
 					.userType(UserType.ADMIN)
+					.status(UserStatus.ACTIVE)
 					.build();
 
 			User savedAdmin = userRepository.save(adminUser);

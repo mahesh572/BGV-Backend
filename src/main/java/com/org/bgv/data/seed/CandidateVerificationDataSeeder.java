@@ -9,6 +9,8 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.node.ObjectNode;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.boot.CommandLineRunner;
 import org.springframework.boot.context.event.ApplicationReadyEvent;
 import org.springframework.context.annotation.DependsOn;
@@ -25,6 +27,9 @@ import java.util.List;
 @Slf4j
 @DependsOn("entityManagerFactory") // ensure JPA tables are ready
 public class CandidateVerificationDataSeeder implements CommandLineRunner {
+	
+	 @Value("${app.seed.enabled:false}")
+	    private boolean seedEnabled;
 
     private final CandidateVerificationRepository candidateVerificationRepository;
     private final ObjectMapper objectMapper;
@@ -33,6 +38,12 @@ public class CandidateVerificationDataSeeder implements CommandLineRunner {
     @Transactional
    // @EventListener(ApplicationReadyEvent.class)
     public void run(String... args) throws Exception {
+    	
+    	if (!seedEnabled) {
+            System.out.println("Database seeding is disabled.");
+            return;
+        }
+    	
         seedCandidateVerificationData();
     }
 

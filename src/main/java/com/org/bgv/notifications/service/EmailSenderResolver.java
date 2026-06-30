@@ -28,7 +28,7 @@ public class EmailSenderResolver {
         return platformFrom();
     }
 
-    private String platformFrom() {
+    public String platformFrom() {
         return platformRepo.findActive()
                 .map(PlatformEmailSettings::getFromEmail)
                 .orElse("no-reply@bgv.com");

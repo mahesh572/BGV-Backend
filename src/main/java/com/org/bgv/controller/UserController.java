@@ -55,7 +55,7 @@ public class UserController {
                     .body(CustomApiResponse.failure("Failed to fetch user: " + e.getMessage(), HttpStatus.INTERNAL_SERVER_ERROR));
         }
     }
-
+/*
     @PostMapping
     public ResponseEntity<CustomApiResponse<UserDto>> create(@RequestBody UserDto userDto) {
         try {
@@ -72,7 +72,7 @@ public class UserController {
                     .body(CustomApiResponse.failure("Failed to create user: " + e.getMessage(), HttpStatus.INTERNAL_SERVER_ERROR));
         }
     }
-
+*/
     @PutMapping("/{id}")
     public ResponseEntity<CustomApiResponse<UserDto>> update(@PathVariable Long id, @RequestBody UserDetailsDto userDto) {
         try {

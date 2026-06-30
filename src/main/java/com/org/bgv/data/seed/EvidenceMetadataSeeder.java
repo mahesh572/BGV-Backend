@@ -15,6 +15,7 @@ import lombok.extern.slf4j.Slf4j;
 
 import java.util.List;
 
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.boot.CommandLineRunner;
 import org.springframework.boot.context.event.ApplicationReadyEvent;
 import org.springframework.context.annotation.Configuration;
@@ -26,6 +27,9 @@ import org.springframework.context.event.EventListener;
 @Slf4j
 @DependsOn("entityManagerFactory") // ensure JPA tables are ready
 public class EvidenceMetadataSeeder implements CommandLineRunner {
+	
+	 @Value("${app.seed.enabled:false}")
+	    private boolean seedEnabled;
 
     private final EvidenceTypeRepository evidenceTypeRepository;
     private final CategoryEvidenceTypeRepository categoryEvidenceTypeRepository;
@@ -35,6 +39,11 @@ public class EvidenceMetadataSeeder implements CommandLineRunner {
     @Override
    // @EventListener(ApplicationReadyEvent.class)
     public void run(String... args) {
+    	
+    	if (!seedEnabled) {
+            System.out.println("Database seeding is disabled.");
+            return;
+        }
 
         log.info("🌱 Seeding Evidence Metadata...");
         

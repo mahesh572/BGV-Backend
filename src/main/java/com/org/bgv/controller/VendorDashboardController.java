@@ -50,6 +50,7 @@ public class VendorDashboardController {
             @PathVariable Long vendorId,
             @PathVariable Long checkId) {
         try {
+        	log.info("/vendor/{vendorId}/check/{checkId}:::::::::::::::::::::::::::::");
         	VerificationCheckResponseDTO verificationCheckDTO = verificationCheckService.getVerificationCheck(checkId, vendorId);
             return ResponseEntity.ok(CustomApiResponse.success(
                 "Verification check retrieved successfully", 

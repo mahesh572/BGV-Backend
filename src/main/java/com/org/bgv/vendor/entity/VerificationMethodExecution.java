@@ -49,10 +49,20 @@ public class VerificationMethodExecution {
     @Enumerated(EnumType.STRING)
     private VerificationExecutionStatus status;
     // INITIATED / RESPONSE_RECEIVED / COMPLETED
+    
+    @Column(name = "outcome_code")
+    private String outcomeCode;
+
+    @Column(length = 2000)
+    private String outcomeRemarks;
 
     @Column
     private String externalReference;
     // email thread id, portal id, etc.
+    
+ // Retry management
+    private Integer attemptCount;
+
 
     private LocalDateTime initiatedAt;
     private LocalDateTime completedAt;

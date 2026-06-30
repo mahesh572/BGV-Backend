@@ -6,6 +6,8 @@ import com.org.bgv.entity.User;
 import com.org.bgv.repository.ProfileRepository;
 import com.org.bgv.repository.UserRepository;
 import com.org.bgv.s3.S3StorageService;
+import com.org.bgv.user.requests.RegistrationContext;
+import com.org.bgv.user.requests.UserRegistrationRequest;
 
 import jakarta.persistence.EntityNotFoundException;
 import jakarta.transaction.Transactional;
@@ -34,6 +36,29 @@ public class ProfileService {
     /* =====================================================
        CREATE
        ===================================================== */
+    
+    @Transactional
+    public Profile createProfile(User user,
+                                 UserRegistrationRequest request,
+                                 RegistrationContext context) {
+
+        Profile profile = Profile.builder()
+                .user(user)
+                .firstName(request.getFirstName())
+                .lastName(request.getLastName())
+
+                .profileSource(context.getSource().name())
+                .lastUpdatedSource(context.getSource().name())
+
+                .status("ACTIVE")
+                .phoneVerified(false)
+                .consentProvided(false)
+
+                .build();
+
+        return profileRepository.save(profile);
+    }
+    
     public ProfileDTO createProfile(ProfileDTO dto) {
 
         User user = userRepository.findById(dto.getUserId())

@@ -18,6 +18,7 @@ public class ActionPolicyFactory {
 
     private final VendorAgentActionPolicy vendorAgentActionPolicy;
     private final FieldAgentActionPolicy fieldAgentActionPolicy;
+    private final VendorAdminActionPolicy vendorAdminActionPolicy;
 
     public ActionPolicy getPolicy(User user) {
 
@@ -48,6 +49,14 @@ public class ActionPolicyFactory {
                     RoleConstants.ROLE_VENDOR_AGENT);
 
             return vendorAgentActionPolicy;
+        }
+        
+        if(roleNames.contains(RoleConstants.ROLE_VENDOR_ADMINISTRATOR)) {
+        	log.info(
+                    "User {} has role '{}'. Returning VendorAdminActionPolicy",
+                    user.getUserId(),
+                    RoleConstants.ROLE_VENDOR_ADMINISTRATOR);
+        	return vendorAdminActionPolicy;
         }
 
         log.error(

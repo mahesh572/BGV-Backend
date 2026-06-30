@@ -5,6 +5,7 @@ import java.time.LocalDateTime;
 
 import com.org.bgv.entity.User;
 import com.org.bgv.onboarding.entity.Company;
+import com.org.bgv.user.enums.Gender;
 
 import jakarta.persistence.*;
 import lombok.*;
@@ -48,13 +49,14 @@ public class Employee {
     @Column(name = "nationality")
     private String nationality;
 
-    @Column(name = "gender")
-    private String gender;
+    @Enumerated(EnumType.STRING)
+    @Column(name = "gender", length = 30)
+    private Gender gender;
     
     @Column(name = "date_of_birth")
     private LocalDate dateOfBirth;
     
-    @Column(name = "phone_number", unique = true)
+    @Column(name = "phone_number")
     private String phoneNumber;
     
     @Column(name = "marital_status")

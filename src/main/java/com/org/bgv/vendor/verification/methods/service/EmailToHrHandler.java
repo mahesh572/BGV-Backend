@@ -24,6 +24,8 @@ public class EmailToHrHandler implements VerificationMethodHandler {
     private final VerificationMethodExecutionFieldRepository fieldRepository;
     private final NotificationDispatcher notificationDispatcher;
 
+    /*
+    
     @Override
     public void execute(
             VerificationMethodExecution execution,
@@ -122,7 +124,20 @@ public class EmailToHrHandler implements VerificationMethodHandler {
             );
 
             throw ex;
-        }
+        } 
+    }*/
+    
+    
+    @Override
+    public void execute(
+            VerificationMethodExecution execution,
+            VerificationContext context) {
+    	
+    	 execution.setStatus(
+                 VerificationExecutionStatus.INITIATED);
+
+         executionRepository.save(execution);
+    	
     }
 
     private String buildEmailBody(

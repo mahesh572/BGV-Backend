@@ -10,6 +10,7 @@ import org.apache.catalina.security.SecurityUtil;
 import org.apache.commons.text.StringSubstitutor;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.mail.SimpleMailMessage;
 import org.springframework.mail.javamail.JavaMailSender;
 import org.springframework.mail.javamail.MimeMessageHelper;
@@ -33,6 +34,7 @@ import com.org.bgv.repository.ProfileRepository;
 import com.org.bgv.repository.UserRepository;
 import com.org.bgv.repository.VerificationCaseCheckRepository;
 import com.org.bgv.repository.VerificationCaseRepository;
+import com.org.bgv.settings.service.DynamicMailService;
 import com.org.bgv.vendor.dto.ActionType;
 
 import jakarta.mail.MessagingException;
@@ -45,6 +47,12 @@ import lombok.RequiredArgsConstructor;
 public class EmailService {
 	
 	private static final Logger log = LoggerFactory.getLogger(EmailService.class);
+	
+	@Value("${app.mail.dynamic:false}")
+    private boolean dynamicMail;
+	
+	
+	private final DynamicMailService dynamicMailService;
 	
 	private final EmailTemplateRepository emailTemplateRepository;
 	
@@ -433,80 +441,53 @@ public class EmailService {
     }
     
     
-    public void sendEmail(String from,String to, String subject, String htmlContent) {
+    public void sendEmail(String from, String to, String subject, String htmlContent) {
+
+        log.info("📧 Email request received | from={} | to={} | subject={} | dynamicMail={}",
+                from, to, subject, dynamicMail);
+
+        if (dynamicMail) {
+            log.info("🚀 Sending email using Dynamic SMTP configuration");
+
+            try {
+                dynamicMailService.sendEmail(from, to, subject, htmlContent);
+
+                log.info("✅ Email sent successfully using Dynamic SMTP | to={} | subject={}",
+                        to, subject);
+            } catch (Exception ex) {
+                log.error("❌ Failed to send email using Dynamic SMTP | to={} | subject={}",
+                        to, subject, ex);
+                throw ex;
+            }
+
+            return;
+        }
+
+        log.info("📨 Sending email using Local JavaMailSender (MailHog)");
+
         MimeMessage message = mailSender.createMimeMessage();
-        
+
         try {
-            MimeMessageHelper helper = new MimeMessageHelper(message, true, "UTF-8");
+            MimeMessageHelper helper =
+                    new MimeMessageHelper(message, true, "UTF-8");
+
+            helper.setFrom(from);
             helper.setTo(to);
             helper.setSubject(subject);
-            helper.setText(htmlContent, true); // true = isHTML
-            
+            helper.setText(htmlContent, true);
+
             mailSender.send(message);
+
+            log.info("✅ Email sent successfully using MailHog | to={} | subject={}",
+                    to, subject);
+
         } catch (MessagingException e) {
+            log.error("❌ Failed to send email using MailHog | to={} | subject={}",
+                    to, subject, e);
+
             throw new RuntimeException("Failed to send email", e);
         }
     }
-    /*
-    public void sendCandidateActionRequiredEmail(
-            Long candidateUserId,
-            Long companyId,
-            String checkName,
-            String actionType,
-            String reason,
-            String actionMessage
-    ) {
-
-        // 1️⃣ Load candidate user & profile
-        Profile profile = profileRepository.findByUserUserId(candidateUserId);
-        if (profile == null) {
-            throw new EntityNotFoundException("Candidate profile not found for userId: " + candidateUserId);
-        }
-
-        User user = profile.getUser();
-        if (user == null) {
-            throw new EntityNotFoundException("User not found for candidate userId: " + candidateUserId);
-        }
-
-        // 2️⃣ Load company
-        Company company = companyRepository.findById(companyId)
-                .orElseThrow(() -> new EntityNotFoundException(
-                        "Company not found with ID: " + companyId));
-
-        // 3️⃣ Fetch email template
-        EmailTemplate emailTemplate = getEmailTemplate(
-                "candidate_action_required",
-                "Candidate Action Required"
-        );
-
-        // 4️⃣ Prepare variables
-        Map<String, Object> variables = new HashMap<>();
-        variables.put("candidateName", profile.getFirstName());
-        variables.put("company", company.getCompanyName());
-        variables.put("checkName", checkName);
-        variables.put("actionType", actionType);
-        variables.put("reason", reason);
-        variables.put("actionMessage", actionMessage);
-        variables.put("portalUrl", "https://localhost:5173/candidate/login");
-
-        // 5️⃣ Process subject & body
-        String subject = processTemplate(emailTemplate.getSubject(), variables);
-        String processedHtml = processTemplate(emailTemplate.getBodyHtml(), variables);
-
-        // 6️⃣ Send email
-        sendEmail(
-                company.getContactEmail(),   // from
-                user.getEmail(),             // to
-                subject,
-                processedHtml
-        );
-
-        log.info(
-            "Candidate action-required email sent | userId={} | check={} | action={}",
-            candidateUserId, checkName, actionType
-        );
-    }
-*/
     
     @Transactional(readOnly = true)
     public void sendCandidateActionRequiredEmail(

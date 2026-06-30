@@ -3,6 +3,8 @@ package com.org.bgv.dto;
 import java.time.LocalDate;
 import java.util.List;
 
+import com.org.bgv.user.enums.Gender;
+
 import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Data;
@@ -27,7 +29,7 @@ public class CreateVendorUserRequest {
 
     private LocalDate dateOfBirth;
 
-    private String gender;
+    private Gender gender;
 
     private String nationality;
 

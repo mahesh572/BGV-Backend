@@ -37,9 +37,9 @@ public class FieldVisitAssignment {
 
     private String visitAddress;
 
-    private Double latitude;
+  //  private Double latitude;
 
-    private Double longitude;
+ //   private Double longitude;
 
     private String outcome;
 
@@ -51,7 +51,7 @@ public class FieldVisitAssignment {
 
     private String remarks;
     
-    private LocalDateTime locationCapturedAt;
+  //  private LocalDateTime locationCapturedAt;
 
-    private Long locationUpdatedBy;
+ //   private Long locationUpdatedBy;
 }

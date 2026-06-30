@@ -18,4 +18,14 @@ public class EmailSettingsResponse {
     private String smtpProvider;
     private boolean active;
     private boolean verified;
+    
+    
+    // SMTP Configuration
+    private String host;
+    private Integer port;
+    private String username;
+    private String password;
+    private Boolean auth;
+    private Boolean startTls;
+    private String protocol;
 }

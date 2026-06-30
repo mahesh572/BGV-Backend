@@ -2,6 +2,7 @@ package com.org.bgv.data.seed;
 
 import java.util.Optional;
 
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.boot.CommandLineRunner;
 import org.springframework.stereotype.Component;
 
@@ -18,12 +19,20 @@ import lombok.RequiredArgsConstructor;
 @RequiredArgsConstructor
 @Transactional
 public class VerificationMethodFieldSeeder implements CommandLineRunner {
+	
+	 @Value("${app.seed.enabled:false}")
+	    private boolean seedEnabled;
 
     private final VerificationMethodRepository methodRepository;
     private final VerificationMethodFieldRepository fieldRepository;
 
     @Override
     public void run(String... args) {
+    	
+    	if (!seedEnabled) {
+            System.out.println("Database seeding is disabled.");
+            return;
+        }
 
         if (fieldRepository.count() > 0) {
             return;

@@ -34,7 +34,6 @@ import com.org.bgv.company.dto.EmployeeSearchRequest;
 import com.org.bgv.company.dto.UpdateEmployeeRequest;
 import com.org.bgv.company.entity.Employee;
 import com.org.bgv.company.repository.EmployeeRepository;
-import com.org.bgv.constants.UserStatus;
 import com.org.bgv.entity.User;
 import com.org.bgv.entity.UserType;
 import com.org.bgv.notifications.NotificationEvent;
@@ -48,6 +47,7 @@ import com.org.bgv.onboarding.entity.Company;
 import com.org.bgv.repository.CompanyRepository;
 import com.org.bgv.repository.UserRepository;
 import com.org.bgv.service.EmailService;
+import com.org.bgv.user.enums.UserStatus;
 
 import jakarta.persistence.criteria.Join;
 import jakarta.persistence.criteria.JoinType;

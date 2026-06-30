@@ -15,4 +15,6 @@ public interface PlatformEmailSettingsRepository
 
     @Query("SELECT p FROM PlatformEmailSettings p WHERE p.active = true")
     Optional<PlatformEmailSettings> findActive();
+    
+    
 }

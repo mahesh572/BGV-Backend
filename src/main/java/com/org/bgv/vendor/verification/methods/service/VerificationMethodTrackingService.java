@@ -1,6 +1,7 @@
 package com.org.bgv.vendor.verification.methods.service;
 
 
+import java.util.Arrays;
 import java.util.Comparator;
 import java.util.List;
 import java.util.Map;
@@ -10,11 +11,13 @@ import org.springframework.stereotype.Service;
 
 import com.org.bgv.enums.VerificationExecutionAction;
 import com.org.bgv.enums.VerificationMethodCode;
+import com.org.bgv.enums.VerificationOutcome;
 import com.org.bgv.vendor.dto.ExecutionActionDto;
 import com.org.bgv.vendor.dto.FieldVisitDto;
 import com.org.bgv.vendor.dto.VerificationExecutionNoteDto;
 import com.org.bgv.vendor.dto.VerificationMethodExecutionDetailsDto;
 import com.org.bgv.vendor.dto.VerificationMethodFieldDTO;
+import com.org.bgv.vendor.dto.VerificationOutcomeDTO;
 import com.org.bgv.vendor.entity.VerificationMethodExecution;
 import com.org.bgv.vendor.entity.VerificationMethodExecutionField;
 import com.org.bgv.vendor.entity.VerificationMethodField;
@@ -293,10 +296,19 @@ public class VerificationMethodTrackingService {
                     .type("WARNING")
                     .build();
             case MAKE_PHONE_CALL -> ExecutionActionDto.builder()
-            .action(action.name())
-            .label("Make Phone Call")
-            .type("WARNING")
-            .build();
+		            .action(action.name())
+		            .label("Make Phone Call")
+		            .type("WARNING")
+		            .outcomes(getPhoneCallOutcomes())
+		            .build();
+            case MARK_PHONE_CALL_COMPLETED -> ExecutionActionDto.builder()
+		            .action(action.name())
+		            .label("Mark Phone Call Completed")
+		            .type("SUCCESS")
+		            .outcomes(getVerificationOutcomes())
+		            .build();
+            
+            
          // ===== Field Visit =====
 
             case ASSIGN_FIELD_AGENT -> ExecutionActionDto.builder()
@@ -333,6 +345,7 @@ public class VerificationMethodTrackingService {
                     .action(action.name())
                     .label("Mark Visit Completed")
                     .type("SUCCESS")
+                    .outcomes(getVerificationOutcomes())
                     .build();
 
             case MARK_ADDRESS_NOT_FOUND -> ExecutionActionDto.builder()
@@ -365,11 +378,298 @@ public class VerificationMethodTrackingService {
                     .type("WARNING")
                     .build();
             case CAPTURE_LOCATION -> ExecutionActionDto.builder()
-            .action(action.name())
-            .label("Capture Location")
-            .type("PRIMARY")
-            .build();
+		            .action(action.name())
+		            .label("Capture Location")
+		            .type("PRIMARY")
+		            .build();
+            case APPROVE -> ExecutionActionDto.builder()
+		            .action(action.name())
+		            .label("Approve")
+		            .type("PRIMARY")
+		            .build();
+            case ESCALATE -> ExecutionActionDto.builder()
+		            .action(action.name())
+		            .label("Escalate")
+		            .type("PRIMARY")
+		            .build();
+            case REWORK -> ExecutionActionDto.builder()
+		            .action(action.name())
+		            .label("Rework")
+		            .type("PRIMARY")
+		            .build();
+            case UNDER_REVIEW -> ExecutionActionDto.builder()
+		            .action(action.name())
+		            .label("Under Review")
+		            .type("PRIMARY")
+		            .build();
+            case SEND_EMAIL -> ExecutionActionDto.builder()
+		            .action(action.name())
+		            .label("Send Email")
+		            .type("PRIMARY")
+		            .build();
+            case RESEND_EMAIL -> ExecutionActionDto.builder()
+		            .action(action.name())
+		            .label("ReSend Email")
+		            .type("PRIMARY")
+		            .build();
+            case MARK_EMAIL_VERIFICATION_COMPLETED -> ExecutionActionDto.builder()
+		            .action(action.name())
+		            .label("Complete Email Verification")
+		            .outcomes(getVerificationOutcomes())
+		            .type("PRIMARY")
+		            .build();
+            
 		default -> throw new IllegalArgumentException("Unexpected value: " + action);
         };
+    }
+    
+    
+    
+    private List<VerificationOutcomeDTO> getPhoneCallOutcomes() {
+
+        return List.of(
+
+                VerificationOutcomeDTO.builder()
+                        .code("CONNECTED_SUCCESS")
+                        .label("Connected - Successful")
+                        .description("Verification completed successfully over the call")
+                        .success(true)
+                      //  .canComplete(true)
+                      //  .nextStatus("PHONE_CALL_COMPLETED")
+                        .evidenceRequired(false)
+                        .remarksRequired(true)
+                        .build(),
+
+                VerificationOutcomeDTO.builder()
+                        .code("CONNECTED_PARTIAL")
+                        .label("Connected - Partial Information")
+                        .description("Partial information received")
+                        .success(true)
+                       // .canComplete(true)
+                      //  .nextStatus("PHONE_CALL_COMPLETED")
+                        .evidenceRequired(false)
+                        .remarksRequired(true)
+                        .build(),
+
+                VerificationOutcomeDTO.builder()
+                        .code("CONNECTED_FOLLOWUP")
+                        .label("Connected - Follow-up Required")
+                        .description("Additional follow-up is required")
+                        .success(true)
+                      //  .canComplete(false)
+                      //  .nextStatus("FOLLOW_UP_REQUIRED")
+                        .evidenceRequired(false)
+                        .remarksRequired(true)
+                        .build(),
+
+                VerificationOutcomeDTO.builder()
+                        .code("NOT_ANSWERED")
+                        .label("Not Answered")
+                        .description("Call was not answered")
+                        .success(false)
+                       // .canComplete(false)
+                      //  .nextStatus("PHONE_CALL_INITIATED")
+                        .evidenceRequired(false)
+                        .remarksRequired(true)
+                        .build(),
+
+                VerificationOutcomeDTO.builder()
+                        .code("WRONG_NUMBER")
+                        .label("Wrong Number")
+                        .description("Provided phone number is incorrect")
+                        .success(false)
+                      //  .canComplete(false)
+                      //  .nextStatus("CONTACT_DETAILS_INVALID")
+                        .evidenceRequired(false)
+                        .remarksRequired(true)
+                        .build(),
+
+                VerificationOutcomeDTO.builder()
+                        .code("CALL_REJECTED")
+                        .label("Call Rejected")
+                        .description("Recipient rejected the call")
+                        .success(false)
+                      //  .canComplete(false)
+                       // .nextStatus("PHONE_CALL_REJECTED")
+                        .evidenceRequired(false)
+                        .remarksRequired(true)
+                        .build(),
+
+                VerificationOutcomeDTO.builder()
+                        .code("CALLBACK_REQUESTED")
+                        .label("Callback Requested")
+                        .description("Recipient requested a callback")
+                        .success(false)
+                      //  .canComplete(false)
+                       // .nextStatus("CALLBACK_SCHEDULED")
+                        .evidenceRequired(false)
+                        .remarksRequired(true)
+                        .build(),
+
+                VerificationOutcomeDTO.builder()
+                        .code("NUMBER_DISCONNECTED")
+                        .label("Number Disconnected")
+                        .description("Phone number is disconnected")
+                        .success(false)
+                      //  .canComplete(false)
+                      //  .nextStatus("CONTACT_DETAILS_INVALID")
+                        .evidenceRequired(false)
+                        .remarksRequired(true)
+                        .build(),
+
+                VerificationOutcomeDTO.builder()
+                        .code("VOICEMAIL_LEFT")
+                        .label("Voicemail Left")
+                        .description("Voicemail message left")
+                        .success(false)
+                      //  .canComplete(false)
+                      //  .nextStatus("WAITING_FOR_CALLBACK")
+                        .evidenceRequired(false)
+                        .remarksRequired(false)
+                        .build()
+        );
+    }
+    
+    
+    private List<VerificationOutcomeDTO> getFieldVisitOutcomes() {
+
+        return List.of(
+
+                VerificationOutcomeDTO.builder()
+                        .code("COMPLETED_SUCCESSFULLY")
+                        .label("Completed Successfully")
+                        .description("Field verification completed successfully")
+                        .success(true)
+                      //  .canComplete(true)
+                       // .nextStatus("FIELD_VISIT_COMPLETED")
+                        .evidenceRequired(true)
+                        .remarksRequired(true)
+                        .build(),
+
+                VerificationOutcomeDTO.builder()
+                        .code("PARTIAL_COMPLETION")
+                        .label("Partial Completion")
+                        .description("Field visit completed with partial information")
+                        .success(true)
+                      //  .canComplete(true)
+                      //  .nextStatus("FIELD_VISIT_COMPLETED")
+                        .evidenceRequired(true)
+                        .remarksRequired(true)
+                        .build(),
+
+                VerificationOutcomeDTO.builder()
+                        .code("CANDIDATE_NOT_AVAILABLE")
+                        .label("Candidate Not Available")
+                        .description("Candidate was not available at the location")
+                        .success(false)
+                      //  .canComplete(false)
+                      //  .nextStatus("FIELD_VISIT_PENDING")
+                        .evidenceRequired(false)
+                        .remarksRequired(true)
+                        .build(),
+
+                VerificationOutcomeDTO.builder()
+                        .code("ADDRESS_NOT_FOUND")
+                        .label("Address Not Found")
+                        .description("Provided address could not be located")
+                        .success(false)
+                       // .canComplete(false)
+                      //  .nextStatus("ADDRESS_VERIFICATION_REQUIRED")
+                        .evidenceRequired(true)
+                        .remarksRequired(true)
+                        .build(),
+
+                VerificationOutcomeDTO.builder()
+                        .code("DOCUMENTS_NOT_READY")
+                        .label("Documents Not Ready")
+                        .description("Required documents were not available")
+                        .success(false)
+                       // .canComplete(false)
+                       // .nextStatus("FOLLOW_UP_REQUIRED")
+                        .evidenceRequired(false)
+                        .remarksRequired(true)
+                        .build(),
+
+                VerificationOutcomeDTO.builder()
+                        .code("RESCHEDULE_REQUESTED")
+                        .label("Reschedule Requested")
+                        .description("Visit has been requested to be rescheduled")
+                        .success(false)
+                      //  .canComplete(false)
+                      //  .nextStatus("FIELD_VISIT_RESCHEDULED")
+                        .evidenceRequired(false)
+                        .remarksRequired(true)
+                        .build(),
+
+                VerificationOutcomeDTO.builder()
+                        .code("WRONG_ADDRESS")
+                        .label("Wrong Address Provided")
+                        .description("Provided address is incorrect")
+                        .success(false)
+                      //  .canComplete(false)
+                       // .nextStatus("ADDRESS_VERIFICATION_REQUIRED")
+                        .evidenceRequired(true)
+                        .remarksRequired(true)
+                        .build(),
+
+                VerificationOutcomeDTO.builder()
+                        .code("CONTACT_NOT_REACHABLE")
+                        .label("Contact Not Reachable")
+                        .description("Unable to reach the contact person")
+                        .success(false)
+                      //  .canComplete(false)
+                       // .nextStatus("FOLLOW_UP_REQUIRED")
+                        .evidenceRequired(false)
+                        .remarksRequired(true)
+                        .build(),
+
+                VerificationOutcomeDTO.builder()
+                        .code("BUSINESS_CLOSED")
+                        .label("Business Closed / Permanently Shut")
+                        .description("Business location was found closed or permanently shut")
+                        .success(false)
+                      //  .canComplete(false)
+                       // .nextStatus("BUSINESS_NOT_OPERATIONAL")
+                        .evidenceRequired(true)
+                        .remarksRequired(true)
+                        .build(),
+
+                VerificationOutcomeDTO.builder()
+                        .code("SECURITY_DENIED_ACCESS")
+                        .label("Security Denied Access")
+                        .description("Security personnel denied access to the premises")
+                        .success(false)
+                      //  .canComplete(false)
+                      //  .nextStatus("ACCESS_DENIED")
+                        .evidenceRequired(false)
+                        .remarksRequired(true)
+                        .build(),
+
+                VerificationOutcomeDTO.builder()
+                        .code("NO_RESPONSE")
+                        .label("No Response at Location")
+                        .description("No one responded at the location during the visit")
+                        .success(false)
+                      //  .canComplete(false)
+                       // .nextStatus("FIELD_VISIT_PENDING")
+                        .evidenceRequired(false)
+                        .remarksRequired(true)
+                        .build()
+        );
+    }
+    
+    
+    private List<VerificationOutcomeDTO> getVerificationOutcomes() {
+
+        return Arrays.stream(VerificationOutcome.values())
+                .map(outcome -> VerificationOutcomeDTO.builder()
+                        .code(outcome.name())
+                        .label(outcome.getLabel())
+                        .description(outcome.getDescription())
+                        .success(outcome.isSuccess())
+                        .evidenceRequired(outcome.isEvidenceRequired())
+                        .remarksRequired(outcome.isRemarksRequired())
+                        .build())
+                .toList();
     }
 }

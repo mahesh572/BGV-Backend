@@ -3,6 +3,11 @@ package com.org.bgv.notifications.dto;
 public enum NotificationPlaceholder {
 	
 	// USER_FULL_NAME("userFullName","User Full Name"),
+	
+	// User
+	
+	USER_ACCOUNT_ACTIVATION_LINK("useraccountactiationlink","User Activation Link"),
+	USER_FULL_NAME("userfullname","User Full Name"),
 
     // 🔹 Employer / Organization // who initiated BGV for candidate
     EMPLOYER_BRAND_NAME("employerBrandName", "Employer Brand Name"),

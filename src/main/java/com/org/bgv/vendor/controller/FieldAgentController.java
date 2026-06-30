@@ -4,6 +4,7 @@ import com.org.bgv.api.response.CustomApiResponse;
 import com.org.bgv.entity.User;
 import com.org.bgv.vendor.dto.CompleteFieldVisitRequest;
 import com.org.bgv.vendor.dto.FieldAssignmentDTO;
+import com.org.bgv.vendor.dto.UpdateExecutionStatusRequest;
 import com.org.bgv.vendor.dto.UpdateVisitLocationRequest;
 import com.org.bgv.vendor.service.FieldAgentService;
 
@@ -90,11 +91,11 @@ public class FieldAgentController {
      * Start visit
      */
     
-    /*
+    
     @PostMapping("/executions/{executionId}/start")
     public ResponseEntity<CustomApiResponse<String>> startVisit(
             @PathVariable Long executionId,
-            @RequestBody StartVisitRequest request) {
+            @RequestBody UpdateExecutionStatusRequest request) {
 
         service.startVisit(
                 executionId,
@@ -108,7 +109,7 @@ public class FieldAgentController {
                 )
         );
     }
-*/
+
     /**
      * Complete visit
      */

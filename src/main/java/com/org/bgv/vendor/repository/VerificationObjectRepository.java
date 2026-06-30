@@ -2,11 +2,15 @@ package com.org.bgv.vendor.repository;
 
 
 import com.org.bgv.vendor.entity.VerificationObject;
+
+import jakarta.transaction.Transactional;
+
 import com.org.bgv.enums.VerificationObjectStatus;
 import com.org.bgv.dto.CheckCategoryEnum;
 import com.org.bgv.entity.VerificationCaseCheck;
 
 import org.springframework.data.jpa.repository.JpaRepository;
+import org.springframework.data.jpa.repository.Modifying;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 import org.springframework.stereotype.Repository;
@@ -82,4 +86,8 @@ public interface VerificationObjectRepository extends JpaRepository<Verification
     
     // Find by verification check case check ID with pagination
     // (For pagination, add Pageable parameter: Page<VerificationObject> findByVerificationCheck_CaseCheckId(Long caseCheckId, Pageable pageable)
+    
+    @Modifying
+    @Transactional
+    void deleteByVerificationCheckVerificationCaseCaseId(Long caseId);
 }

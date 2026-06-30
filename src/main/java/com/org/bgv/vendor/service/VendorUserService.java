@@ -7,10 +7,10 @@ import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 
 import com.org.bgv.common.CommonUtils;
+import com.org.bgv.common.UserDto;
 import com.org.bgv.common.entity.StateRegion;
 import com.org.bgv.common.repository.StateRegionRepository;
 import com.org.bgv.config.SecurityUtils;
-import com.org.bgv.constants.UserStatus;
 import com.org.bgv.dto.CreateVendorUserRequest;
 import com.org.bgv.entity.CompanyUser;
 import com.org.bgv.entity.Profile;
@@ -25,6 +25,8 @@ import com.org.bgv.repository.ProfileRepository;
 import com.org.bgv.repository.RoleRepository;
 import com.org.bgv.repository.UserRepository;
 import com.org.bgv.repository.UserRoleRepository;
+import com.org.bgv.service.util.UserServiceUtil;
+import com.org.bgv.user.enums.UserStatus;
 import com.org.bgv.vendor.entity.VendorUser;
 import com.org.bgv.vendor.repository.VendorUserRepository;
 
@@ -48,6 +50,7 @@ public class VendorUserService {
     private final CompanyRepository companyRepository;
     private final NotificationDispatcher notificationDispatcher;
     private final PasswordEncoder passwordEncoder;
+    private final  UserServiceUtil userServiceUtil;
 
     
     @Transactional
@@ -159,5 +162,10 @@ public class VendorUserService {
                 user.getUserId());
 
         return savedVendorUser;
+    }
+    
+  public List<UserDto> getVendorAgentUsersToAssign(Long companyId){
+    	
+    	return userServiceUtil.getVendorAgentUsersToAssign(companyId);
     }
 }

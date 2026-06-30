@@ -1,5 +1,7 @@
 package com.org.bgv.vendor.dto;
 
+import java.util.List;
+
 import lombok.Builder;
 import lombok.Data;
 
@@ -14,4 +16,6 @@ public class ExecutionActionDto {
     private String icon;
 
     private String type;     // PRIMARY, SECONDARY, DANGER
+    
+    private List<VerificationOutcomeDTO> outcomes;
 }

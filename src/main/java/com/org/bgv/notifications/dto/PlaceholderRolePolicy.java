@@ -4,6 +4,14 @@ import java.util.EnumSet;
 import java.util.Set;
 
 public enum PlaceholderRolePolicy {
+	
+	// User
+	
+	USER_ACCOUNT_ACTIVATION_LINK(EnumSet.of(
+            TemplateUserRole.ADMINISTRATOR)),
+	
+	USER_FULL_NAME(EnumSet.of(
+            TemplateUserRole.ADMINISTRATOR)),
 
     // 🔹 Employer / Organization
     EMPLOYER_BRAND_NAME(EnumSet.of(

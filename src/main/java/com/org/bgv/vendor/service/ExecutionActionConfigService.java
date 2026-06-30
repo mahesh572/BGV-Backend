@@ -29,12 +29,14 @@ public class ExecutionActionConfigService {
 	        switch (methodCode) {
 
 	            case EMAIL:
-	                return getEmailActions(status);
-
+	                // return getEmailActions(status);
+	            	return getVerificationMethodActions(status,methodCode);
 	            case PHONE_VERIFICATION:
-	                return getPhoneActions(status);
+	               // return getPhoneActions(status);
+	            	return getVerificationMethodActions(status,methodCode);
 	            case FIELD_VISIT:
-	            	return getFieldVisitActions(status);
+	            	// return getFieldVisitActions(status);
+	            	return getVerificationMethodActions(status,methodCode);
 /*
 	            case DOCUMENT_REVIEW:
 	                return getDocumentActions(status);
@@ -170,14 +172,12 @@ public class ExecutionActionConfigService {
                 return List.of();
         }
     }
-    
+    /*
     public List<VerificationExecutionAction> getFieldVisitActions(
             VerificationExecutionStatus status) {
     	
     	 Long userId = SecurityUtils.getCurrentUserId();
     	 User fieldAgent = userService.getUserById(userId);
-    	 
-    	 
     	
     	 User currentUser = userService.getUserById(SecurityUtils.getCurrentUserId());
 
@@ -188,74 +188,26 @@ public class ExecutionActionConfigService {
     	 
     	 return actions;
 
-    	/*
-        switch (status) {
+    	
+    }
+    
+    */
+    
+    public List<VerificationExecutionAction> getVerificationMethodActions(
+            VerificationExecutionStatus status,VerificationMethodCode methodCode) {
+    	
+    	 Long userId = SecurityUtils.getCurrentUserId();
+    	 User fieldAgent = userService.getUserById(userId);
+    	
+    	 User currentUser = userService.getUserById(SecurityUtils.getCurrentUserId());
 
-            case INITIATED:
-                return List.of(
-                        VerificationExecutionAction.ASSIGN_FIELD_AGENT,
-                        VerificationExecutionAction.ADD_NOTE,
-                        VerificationExecutionAction.CANCEL
-                );
+    	 ActionPolicy policy = actionPolicyFactory.getPolicy(currentUser);
 
-            case VISIT_ASSIGNED:
-                return List.of(
-                      //  VerificationExecutionAction.SCHEDULE_VISIT,
-                		VerificationExecutionAction.RESCHEDULE_VISIT,
-                        VerificationExecutionAction.CHANGE_FIELD_AGENT,
-                        VerificationExecutionAction.ADD_NOTE,
-                        VerificationExecutionAction.CANCEL
-                );
+    	 List<VerificationExecutionAction> actions =
+    	         policy.getActions(status,methodCode);
+    	 
+    	 return actions;
 
-            case VISIT_SCHEDULED:
-                return List.of(
-                        VerificationExecutionAction.START_VISIT,
-                        VerificationExecutionAction.RESCHEDULE_VISIT,
-                        VerificationExecutionAction.CHANGE_FIELD_AGENT,
-                        VerificationExecutionAction.ADD_NOTE,
-                        VerificationExecutionAction.CANCEL
-                );
-
-            case VISIT_IN_PROGRESS:
-                return List.of(
-                        VerificationExecutionAction.UPLOAD_EVIDENCE,
-                        VerificationExecutionAction.CAPTURE_LOCATION,
-                        VerificationExecutionAction.ADD_NOTE,
-                        VerificationExecutionAction.MARK_VISIT_COMPLETED,
-                        VerificationExecutionAction.MARK_ADDRESS_NOT_FOUND,
-                        VerificationExecutionAction.MARK_CANDIDATE_NOT_AVAILABLE
-                );
-
-            case VISIT_COMPLETED:
-                return List.of(
-                       // VerificationExecutionAction.UPLOAD_EVIDENCE,
-                        VerificationExecutionAction.ADD_NOTE
-                       // VerificationExecutionAction.MARK_UNDER_REVIEW
-                );
-
-            case UNDER_REVIEW:
-                return List.of(
-                        VerificationExecutionAction.UPLOAD_EVIDENCE,
-                        VerificationExecutionAction.ADD_NOTE,
-                        VerificationExecutionAction.MARK_VERIFIED,
-                        VerificationExecutionAction.MARK_DISCREPANCY_FOUND,
-                        VerificationExecutionAction.MARK_UNABLE_TO_VERIFY
-                );
-
-            case VERIFIED:
-            case DISCREPANCY_FOUND:
-            case UNABLE_TO_VERIFY:
-                return List.of(
-                        VerificationExecutionAction.COMPLETE
-                );
-
-            case COMPLETED:
-            case CANCELLED:
-                return List.of();
-
-            default:
-                return List.of();
-        }
-        */
+    	
     }
 }

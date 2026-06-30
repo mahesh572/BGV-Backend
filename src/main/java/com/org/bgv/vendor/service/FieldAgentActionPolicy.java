@@ -7,13 +7,14 @@ import org.springframework.stereotype.Component;
 
 import com.org.bgv.enums.VerificationExecutionAction;
 import com.org.bgv.enums.VerificationExecutionStatus;
+import com.org.bgv.enums.VerificationMethodCode;
 
 @Component
 public class FieldAgentActionPolicy implements ActionPolicy {
 
     @Override
     public List<VerificationExecutionAction> getActions(
-            VerificationExecutionStatus status) {
+            VerificationExecutionStatus status,VerificationMethodCode code) {
 
         switch (status) {
 
@@ -28,9 +29,9 @@ public class FieldAgentActionPolicy implements ActionPolicy {
                         VerificationExecutionAction.UPLOAD_EVIDENCE,
                         VerificationExecutionAction.CAPTURE_LOCATION,
                         VerificationExecutionAction.ADD_NOTE,
-                        VerificationExecutionAction.MARK_VISIT_COMPLETED,
-                        VerificationExecutionAction.MARK_ADDRESS_NOT_FOUND,
-                        VerificationExecutionAction.MARK_CANDIDATE_NOT_AVAILABLE
+                        VerificationExecutionAction.MARK_VISIT_COMPLETED
+                       // VerificationExecutionAction.MARK_ADDRESS_NOT_FOUND,
+                      //  VerificationExecutionAction.MARK_CANDIDATE_NOT_AVAILABLE
                 );
 
             case VISIT_COMPLETED:

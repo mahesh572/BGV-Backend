@@ -28,6 +28,7 @@ import com.org.bgv.auth.dto.ResetPasswordRequest;
 import com.org.bgv.auth.dto.TokenValidationResult;
 import com.org.bgv.auth.service.ResetTokenService;
 import com.org.bgv.common.ChangePasswordRequest;
+import com.org.bgv.common.UserDto;
 import com.org.bgv.common.navigation.PortalType;
 import com.org.bgv.company.repository.EmployeeRepository;
 import com.org.bgv.config.CustomUserDetails;
@@ -37,6 +38,10 @@ import com.org.bgv.dto.AuthRequest;
 import com.org.bgv.dto.AuthResponse;
 import com.org.bgv.service.CompanyService;
 import com.org.bgv.service.UserService;
+import com.org.bgv.user.requests.ActivationRequest;
+import com.org.bgv.user.requests.UserRegistrationRequest;
+import com.org.bgv.user.service.AccountActivationService;
+import com.org.bgv.user.service.UserRegistrationService;
 
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.Parameter;
@@ -44,18 +49,18 @@ import io.swagger.v3.oas.annotations.responses.ApiResponse;
 import io.swagger.v3.oas.annotations.responses.ApiResponses;
 import jakarta.servlet.http.HttpServletResponse;
 import jakarta.validation.Valid;
+import lombok.extern.slf4j.Slf4j;
 
+@Slf4j
 @RestController
 @RequestMapping("/api/auth")
 public class AuthController {
 	
-	public AuthController() {
-        System.out.println("🔥🔥🔥 AuthController LOADED: " + this.getClass().getName());
-    }
     private static final Logger logger = LoggerFactory.getLogger(AuthController.class);
 
     @Autowired 
     private AuthenticationManager authenticationManager;
+    
     @Autowired 
     private UserService userService;
     
@@ -70,6 +75,12 @@ public class AuthController {
     
     @Autowired
     private ResetTokenService resetTokenService;
+    
+    @Autowired
+    private UserRegistrationService registrationService;
+    
+    @Autowired
+    private AccountActivationService accountActivationService;
    
     
 
@@ -81,9 +92,8 @@ public class AuthController {
         try {
             logger.info("auth/login::::::{}", authRequest);
 
-            PortalType portal =
-                    PortalType.valueOf(authRequest.getPortal().toUpperCase());
-
+            PortalType portal = authRequest.getPortal();
+                   
             Authentication authentication =
                     authenticationManager.authenticate(
                         new PortalAuthenticationToken(
@@ -251,7 +261,7 @@ public class AuthController {
     }
     
     
-    @GetMapping("/password-reset/validate")
+    @GetMapping("/token/validate")
     public ResponseEntity<CustomApiResponse<Void>> validateResetToken(
             @RequestParam String token
     ) {
@@ -276,8 +286,60 @@ public class AuthController {
                 )
         );
     }
+    
+    
+    @PostMapping("/register")
+    public ResponseEntity<CustomApiResponse<?>> register(
+            @RequestBody UserRegistrationRequest request) {
 
+        try {
+            log.info("Register API called for email: {}", request.getEmail());
 
+            registrationService.register(request);
+
+            return ResponseEntity.status(HttpStatus.CREATED)
+                    .body(CustomApiResponse.success(
+                            "Registration successful. Please check your email to activate your account.",
+                            null,
+                            HttpStatus.CREATED
+                    ));
+
+        } catch (RuntimeException e) {
+
+            log.error("Business error during registration: ", e);
+
+            return ResponseEntity.status(HttpStatus.BAD_REQUEST)
+                    .body(CustomApiResponse.failure(
+                            e.getMessage(),
+                            HttpStatus.BAD_REQUEST
+                    ));
+
+        } catch (Exception e) {
+
+            log.error("Unexpected error during registration: ", e);
+
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
+                    .body(CustomApiResponse.failure(
+                            "Failed to register user. Please try again later.",
+                            HttpStatus.INTERNAL_SERVER_ERROR
+                    ));
+        }
+    }
+    
+    @PostMapping("/activate")
+    public ResponseEntity<CustomApiResponse<?>> activateAccount(
+            @RequestBody ActivationRequest request) {
+
+        accountActivationService.activateAccount(request.getToken());
+
+        return ResponseEntity.ok(
+                CustomApiResponse.success(
+                        "Your account has been activated successfully. You can now log in.",
+                        null,
+                        HttpStatus.OK
+                )
+        );
+    }
     
     
     
@@ -322,10 +384,6 @@ public class AuthController {
 
             case ADMIN:
                 // TODO: role/permission validation
-                break;
-
-            case USER:
-                // normal user, no extra validation
                 break;
 
             default:

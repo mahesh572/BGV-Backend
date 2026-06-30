@@ -1,5 +1,6 @@
 package com.org.bgv.data.seed;
 
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.boot.CommandLineRunner;
 import org.springframework.stereotype.Component;
 
@@ -16,6 +17,9 @@ import lombok.RequiredArgsConstructor;
 @Component
 @RequiredArgsConstructor
 public class VerificationMethodSeeder implements CommandLineRunner {
+	
+	 @Value("${app.seed.enabled:false}")
+	    private boolean seedEnabled;
 
     private final VerificationMethodRepository methodRepository;
     private final CheckVerificationMethodRepository mappingRepository;
@@ -23,109 +27,123 @@ public class VerificationMethodSeeder implements CommandLineRunner {
     @Override
     @Transactional
     public void run(String... args) {
-
-        if (methodRepository.count() > 0) {
+    	
+    	if (!seedEnabled) {
+            System.out.println("Database seeding is disabled.");
             return;
         }
 
-        VerificationMethod email =
-                saveMethod(VerificationMethodCode.EMAIL, "Email");
+        VerificationMethod email = saveOrUpdateMethod(
+                VerificationMethodCode.EMAIL,
+                "Email Verification",
+                "Verification through email",
+                3,
+                24,
+                true);
 
-        VerificationMethod phone =
-                saveMethod(VerificationMethodCode.PHONE_VERIFICATION, "Phone Verification");
+        VerificationMethod phone = saveOrUpdateMethod(
+                VerificationMethodCode.PHONE_VERIFICATION,
+                "Phone Verification",
+                "Verification through phone call",
+                3,
+                2,
+                true);
 
-        VerificationMethod portal =
-                saveMethod(VerificationMethodCode.PORTAL, "Portal / System");
+        VerificationMethod portal = saveOrUpdateMethod(
+                VerificationMethodCode.PORTAL,
+                "Portal Verification",
+                "Verification through employer portal",
+                2,
+                24,
+                true);
 
-        VerificationMethod physicalVisit =
-                saveMethod(VerificationMethodCode.FIELD_VISIT, "Field Visit");
+        VerificationMethod fieldVisit = saveOrUpdateMethod(
+                VerificationMethodCode.FIELD_VISIT,
+                "Field Visit",
+                "Physical address verification",
+                2,
+                48,
+                true);
 
-        VerificationMethod database =
-                saveMethod(VerificationMethodCode.DATABASE, "Database Check");
+        VerificationMethod database = saveOrUpdateMethod(
+                VerificationMethodCode.DATABASE,
+                "Database Check",
+                "Verification using government or third-party databases",
+                1,
+                0,
+                false);
 
-        VerificationMethod videoCall =
-                saveMethod(VerificationMethodCode.VIDEO_CALL, "Video Verification");
+        VerificationMethod videoCall = saveOrUpdateMethod(
+                VerificationMethodCode.VIDEO_CALL,
+                "Video Verification",
+                "Video verification",
+                2,
+                4,
+                true);
 
-        VerificationMethod documentReview =
-                saveMethod(VerificationMethodCode.DOCUMENT_REVIEW, "Document Review");
+        VerificationMethod other = saveOrUpdateMethod(
+                VerificationMethodCode.OTHER,
+                "Other",
+                "Other verification method",
+                1,
+                0,
+                false);
 
-        VerificationMethod other =
-                saveMethod(VerificationMethodCode.OTHER, "Other");
+        // mappings (idempotent)
+        mapIfNotExists(CheckCategoryEnum.WORK_EXPERIENCE, email);
+        mapIfNotExists(CheckCategoryEnum.WORK_EXPERIENCE, phone);
+        mapIfNotExists(CheckCategoryEnum.WORK_EXPERIENCE, portal);
+        mapIfNotExists(CheckCategoryEnum.WORK_EXPERIENCE, fieldVisit);
 
-        /*
-         * WORK
-         */
-        map(CheckCategoryEnum.WORK_EXPERIENCE, documentReview);
-        map(CheckCategoryEnum.WORK_EXPERIENCE, email);
-        map(CheckCategoryEnum.WORK_EXPERIENCE, phone);
-        map(CheckCategoryEnum.WORK_EXPERIENCE, portal);
-        map(CheckCategoryEnum.WORK_EXPERIENCE, physicalVisit);
+        mapIfNotExists(CheckCategoryEnum.EDUCATION, email);
+        mapIfNotExists(CheckCategoryEnum.EDUCATION, phone);
+        mapIfNotExists(CheckCategoryEnum.EDUCATION, portal);
 
-        /*
-         * EDUCATION
-         */
-        map(CheckCategoryEnum.EDUCATION, documentReview);
-        map(CheckCategoryEnum.EDUCATION, email);
-        map(CheckCategoryEnum.EDUCATION, phone);
-        map(CheckCategoryEnum.EDUCATION, portal);
+        mapIfNotExists(CheckCategoryEnum.ADDRESS, phone);
+        mapIfNotExists(CheckCategoryEnum.ADDRESS, fieldVisit);
 
-        /*
-         * ADDRESS
-         */
-        map(CheckCategoryEnum.ADDRESS, documentReview);
-        map(CheckCategoryEnum.ADDRESS, phone);
-        map(CheckCategoryEnum.ADDRESS, physicalVisit);
+        mapIfNotExists(CheckCategoryEnum.IDENTITY, database);
+        mapIfNotExists(CheckCategoryEnum.IDENTITY, videoCall);
 
-        /*
-         * IDENTITY
-         */
-        map(CheckCategoryEnum.IDENTITY, documentReview);
-        map(CheckCategoryEnum.IDENTITY, database);
-        map(CheckCategoryEnum.IDENTITY, videoCall);
+        mapIfNotExists(CheckCategoryEnum.REFERENCE, phone);
+        mapIfNotExists(CheckCategoryEnum.REFERENCE, email);
 
-        /*
-         * REFERENCE
-         */
-        map(CheckCategoryEnum.REFERENCE, phone);
-        map(CheckCategoryEnum.REFERENCE, email);
+        mapIfNotExists(CheckCategoryEnum.CREDIT, database);
 
-        /*
-         * CRIMINAL
-         */
-        // map(CheckCategoryEnum.CRIMINAL, database);
-        // map(CheckCategoryEnum.CRIMINAL, portal);
-
-        /*
-         * CREDIT
-         */
-        map(CheckCategoryEnum.CREDIT, database);
-
-        /*
-         * DATABASE
-         */
-        map(CheckCategoryEnum.DATABASE, database);
+        mapIfNotExists(CheckCategoryEnum.DATABASE, database);
     }
 
-    private VerificationMethod saveMethod(
-    		VerificationMethodCode code,
-            String name) {
+    private VerificationMethod saveOrUpdateMethod(
+            VerificationMethodCode code,
+            String name,
+            String description,
+            Integer maxAttempts,
+            Integer retryIntervalHours,
+            Boolean retryAllowed) {
 
-        VerificationMethod method = new VerificationMethod();
+        VerificationMethod method = methodRepository.findByCode(code)
+                .orElse(new VerificationMethod());
 
         method.setCode(code);
         method.setName(name);
+        method.setDescription(description);
+        method.setMaxAttempts(maxAttempts);
+        method.setRetryIntervalHours(retryIntervalHours);
+        method.setRetryAllowed(retryAllowed);
         method.setActive(true);
 
         return methodRepository.save(method);
     }
 
-    private void map(
-            CheckCategoryEnum checkType,
-            VerificationMethod method) {
+    private void mapIfNotExists(CheckCategoryEnum checkType,
+                                VerificationMethod method) {
 
-        CheckVerificationMethod mapping =
-                new CheckVerificationMethod();
+        boolean exists = mappingRepository
+                .existsByCheckTypeAndVerificationMethod(checkType, method);
 
+        if (exists) return;
+
+        CheckVerificationMethod mapping = new CheckVerificationMethod();
         mapping.setCheckType(checkType);
         mapping.setVerificationMethod(method);
 

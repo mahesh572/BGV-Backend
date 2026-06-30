@@ -5,6 +5,8 @@ import lombok.*;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
 
+import com.org.bgv.user.enums.Gender;
+
 @Data
 @NoArgsConstructor
 @AllArgsConstructor
@@ -26,7 +28,7 @@ public class ProfileDTO {
     private String parentRelationship;  // FATHER, MOTHER, GUARDIAN
 
     private String nationality;
-    private String gender;
+    private Gender gender;
     private LocalDate dateOfBirth;
     private String maritalStatus;
     

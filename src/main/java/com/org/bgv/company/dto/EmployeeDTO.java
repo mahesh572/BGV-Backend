@@ -2,6 +2,8 @@ package com.org.bgv.company.dto;
 
 import java.time.LocalDate;
 
+import com.org.bgv.user.enums.Gender;
+
 import lombok.Builder;
 import lombok.Data;
 
@@ -29,7 +31,7 @@ public class EmployeeDTO {
 
     private LocalDate dateOfBirth;
 
-    private String gender;
+    private Gender gender;
 
     private String nationality;
 
