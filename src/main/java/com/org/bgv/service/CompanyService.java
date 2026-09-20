@@ -920,14 +920,7 @@ public class CompanyService {
 	        return companyUser.getCompany();
 	    }
 	    
-	    @Transactional(readOnly = true)
-	    public Company getDefaultCompany() {
-
-	        return companyRepository
-	                .findByCompanyType(CompanyType.DEFAULT)
-	                .orElseThrow(() ->
-	                        new BusinessException("Default company not configured."));
-	    }
+	   
 	    
 	    
 }

@@ -20,6 +20,20 @@ public class IdentityHashUtil {
             throw new IllegalStateException("Hashing failed", e);
         }
     }
+    
+    public String hash(byte[] value) {
+        try {
+            MessageDigest digest = MessageDigest.getInstance("SHA-256");
+
+            digest.update(SALT.getBytes(StandardCharsets.UTF_8));
+            digest.update(value);
+
+            return HexFormat.of().formatHex(digest.digest());
+
+        } catch (Exception e) {
+            throw new IllegalStateException("Hashing failed", e);
+        }
+    }
 
     public String last4(String value) {
         return value.substring(value.length() - 4);

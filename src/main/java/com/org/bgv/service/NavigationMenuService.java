@@ -95,13 +95,7 @@ public class NavigationMenuService {
             if (!UserType.COMPANY.name().equalsIgnoreCase(candidate.getSourceType())) {
                 return;
             }
-/*
-            Set<String> allowedMenus = new HashSet<>(Set.of(
-                    "DashBoard", "Basic Details", "Documents",
-                    "Education", "Work Experience", "Address",
-                    "verification", "Cases"
-            ));
-*/
+
             Set<String> checkTypes =
                     verificationCaseRepository.findByCandidateId(candidate.getCandidateId())
                             .stream()

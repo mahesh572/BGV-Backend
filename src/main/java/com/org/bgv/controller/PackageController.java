@@ -54,13 +54,16 @@ public class PackageController {
     @GetMapping
     public ResponseEntity<CustomApiResponse<List<PackageDTO>>> getAllPackages() {
         try {
-            List<PackageDTO> packages = packageService.getAllPackages();
+           // List<PackageDTO> packages = packageService.getAllPackages();
+        	List<PackageDTO> packages = packageService.getPackagesForCurrentUser();
             return ResponseEntity.ok(CustomApiResponse.success("Packages retrieved successfully", packages, HttpStatus.OK));
         } catch (Exception e) {
             return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
                     .body(CustomApiResponse.failure("Failed to retrieve packages: " + e.getMessage(), HttpStatus.INTERNAL_SERVER_ERROR));
         }
     }
+    
+    
     @GetMapping("/admin/company/{companyId}")
     public ResponseEntity<CustomApiResponse<List<PackageDTO>>> getAllPackages(@PathVariable Long companyId) {
         try {

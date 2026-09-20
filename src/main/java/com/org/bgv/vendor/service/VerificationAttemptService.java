@@ -7,6 +7,7 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import com.org.bgv.enums.VerificationExecutionStatus;
+import com.org.bgv.enums.VerificationOutcome;
 import com.org.bgv.exceptions.BusinessException;
 import com.org.bgv.vendor.dto.AttemptStatus;
 import com.org.bgv.vendor.entity.VerificationAttempt;
@@ -61,7 +62,7 @@ public class VerificationAttemptService {
 
     @Transactional
     public void completeAttempt(Long executionId,
-                                String outcome,
+    		VerificationOutcome outcome,
                                 String remarks) {
 
         VerificationMethodExecution execution = executionRepository.findById(executionId)
@@ -73,7 +74,7 @@ public class VerificationAttemptService {
         if(attempt!=null) {
 
         attempt.setStatus(AttemptStatus.COMPLETED);
-        attempt.setOutcomeCode(outcome);
+        attempt.setOutcome(outcome);
         attempt.setRemarks(remarks);
         attempt.setCompletedAt(LocalDateTime.now());
 

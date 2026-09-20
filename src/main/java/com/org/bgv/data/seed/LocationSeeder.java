@@ -20,7 +20,7 @@ import lombok.RequiredArgsConstructor;
 @RequiredArgsConstructor
 public class LocationSeeder {
 	
-	 @Value("${app.seed.enabled:false}")
+	    @Value("${app.seed.enabled:false}")
 	    private boolean seedEnabled;
 
     private final CountryRepository countryRepository;
@@ -31,19 +31,26 @@ public class LocationSeeder {
     CommandLineRunner seedLocations() {
         return args -> {
 
-            // Skip if India already exists
-            if (countryRepository.existsByCode("IN")) {
-                return;
-            }
+           
 
-            Country india = new Country();
-            india.setCode("IN");
-            india.setName("India");
-
-            countryRepository.save(india);
+        	Country india = saveCountry("IN", "India");
 
             // States
-            saveState(india, "AP", "Andhra Pradesh");
+            StateRegion ap = saveState(india, "AP", "Andhra Pradesh");
+            
+            saveCities(ap,
+                    "Visakhapatnam",
+                    "Vijayawada",
+                    "Guntur",
+                    "Tirupati",
+                    "Kakinada",
+                    "Rajahmundry",
+                    "Nellore",
+                    "Kurnool",
+                    "Anantapur",
+                    "Kadapa");
+            
+            
             saveState(india, "AR", "Arunachal Pradesh");
             saveState(india, "AS", "Assam");
             saveState(india, "BR", "Bihar");
@@ -53,10 +60,26 @@ public class LocationSeeder {
             saveState(india, "HR", "Haryana");
             saveState(india, "HP", "Himachal Pradesh");
             saveState(india, "JH", "Jharkhand");
-            saveState(india, "KA", "Karnataka");
+            StateRegion ka = saveState(india, "KA", "Karnataka");
+            saveCities(ka,
+                    "Bengaluru",
+                    "Mysuru",
+                    "Mangaluru",
+                    "Hubballi",
+                    "Belagavi",
+                    "Ballari",
+                    "Davanagere");
             saveState(india, "KL", "Kerala");
             saveState(india, "MP", "Madhya Pradesh");
-            saveState(india, "MH", "Maharashtra");
+            StateRegion mh =  saveState(india, "MH", "Maharashtra");
+            saveCities(mh,
+                    "Mumbai",
+                    "Pune",
+                    "Nagpur",
+                    "Nashik",
+                    "Thane",
+                    "Aurangabad",
+                    "Kolhapur");
             saveState(india, "MN", "Manipur");
             saveState(india, "ML", "Meghalaya");
             saveState(india, "MZ", "Mizoram");
@@ -65,8 +88,24 @@ public class LocationSeeder {
             saveState(india, "PB", "Punjab");
             saveState(india, "RJ", "Rajasthan");
             saveState(india, "SK", "Sikkim");
-            saveState(india, "TN", "Tamil Nadu");
-            saveState(india, "TG", "Telangana");
+            StateRegion tn =saveState(india, "TN", "Tamil Nadu");
+            saveCities(tn,
+                    "Chennai",
+                    "Coimbatore",
+                    "Madurai",
+                    "Salem",
+                    "Tiruchirappalli",
+                    "Tirunelveli");
+            StateRegion tg = saveState(india, "TG", "Telangana");
+            saveCities(tg,
+                    "Hyderabad",
+                    "Warangal",
+                    "Karimnagar",
+                    "Khammam",
+                    "Nizamabad",
+                    "Mahabubnagar",
+                    "Adilabad",
+                    "Siddipet");
             saveState(india, "TR", "Tripura");
             saveState(india, "UP", "Uttar Pradesh");
             saveState(india, "UK", "Uttarakhand");
@@ -86,27 +125,54 @@ public class LocationSeeder {
         };
     }
 
-    private void saveState(Country country, String code, String name) {
+    private StateRegion saveState(Country country, String code, String name) {
 
-        StateRegion state = new StateRegion();
-        state.setCountry(country);
-        state.setCode(code);
-        state.setName(name);
+    	 StateRegion state = stateRegionRepository
+    	            .findByCountryAndCode(country, code)
+    	            .orElseGet(StateRegion::new);
 
-        stateRegionRepository.save(state);
+    	    state.setCountry(country);
+    	    state.setCode(code);
+    	    state.setName(name);
+
+    	    return stateRegionRepository.save(state);
     }
     
     private void saveCity(StateRegion state, String code, String name) {
 
-        if (cityRepository.existsByStateAndName(state, name)) {
-            return;
+    	 City city = cityRepository
+    	            .findByStateAndCode(state, code)
+    	            .orElseGet(City::new);
+
+    	    city.setState(state);
+    	    city.setCode(code);
+    	    city.setName(name);
+
+    	    cityRepository.save(city);
+    }
+    
+    
+    
+    private void saveCities(StateRegion state, String... cities) {
+
+        for (String cityName : cities) {
+
+        	String code = cityName.substring(0, Math.min(3, cityName.length()))
+                    .toUpperCase();
+
+            saveCity(state, code, cityName);
         }
+    }
+    
+    private Country saveCountry(String code, String name) {
 
-        City city = new City();
-        city.setState(state);
-        city.setCode(code);
-        city.setName(name);
+        Country country = countryRepository
+                .findByCode(code)
+                .orElseGet(Country::new);
 
-        cityRepository.save(city);
+        country.setCode(code);
+        country.setName(name);
+
+        return countryRepository.save(country);
     }
 }

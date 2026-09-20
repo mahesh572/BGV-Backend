@@ -6,6 +6,7 @@ import com.org.bgv.vendor.entity.VerificationObject;
 import jakarta.transaction.Transactional;
 
 import com.org.bgv.enums.VerificationObjectStatus;
+import com.org.bgv.enums.VerificationOutcome;
 import com.org.bgv.dto.CheckCategoryEnum;
 import com.org.bgv.entity.VerificationCaseCheck;
 
@@ -32,7 +33,7 @@ public interface VerificationObjectRepository extends JpaRepository<Verification
     List<VerificationObject> findByStatus(VerificationObjectStatus status);
     
     // Find by final result
-    List<VerificationObject> findByFinalResult(VerificationObjectStatus finalResult);
+    List<VerificationObject> findByOutcome(VerificationOutcome outcome);
     
     // Find by source ID
     Optional<VerificationObject> findBySourceId(Long sourceId);
@@ -54,7 +55,7 @@ public interface VerificationObjectRepository extends JpaRepository<Verification
     List<VerificationObject> findByVerificationCheck_CaseCheckIdAndStatus(Long caseCheckId, VerificationObjectStatus status);
     
     // Find by case check ID and final result
-    List<VerificationObject> findByVerificationCheck_CaseCheckIdAndFinalResult(Long caseCheckId, VerificationObjectStatus finalResult);
+    List<VerificationObject> findByVerificationCheck_CaseCheckIdAndOutcome(Long caseCheckId, VerificationOutcome outcome);
     
     // Find unverified objects (where verifiedAt is null and status is not COMPLETED)
     @Query("SELECT v FROM VerificationObject v WHERE v.verifiedAt IS NULL AND v.status != 'COMPLETED'")
@@ -70,7 +71,7 @@ public interface VerificationObjectRepository extends JpaRepository<Verification
     long countByStatus(VerificationObjectStatus status);
     
     // Count by final result
-    long countByFinalResult(VerificationObjectStatus finalResult);
+    long countByOutcome(VerificationObjectStatus outcome);
     
     // Count by case check ID
     long countByVerificationCheck_CaseCheckId(Long caseCheckId);

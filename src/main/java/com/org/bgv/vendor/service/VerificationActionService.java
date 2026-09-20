@@ -742,7 +742,7 @@ public class VerificationActionService {
 	            verificationCaseSelectionRepository
 	                    .findByVerificationCase_CaseIdAndType(
 	                            caseId,
-	                            CheckCategoryEnum.WORK_EXPERIENCE);
+	                            CheckCategoryEnum.EMPLOYMENT);
 
 	    List<String> unverifiedDocuments = new ArrayList();
 

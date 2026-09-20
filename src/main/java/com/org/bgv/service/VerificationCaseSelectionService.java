@@ -192,7 +192,7 @@ public class VerificationCaseSelectionService {
 	    // =========================
 	    // 3. WORK RULES
 	    // =========================
-	    else if (checkCategory != null && checkCategory.getName().equalsIgnoreCase(CheckCategoryEnum.WORK_EXPERIENCE.getName())) {
+	    else if (checkCategory != null && checkCategory.getName().equalsIgnoreCase(CheckCategoryEnum.EMPLOYMENT.getName())) {
 	        processWorkRules(verificationCase, rule,verificationCaseCheck);
 	    }
 	    
@@ -498,7 +498,7 @@ public class VerificationCaseSelectionService {
 	                verificationCaseSelectionRepository
 	                        .findByVerificationCaseAndTypeAndReferenceId(
 	                                verificationCase,
-	                                CheckCategoryEnum.WORK_EXPERIENCE,
+	                                CheckCategoryEnum.EMPLOYMENT,
 	                                work.getExperienceId())
 	                        .orElse(null);
 
@@ -509,7 +509,7 @@ public class VerificationCaseSelectionService {
 	            VerificationCaseSelection selection =
 	                    createSelection(
 	                            verificationCase,
-	                            CheckCategoryEnum.WORK_EXPERIENCE,
+	                            CheckCategoryEnum.EMPLOYMENT,
 	                            work.getExperienceId());
 
 	            if (isAddon) {
@@ -541,7 +541,7 @@ public class VerificationCaseSelectionService {
 
 	            verificationObjectService.create(
 	                    verificationCaseCheck,
-	                    CheckCategoryEnum.WORK_EXPERIENCE,
+	                    CheckCategoryEnum.EMPLOYMENT,
 	                    work.getExperienceId(),
 	                    work.getCompanyName());
 

@@ -26,7 +26,7 @@ public class WorkRuleStrategy implements RuleExecutionStrategy {
 
     @Override
     public boolean supports(CheckCategory category, RuleTypes ruleType) {
-        return "WORK".equalsIgnoreCase(category.getName());
+        return CheckCategoryEnum.EMPLOYMENT.getName().equalsIgnoreCase(category.getName());
     }
 
     @Override
@@ -49,7 +49,7 @@ public class WorkRuleStrategy implements RuleExecutionStrategy {
             VerificationCaseSelection selection = selectionRepo.save(
                     VerificationCaseSelection.builder()
                             .verificationCase(verificationCase)
-                            .type(CheckCategoryEnum.WORK_EXPERIENCE)
+                            .type(CheckCategoryEnum.EMPLOYMENT)
                             .referenceId(work.getExperienceId())
                             .status("PENDING")
                             .build()

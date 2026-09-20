@@ -39,7 +39,7 @@ public class ObjectFieldBuilderRegistry {
             case ADDRESS ->
                     new ArrayList();
 
-            case WORK_EXPERIENCE ->
+            case EMPLOYMENT ->
                     workExperienceFieldBuilder.buildFields((WorkExperience)source);
         };
     }

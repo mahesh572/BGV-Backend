@@ -4,9 +4,14 @@ import java.math.BigDecimal;
 import java.util.ArrayList;
 import java.util.List;
 
+import com.org.bgv.enums.PackageType;
+import com.org.bgv.user.enums.UserStatus;
+
 import jakarta.persistence.CascadeType;
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
+import jakarta.persistence.EnumType;
+import jakarta.persistence.Enumerated;
 import jakarta.persistence.FetchType;
 import jakarta.persistence.GeneratedValue;
 import jakarta.persistence.GenerationType;
@@ -46,6 +51,10 @@ public class BgvPackage {
     
     @Column(name = "base_price")
     private BigDecimal basePrice;
+    
+    @Enumerated(EnumType.STRING)
+    @Column(name = "package_type")
+    private PackageType packageType; 
     
     @Column(name = "isactive")
     private Boolean isActive;

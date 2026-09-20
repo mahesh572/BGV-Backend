@@ -46,5 +46,9 @@ public interface PackageCheckCategoryRuleTypeRepository extends JpaRepository<Pa
             Long checkCategoryId, 
             Long ruleTypeId
         );
+    
+    List<PackageCheckCategoryRuleType> findByBgvPackage_PackageId(Long packageId);
+
+    List<PackageCheckCategoryRuleType> findByBgvPackage_PackageIdAndCheckCategoryId(Long packageId,Long checkCategoryId);
         
 }

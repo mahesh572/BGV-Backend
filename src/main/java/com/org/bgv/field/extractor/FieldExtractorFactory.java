@@ -21,7 +21,7 @@ public class FieldExtractorFactory {
 
             case EDUCATION -> educationExtractor;
 
-            case WORK_EXPERIENCE -> employmentExtractor;
+            case EMPLOYMENT -> employmentExtractor;
 
             default -> throw new RuntimeException(
                     "No extractor found");

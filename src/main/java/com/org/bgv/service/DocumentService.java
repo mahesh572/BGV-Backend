@@ -976,7 +976,7 @@ public class DocumentService {
                             buildEducationDocuments(candidateId, category)
                     );
 
-            case "Work Experience" ->
+            case "Employment" ->
                     categoryDto.setCompanies(
                             buildWorkExperienceDocuments(candidateId, category, documentTypes)
                     );

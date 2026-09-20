@@ -4,7 +4,9 @@ import java.time.LocalDate;
 import java.time.LocalDateTime;
 
 import com.org.bgv.entity.User;
+import com.org.bgv.enums.VerificationOutcome;
 
+import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
 import jakarta.persistence.GeneratedValue;
 import jakarta.persistence.GenerationType;
@@ -41,7 +43,8 @@ public class FieldVisitAssignment {
 
  //   private Double longitude;
 
-    private String outcome;
+    @Column(name = "outcome")
+    private VerificationOutcome outcome;
 
     private LocalDate scheduledDate;
 

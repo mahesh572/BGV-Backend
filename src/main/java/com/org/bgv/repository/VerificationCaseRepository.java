@@ -14,6 +14,7 @@ import org.springframework.data.repository.query.Param;
 import org.springframework.stereotype.Repository;
 
 import java.time.LocalDateTime;
+import java.util.Collection;
 import java.util.List;
 import java.util.Optional;
 
@@ -98,5 +99,12 @@ public interface VerificationCaseRepository extends JpaRepository<VerificationCa
  // Count methods for statistics
     Long countByCandidateId(Long candidateId);
     Long countByCandidateIdAndStatus(Long candidateId, CaseStatus status);
+    
+    boolean existsByCandidateIdAndEmployerPackageIdAndCompanyIdAndStatusNotIn(
+            Long candidateId,
+            Long employerPackageId,
+            Long companyId,
+            Collection<CaseStatus> statuses
+    );
     
 }

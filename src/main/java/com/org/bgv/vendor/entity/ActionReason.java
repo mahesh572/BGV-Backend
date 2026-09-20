@@ -43,7 +43,7 @@ public class ActionReason {
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "category_id")
     private CheckCategory category; 
-    // Identity / Education / Work Experience (nullable = common reasons)
+    // Identity / Education / Employmement (nullable = common reasons)
     
     @Enumerated(EnumType.STRING)
     private ActionType actionType;

@@ -9,6 +9,8 @@ import org.springframework.data.repository.query.Param;
 import org.springframework.stereotype.Repository;
 
 import com.org.bgv.entity.BgvPackage;
+import com.org.bgv.enums.PackageType;
+
 
 @Repository
 public interface BgvPackageRepository extends JpaRepository<BgvPackage, Long> {
@@ -18,6 +20,8 @@ public interface BgvPackageRepository extends JpaRepository<BgvPackage, Long> {
     List<BgvPackage> findByIsActiveTrue();
     
     boolean existsByCode(String code);
+    
+    List<BgvPackage> findByPackageType(PackageType packageType);
     
     boolean existsByCodeAndPackageIdNot(String code, Long packageId);
     

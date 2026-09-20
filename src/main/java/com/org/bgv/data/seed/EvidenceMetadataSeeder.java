@@ -69,10 +69,10 @@ public class EvidenceMetadataSeeder implements CommandLineRunner {
                         .price(0.0)
                         .build(),
                 CheckCategoryRequest.builder()
-                        .name("Work Experience")
+                        .name("Employment")
                         .label("Professional/Work Experience")
                         .description("Professional/Work Experience")
-                        .code("WORK")
+                        .code("EMPLOYMENT")
                         .hasDocuments(true)
                         .isActive(true)
                         .price(0.0)
@@ -154,8 +154,8 @@ public class EvidenceMetadataSeeder implements CommandLineRunner {
         mapToCategory("Education", discrepancyProof, true, 5);
         mapToCategory("Education", clarificationDoc, false, 3);
 
-        mapToCategory("Work Experience", manualVerification, true, 5);
-        mapToCategory("Work Experience", discrepancyProof, false, 3);
+        mapToCategory("Employment", manualVerification, true, 5);
+        mapToCategory("Employment", discrepancyProof, false, 3);
 
         log.info("✅ Evidence Metadata Seeding Completed");
     }

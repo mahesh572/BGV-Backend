@@ -3,6 +3,7 @@ package com.org.bgv.company.dto;
 import java.time.LocalDate;
 
 import com.org.bgv.user.enums.Gender;
+import com.org.bgv.user.enums.UserStatus;
 
 import lombok.Builder;
 import lombok.Data;
@@ -27,7 +28,7 @@ public class EmployeeDTO {
 
     private String employmentType; // FULL_TIME, CONTRACT, INTERN
 
-    private String status; // ACTIVE, INACTIVE
+    private UserStatus status; // ACTIVE, INACTIVE
 
     private LocalDate dateOfBirth;
 

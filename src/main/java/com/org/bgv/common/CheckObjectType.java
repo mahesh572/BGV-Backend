@@ -5,7 +5,8 @@ public enum CheckObjectType {
     IDENTITY("Identity"),
     EDUCATION("Education"),
     ADDRESS("Address"),
-    WORK_EXPERIENCE("Work Experience");
+  //  WORK_EXPERIENCE("Work Experience");
+	EMPLOYMENT("Employment");
 
     private final String label;
 

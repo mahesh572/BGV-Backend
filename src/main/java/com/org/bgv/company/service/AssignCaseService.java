@@ -168,7 +168,8 @@ public class AssignCaseService {
 	        PricingInfo selectedpricingInfo = pricingService.resolvePricing(
                     companyId,
                     categoryId,
-                    ruleType
+                    ruleType,
+                    true
             );
 
 	        SelectedRuleDTO packageRuleDTO =
@@ -260,7 +261,8 @@ public class AssignCaseService {
 	                            PricingInfo pricingInfo = pricingService.resolvePricing(
 	                                    companyId,
 	                                    categoryId,
-	                                    addOnRuleType
+	                                    addOnRuleType,
+	                                    true
 	                            );
 	                            PricingType pricingType = pricingInfo != null ? pricingInfo.getPricingType() : null;
 	                           

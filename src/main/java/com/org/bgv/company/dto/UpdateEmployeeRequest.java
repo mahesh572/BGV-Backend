@@ -1,5 +1,7 @@
 package com.org.bgv.company.dto;
 
+import com.org.bgv.user.enums.UserStatus;
+
 import lombok.Getter;
 import lombok.Setter;
 
@@ -14,6 +16,6 @@ public class UpdateEmployeeRequest {
     private String designation;
     private String department;
     private String employmentType;
-    private String status; // ACTIVE / INACTIVE
+    private UserStatus status; // ACTIVE / INACTIVE
 }
 

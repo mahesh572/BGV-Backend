@@ -17,6 +17,7 @@ import com.org.bgv.common.repository.FieldConfigurationRepository;
 import com.org.bgv.config.SecurityUtils;
 import com.org.bgv.enums.ComparisonStatus;
 import com.org.bgv.enums.VerificationObjectStatus;
+import com.org.bgv.enums.VerificationOutcome;
 import com.org.bgv.vendor.dto.UpdateFieldComparisonRequest;
 import com.org.bgv.vendor.entity.VerificationFieldComparison;
 import com.org.bgv.vendor.entity.VerificationObject;
@@ -121,12 +122,12 @@ public class FieldComparisonService {
 
         } else if (mismatchCount > 0) {
 
-            object.setFinalResult(VerificationObjectStatus.DISCREPANCY_FOUND);
+            object.setOutcome(VerificationOutcome.DISCREPANCY);
             object.setStatus(VerificationObjectStatus.COMPLETED);
 
         } else {
 
-            object.setFinalResult(VerificationObjectStatus.CLEAR);
+            object.setOutcome(VerificationOutcome.VERIFIED);
             object.setStatus(VerificationObjectStatus.COMPLETED);
             object.setVerifiedAt(LocalDateTime.now());
         }
@@ -137,7 +138,7 @@ public class FieldComparisonService {
                 "Object saved. objectId={}, status={}, finalResult={}",
                 object.getObjectId(),
                 object.getStatus(),
-                object.getFinalResult());
+                object.getOutcome());
     }
 
     public void createComparisonFields(VerificationObject object) {
@@ -277,6 +278,6 @@ public class FieldComparisonService {
                 "Verification object status recalculated. objectId={}, status={}, finalResult={}",
                 object.getObjectId(),
                 object.getStatus(),
-                object.getFinalResult());
+                object.getOutcome());
     }
 }

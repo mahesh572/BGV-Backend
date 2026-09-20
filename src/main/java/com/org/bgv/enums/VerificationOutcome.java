@@ -36,6 +36,9 @@ public enum VerificationOutcome {
             false,
             false,
             true);
+	
+	
+	
 
     private final String label;
     private final String description;

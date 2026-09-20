@@ -3,6 +3,8 @@ package com.org.bgv.common;
 import java.math.BigDecimal;
 import java.util.List;
 
+import com.org.bgv.enums.CaseSource;
+
 import jakarta.validation.constraints.NotNull;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
@@ -21,11 +23,14 @@ public class VerificationCaseRequest {
     @NotNull
     private Long companyId;
     
-    @NotNull
+    private Long packageId;
+    
     private Long employerPackageId;
     
    // @NotNull
     private BigDecimal totalPrice;
     
     private List<CategoryCase> categories;
+    
+    private CaseSource source;
 }

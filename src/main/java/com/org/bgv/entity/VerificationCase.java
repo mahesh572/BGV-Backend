@@ -10,6 +10,8 @@ import java.util.List;
 
 import com.org.bgv.candidate.entity.Candidate;
 import com.org.bgv.constants.CaseStatus;
+import com.org.bgv.enums.CaseSource;
+import com.org.bgv.enums.VerificationOutcome;
 
 @Entity
 @Table(name = "verification_case")
@@ -40,8 +42,13 @@ public class VerificationCase {
     private Long companyId;
 
     @ManyToOne(fetch = FetchType.LAZY)
-    @JoinColumn(name = "employer_package_id", nullable = false)
+    @JoinColumn(name = "employer_package_id")
     private EmployerPackage employerPackage;
+    
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "packageId")
+    private BgvPackage bgvPackage;
+    
 
     @Column(name = "base_price")
     private BigDecimal basePrice;
@@ -64,6 +71,10 @@ public class VerificationCase {
     @Column(name = "completed_at")
     private LocalDateTime completedAt;
     
+    @Enumerated(EnumType.STRING)
+    @Column(name = "case_source")
+    private CaseSource caseSource;
+    
     @OneToMany(mappedBy = "verificationCase", cascade = CascadeType.ALL, fetch = FetchType.LAZY)
     @Builder.Default
     private List<VerificationCaseDocument> caseDocuments = new ArrayList<>();
@@ -71,6 +82,10 @@ public class VerificationCase {
     @OneToMany(mappedBy = "verificationCase", cascade = CascadeType.ALL, fetch = FetchType.LAZY)
     @Builder.Default
     private List<VerificationCaseCheck> caseChecks = new ArrayList<>();
+    
+    @Enumerated(EnumType.STRING)
+    private VerificationOutcome outcome;
+    
     
     /*
     @Column(name = "vendor_id")

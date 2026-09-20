@@ -1,8 +1,20 @@
 package com.org.bgv.common;
 
+import java.io.ByteArrayInputStream;
+import java.io.File;
+import java.io.FileOutputStream;
+import java.io.IOException;
+import java.io.InputStream;
 import java.nio.charset.StandardCharsets;
 import java.security.SecureRandom;
+import java.util.Base64;
 
+import org.springframework.web.multipart.MultipartFile;
+
+import lombok.extern.slf4j.Slf4j;
+
+
+@Slf4j
 public class CommonUtils {
 
 	private static final String CHAR_SET = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789@#$!%";
@@ -59,6 +71,69 @@ public class CommonUtils {
 
         } catch (Exception e) {
             throw new IllegalArgumentException("Invalid Base64 data format", e);
+        }
+    }
+    
+    
+    public static MultipartFile base64ToMultipartFile(String base64Data, String mimeType, String fileName) {
+        try {
+            // Remove data URL prefix if present
+            if (base64Data.contains(",")) {
+                base64Data = base64Data.split(",")[1];
+            }
+            
+            log.info("base64Data::::::::::::::::::::{}",base64Data);
+
+            byte[] decodedBytes = Base64.getDecoder().decode(base64Data);
+
+            // Return anonymous implementation of MultipartFile
+            return new MultipartFile() {
+                @Override
+                public String getName() {
+                    return fileName;
+                }
+
+                @Override
+                public String getOriginalFilename() {
+                    return fileName;
+                }
+
+                @Override
+                public String getContentType() {
+                    return mimeType;
+                }
+
+                @Override
+                public boolean isEmpty() {
+                    return decodedBytes.length == 0;
+                }
+
+                @Override
+                public long getSize() {
+                    return decodedBytes.length;
+                }
+
+                @Override
+                public byte[] getBytes() throws IOException {
+                    return decodedBytes;
+                }
+
+                @Override
+                public InputStream getInputStream() throws IOException {
+                    return new ByteArrayInputStream(decodedBytes);
+                }
+
+                @Override
+                public void transferTo(File dest) throws IOException, IllegalStateException {
+                    try (FileOutputStream fos = new FileOutputStream(dest)) {
+                        fos.write(decodedBytes);
+                    }
+                }
+            };
+
+        } catch (Exception e) {
+        	log.error("error in base64ToMultipartFile:::::"+e.getMessage());
+            throw new RuntimeException("Error converting base64 to MultipartFile", e);
         }
     }
 

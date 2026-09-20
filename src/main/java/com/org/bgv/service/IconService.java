@@ -14,7 +14,7 @@ public class IconService {
         log.info("IconService::::::::::::::::::verificationName::{}",verificationName);
         
         return switch (verificationName.toLowerCase()) {
-            case "work experience" -> "💼";
+            case "Employment" -> "💼";
             case "education" -> "🎓";
             case "address" -> "🏠";
             case "court", "court check" -> "⚖️";

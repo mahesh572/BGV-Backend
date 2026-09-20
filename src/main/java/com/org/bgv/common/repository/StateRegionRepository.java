@@ -13,6 +13,8 @@ import com.org.bgv.common.entity.StateRegion;
 
 @Repository
 public interface StateRegionRepository extends JpaRepository<StateRegion, Long> {
+	
+	Optional<StateRegion> findByCountryAndCode(Country country, String code);
 
     List<StateRegion> findByCountry(Country country);
 

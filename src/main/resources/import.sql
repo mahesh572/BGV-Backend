@@ -28,7 +28,7 @@ INSERT INTO public.check_category(
 VALUES
 (1, 'Identity', 'Identity', 'IDENTITY', 'IDENTITY', true, true, 0, 0, 0),
 (2, 'Education', 'Education', 'EDUCATION', 'EDUCATION', true, true, 0, 0, 0),
-(3, 'Professional/Work Experience', 'Work Experience', 'WORK', 'WORK', true, true, 0, 0, 0),
+(3, 'Professional/Work Experience', 'EMPLOYMENT', 'EMPLOYMENT', 'EMPLOYMENT', true, true, 0, 0, 0),
 (4, 'Other', 'Other', 'OTHER', 'OTHER', false, true, 0, 0, 0),
 (5, 'Address', 'Address', 'ADDRESS', 'ADDRESS', true, true, 0, 0, 0),
 (6, 'Court', 'Court', 'COURT', 'COURT', false, true, 0, 0, 0);

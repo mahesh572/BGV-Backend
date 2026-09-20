@@ -55,24 +55,7 @@ public class UserController {
                     .body(CustomApiResponse.failure("Failed to fetch user: " + e.getMessage(), HttpStatus.INTERNAL_SERVER_ERROR));
         }
     }
-/*
-    @PostMapping
-    public ResponseEntity<CustomApiResponse<UserDto>> create(@RequestBody UserDto userDto) {
-        try {
-        	logger.info("users/create::::::{}",userDto);
-        	userDto.setUserType(UserType.CANDIDATE);
-        	UserDto createdUser = userService.create(userDto);
-            return ResponseEntity.status(HttpStatus.CREATED)
-                    .body(CustomApiResponse.success("User created successfully", createdUser, HttpStatus.CREATED));
-        } catch (RuntimeException e) {
-            return ResponseEntity.status(HttpStatus.BAD_REQUEST)
-                    .body(CustomApiResponse.failure(e.getMessage(), HttpStatus.BAD_REQUEST));
-        } catch (Exception e) {
-            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
-                    .body(CustomApiResponse.failure("Failed to create user: " + e.getMessage(), HttpStatus.INTERNAL_SERVER_ERROR));
-        }
-    }
-*/
+
     @PutMapping("/{id}")
     public ResponseEntity<CustomApiResponse<UserDto>> update(@PathVariable Long id, @RequestBody UserDetailsDto userDto) {
         try {

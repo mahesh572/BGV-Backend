@@ -3,6 +3,7 @@ package com.org.bgv.vendor.entity;
 import java.time.LocalDateTime;
 
 import com.org.bgv.entity.User;
+import com.org.bgv.enums.VerificationOutcome;
 import com.org.bgv.vendor.dto.AttemptStatus;
 
 import jakarta.persistence.Entity;
@@ -38,7 +39,7 @@ public class VerificationAttempt {
     @Enumerated(EnumType.STRING)
     private AttemptStatus status;
 
-    private String outcomeCode;
+    private VerificationOutcome outcome;
 
     private String remarks;
 

@@ -87,16 +87,7 @@ public class CandidateSubmissionService {
             throw new ValidationException("Candidate does not own this case");
         }
 
-        // ✅ Progress validation
         
-        /*
-        int progress = calculateProgress(candidateverification);
-        if (progress < 100) {
-            throw new ValidationException(
-                    "Cannot submit verification. Complete all required sections. Progress: " + progress + "%"
-            );
-        }
-*/
         // -----------------------------
         // 1️⃣ Candidate Verification
         // -----------------------------
@@ -167,8 +158,6 @@ public class CandidateSubmissionService {
         // -----------------------------
         // 5️⃣ Notify vendor / system
         // -----------------------------
-       
-
         
     	verificationCaseSelectionService.populateSelections(caseId);
     	calculatePricing(candidateId, caseId, verificationCase);

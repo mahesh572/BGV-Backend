@@ -6,6 +6,7 @@ import java.util.Objects;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
 
+import com.org.bgv.common.navigation.PortalType;
 import com.org.bgv.entity.UserType;
 import com.org.bgv.user.enums.Gender;
 
@@ -40,6 +41,7 @@ public class UserDto {
     private Long candidateId;
     private Boolean passwordResetrequired;
     private String landingPage;
+    private PortalType portal;
   //  private Long vendorId;
   //  private Long caseId;
     

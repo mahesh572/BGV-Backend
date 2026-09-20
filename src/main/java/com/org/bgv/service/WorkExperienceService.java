@@ -113,7 +113,7 @@ public class WorkExperienceService {
 	    }
 	    
 	   // final String CATEGORY_NAME = "Work Experience";
-	    final String CATEGORY_NAME = CheckCategoryEnum.WORK_EXPERIENCE.getName();
+	    final String CATEGORY_NAME = CheckCategoryEnum.EMPLOYMENT.getName();
 	    
 	    CheckCategory category = checkCategoryRepository
                 .findByNameIgnoreCase(CATEGORY_NAME)
@@ -178,7 +178,7 @@ public class WorkExperienceService {
 		  VerificationCaseCheck verificationCaseCheck = null;
 	        if(caseId!=null && caseId!=0) {
 	        	verificationCase = verificationCaseRepository.findByCaseIdAndCandidateId(caseId,candidate.getCandidateId()).orElseThrow(()->new EntityNotFoundException());
-	        	final String CATEGORY_NAME = "Work Experience";
+	        	final String CATEGORY_NAME = CheckCategoryEnum.EMPLOYMENT.getName();
 	        	CheckCategory category = checkCategoryRepository
 	                    .findByNameIgnoreCase(CATEGORY_NAME)
 	                    .orElseThrow(() -> new RuntimeException("Category not found: " + CATEGORY_NAME));
@@ -317,7 +317,7 @@ public class WorkExperienceService {
 	                    workExperienceRepository::delete,
 	                    () -> {
 	                        throw new EntityNotFoundException(
-	                            "Work experience not found for profileId: " + candidateId + " and experienceId: " + experienceId
+	                            "Employmement not found for profileId: " + candidateId + " and experienceId: " + experienceId
 	                        );
 	                    }
 	            );
@@ -330,7 +330,7 @@ public class WorkExperienceService {
 	        Long caseId
 	) {
 	    if (workExperienceDTOs == null || workExperienceDTOs.isEmpty()) {
-	        throw new IllegalArgumentException("Work experiences list cannot be empty");
+	        throw new IllegalArgumentException("Employmements list cannot be empty");
 	    }
 
 	    Candidate candidate = candidateRepository.findById(candidateId)
@@ -353,7 +353,7 @@ public class WorkExperienceService {
 	                        workExperienceRepository
 	                                .findByCandidateIdAndExperienceId(candidateId, dto.getId())
 	                                .orElseThrow(() ->
-	                                        new RuntimeException("Work experience not found for candidate"));
+	                                        new RuntimeException("Employmement not found for candidate"));
 	            }
 	            // CASE VERIFICATION MODE
 	            else {
@@ -365,7 +365,7 @@ public class WorkExperienceService {
 	                                        dto.getId()
 	                                );
 	                if (workExperience == null) {
-	                    throw new RuntimeException("Work experience not found for case");
+	                    throw new RuntimeException("Employmement not found for case");
 	                }
 	            }
 	        }
@@ -381,7 +381,7 @@ public class WorkExperienceService {
 	                        verificationCaseRepository.findById(caseId)
 	                                .orElseThrow(() -> new RuntimeException("Case not found"));
 	                
-	                final String CATEGORY_NAME = "Work Experience";
+	                final String CATEGORY_NAME = "Employmement";
 	            	CheckCategory category = checkCategoryRepository
 	                        .findByNameIgnoreCase(CATEGORY_NAME)
 	                        .orElseThrow(() -> new RuntimeException("Category not found: " + CATEGORY_NAME));
@@ -433,7 +433,7 @@ public class WorkExperienceService {
 	// verification
 	@Cacheable(value = "workExperience", key = "#candidateId")
     public List<WorkExperienceDTO> getExperiences(Long candidateId) {
-        logger.info("Fetching work experience records for candidate: {}", candidateId);
+        logger.info("Fetching Employmement records for candidate: {}", candidateId);
         
         List<WorkExperience> experiences = workExperienceRepository.findByCandidateIdOrderByDate(candidateId);
         

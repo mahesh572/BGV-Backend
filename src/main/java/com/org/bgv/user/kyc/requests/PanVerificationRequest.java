@@ -1,12 +1,21 @@
 package com.org.bgv.user.kyc.requests;
 
+import com.fasterxml.jackson.annotation.JsonProperty;
+
+import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Data;
+import lombok.NoArgsConstructor;
 
 @Builder
 @Data
+@NoArgsConstructor
+@AllArgsConstructor
 public class PanVerificationRequest {
-    private String panNumber;
-    private String fullName;
-    private String dob;
+
+	@JsonProperty("pan")
+    private String pan;
+
+	@JsonProperty("name")
+    private String name;
 }

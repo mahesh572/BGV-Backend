@@ -10,9 +10,37 @@ import lombok.NoArgsConstructor;
 @NoArgsConstructor
 @AllArgsConstructor
 public class PanVerificationResponse {
-    private boolean valid;
-    private String name;
-    private String dob;
-    private String status; // ACTIVE / INVALID
-    private String providerRefId;
+
+    /**
+     * Provider verification status
+     */
+    private boolean verified;
+
+    /**
+     * PAN number returned by provider
+     */
+    private String pan;
+
+    /**
+     * Candidate entered name
+     */
+    private String providedName;
+
+    /**
+     * Name registered with Income Tax
+     */
+    private String registeredName;
+
+    private String fatherName;
+
+    private String panType;
+
+    private String providerReference;
+
+    private String message;
+
+    /**
+     * Keep complete response for auditing/debugging
+     */
+    private Object rawResponse;
 }

@@ -99,7 +99,7 @@ public class UserWorkExperienceService {
 	public List<WorkExperienceDTO> updateUserWorkExperiences(Long userId,List<WorkExperienceDTO> workExperienceDTOs) {
 
 		if (workExperienceDTOs == null || workExperienceDTOs.isEmpty()) {
-			throw new IllegalArgumentException("Work experiences list cannot be empty");
+			throw new IllegalArgumentException("Employmements list cannot be empty");
 		}
 
 		User user = userRepository.findById(userId)
@@ -117,7 +117,7 @@ public class UserWorkExperienceService {
 			if (dto.getId() != null) {
 
 				experience = userWorkExperienceRepository.findByUser_UserIdAndId(userId, dto.getId())
-						.orElseThrow(() -> new RuntimeException("Work experience not found for user"));
+						.orElseThrow(() -> new RuntimeException("Employmement not found for user"));
 
 			}
 			/*
@@ -158,7 +158,7 @@ public class UserWorkExperienceService {
 	public void deleteWorkExperience(Long userId, Long experienceId) {
 		userWorkExperienceRepository.findByUser_UserIdAndId(userId, experienceId)
 				.ifPresentOrElse(userWorkExperienceRepository::delete, () -> {
-					throw new EntityNotFoundException("Work experience not found for profileId: " + userId
+					throw new EntityNotFoundException("Employmement not found for profileId: " + userId
 							+ " and experienceId: " + experienceId);
 				});
 	}

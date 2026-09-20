@@ -6,6 +6,7 @@ import java.time.LocalDateTime;
 import com.org.bgv.entity.User;
 import com.org.bgv.onboarding.entity.Company;
 import com.org.bgv.user.enums.Gender;
+import com.org.bgv.user.enums.UserStatus;
 
 import jakarta.persistence.*;
 import lombok.*;
@@ -76,8 +77,9 @@ public class Employee {
     private String employmentType; 
     // FULL_TIME, CONTRACT, INTERN
 
+    @Enumerated(EnumType.STRING)
     @Column(name = "status")
-    private String status; 
+    private UserStatus status; 
     // ACTIVE, INACTIVE
 
     @Column(name = "created_at", updatable = false)
@@ -90,7 +92,7 @@ public class Employee {
     protected void onCreate() {
         this.createdAt = LocalDateTime.now();
         if (this.status == null) {
-            this.status = "ACTIVE";
+            this.status = UserStatus.ACTIVE;
         }
     }
 

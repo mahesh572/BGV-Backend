@@ -348,10 +348,10 @@ public class VerificationService {
                             () -> educationService.getEducations(candidateId)
                     );
 
-                    case WORK_EXPERIENCE -> addSection(
+                    case EMPLOYMENT -> addSection(
                             sections,
-                            SectionConstants.WORK_EXPERIENCE.getValue(),
-                            "Work Experience",
+                            SectionConstants.EMPLOYMENT.getValue(),
+                            "Employment",
                             requirementsMap,
                             statusMap,
                             () -> workExperienceService.getExperiences(candidateId)

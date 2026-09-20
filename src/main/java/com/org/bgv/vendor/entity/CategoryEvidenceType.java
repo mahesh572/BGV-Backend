@@ -22,7 +22,7 @@ public class CategoryEvidenceType {
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
 
-    // Identity / Education / Work Experience
+    // Identity / Education / Employmement
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "category_id", nullable = false)
     private CheckCategory category;

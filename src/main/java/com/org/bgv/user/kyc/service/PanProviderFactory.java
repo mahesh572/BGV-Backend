@@ -1,28 +1,41 @@
 package com.org.bgv.user.kyc.service;
 
-import java.util.HashMap;
+import java.util.EnumMap;
 import java.util.List;
 import java.util.Map;
 
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 
+import com.org.bgv.user.enums.KycProvider;
+
 @Service
 public class PanProviderFactory {
 
-    @Value("${kyc.pan.provider}")
-    private String activeProvider;
+    private final KycProvider activeProvider;
 
-    private final Map<String, PanVerificationProvider> providers;
+    private final Map<KycProvider, PanVerificationProvider> providers =
+            new EnumMap<>(KycProvider.class);
 
-    public PanProviderFactory(List<PanVerificationProvider> providerList) {
-        this.providers = new HashMap<>();
-        for (PanVerificationProvider p : providerList) {
-            providers.put(p.getProviderName(), p);
-        }
+    public PanProviderFactory(
+            @Value("${kyc.pan.provider}") KycProvider activeProvider,
+            List<PanVerificationProvider> providerList) {
+
+        this.activeProvider = activeProvider;
+
+        providerList.forEach(provider ->
+                providers.put(provider.getProviderName(), provider));
     }
 
     public PanVerificationProvider getProvider() {
-        return providers.get(activeProvider);
+
+        PanVerificationProvider provider = providers.get(activeProvider);
+
+        if (provider == null) {
+            throw new IllegalStateException(
+                    "PAN Provider not configured: " + activeProvider);
+        }
+
+        return provider;
     }
 }

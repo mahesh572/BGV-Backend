@@ -6,6 +6,7 @@ import com.org.bgv.entity.User;
 import com.org.bgv.enums.VerificationExecutionAction;
 import com.org.bgv.enums.VerificationExecutionStatus;
 import com.org.bgv.service.UserService;
+import com.org.bgv.service.util.UserServiceUtil;
 import com.org.bgv.vendor.dto.CompleteFieldVisitRequest;
 import com.org.bgv.vendor.dto.ExecutionActionDto;
 import com.org.bgv.vendor.dto.FieldAssignmentDTO;
@@ -44,6 +45,7 @@ public class FieldAgentService {
  private final ExecutionActionConfigService executionActionConfigService;
  private final VerificationMethodTrackingService  verificationMethodTrackingService;
  private final FieldVisitLocationRepository fieldVisitLocationRepository;
+ private final UserServiceUtil userServiceUtil;
 
  /**
   * Get dashboard summary for field agent
@@ -52,7 +54,7 @@ public class FieldAgentService {
      
 	 
 	 Long userId = SecurityUtils.getCurrentUserId();
-	 User fieldAgent = userService.getUserById(userId);
+	 User fieldAgent = userServiceUtil.getUserById(userId);
 	 
 	 LocalDate today = LocalDate.now();
      
@@ -85,7 +87,7 @@ public class FieldAgentService {
      List<FieldVisitAssignment> assignments;
      
      Long userId = SecurityUtils.getCurrentUserId();
-    User fieldAgent = userService.getUserById(userId);
+    User fieldAgent = userServiceUtil.getUserById(userId);
     assignments = assignmentRepository.findByFieldAgent(fieldAgent);
     
    
@@ -103,7 +105,7 @@ public class FieldAgentService {
 	        ) {
 	 
 	    Long userId = SecurityUtils.getCurrentUserId();
-	    User fieldAgent = userService.getUserById(userId);
+	    User fieldAgent = userServiceUtil.getUserById(userId);
 
 	    FieldVisitAssignment assignment =
 	            assignmentRepository.findById(assignmentId)
@@ -144,7 +146,7 @@ public class FieldAgentService {
          Long executionId,
          UpdateExecutionStatusRequest request) {
 	 
-	 User fieldAgent = userService.getUserById(SecurityUtils.getCurrentUserId());
+	 User fieldAgent = userServiceUtil.getUserById(SecurityUtils.getCurrentUserId());
 	 
 	 FieldVisitAssignment assignment =
              assignmentRepository.findByExecutionExecutionId(executionId)
@@ -232,7 +234,7 @@ public class FieldAgentService {
      VerificationMethodExecution execution = assignment.getExecution();
     // execution.setStatus(VerificationExecutionStatus.VISIT_COMPLETED);
      execution.setStatus(VerificationExecutionStatus.PENDING_REVIEW);
-     execution.setOutcomeCode(request.getOutcome());
+     execution.setOutcome(request.getOutcome());
      execution.setOutcomeRemarks(request.getRemarks());
      execution.setCompletedAt(LocalDateTime.now());
 

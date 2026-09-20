@@ -11,6 +11,8 @@ import jakarta.validation.constraints.NotNull;
 import java.math.BigDecimal;
 import java.util.List;
 
+import com.org.bgv.enums.PackageType;
+
 @Data
 @Builder
 @NoArgsConstructor
@@ -26,6 +28,8 @@ public class PackageRequest {
     
     @NotNull(message = "Customizable flag is required")
     private Boolean customizable;
+    
+    private PackageType type;
     
     private BigDecimal basePrice;
     

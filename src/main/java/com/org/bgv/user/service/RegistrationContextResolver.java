@@ -8,6 +8,7 @@ import com.org.bgv.common.RoleConstants;
 import com.org.bgv.entity.User;
 import com.org.bgv.onboarding.entity.Company;
 import com.org.bgv.service.CompanyService;
+import com.org.bgv.service.util.CompanyServiceUtil;
 import com.org.bgv.user.enums.CandidateSource;
 import com.org.bgv.user.enums.UserRegistrationSource;
 import com.org.bgv.user.requests.RegistrationContext;
@@ -19,6 +20,8 @@ import lombok.RequiredArgsConstructor;
 public class RegistrationContextResolver {
 	
 	private final CompanyService companyService;
+	
+	private final CompanyServiceUtil companyServiceUtil;
 
     public RegistrationContext resolve(User currentUser) {
 
@@ -52,7 +55,7 @@ public class RegistrationContextResolver {
     
     private RegistrationContext selfRegistration() {
 
-    	Company defaultCompany = companyService.getDefaultCompany();
+    	Company defaultCompany = companyServiceUtil.getDefaultCompany();
 
         return RegistrationContext.builder()
                 .company(defaultCompany)

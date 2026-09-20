@@ -17,6 +17,8 @@ public class SupportEmailResolver {
     private final PlatformEmailSettingsRepository platformRepo;
 
     public String resolve(Long companyId) {
+    	
+    	companyId = null;
 
         // 1️⃣ Company-level support email
         if (companyId != null) {

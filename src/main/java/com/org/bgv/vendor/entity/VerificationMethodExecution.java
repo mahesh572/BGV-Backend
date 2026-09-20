@@ -4,6 +4,7 @@ import java.time.LocalDateTime;
 
 import com.org.bgv.entity.VerificationCaseCheck;
 import com.org.bgv.enums.VerificationExecutionStatus;
+import com.org.bgv.enums.VerificationOutcome;
 
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
@@ -51,7 +52,7 @@ public class VerificationMethodExecution {
     // INITIATED / RESPONSE_RECEIVED / COMPLETED
     
     @Column(name = "outcome_code")
-    private String outcomeCode;
+    private VerificationOutcome outcome;
 
     @Column(length = 2000)
     private String outcomeRemarks;

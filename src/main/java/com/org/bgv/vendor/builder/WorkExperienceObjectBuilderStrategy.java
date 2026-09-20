@@ -51,7 +51,7 @@ public class WorkExperienceObjectBuilderStrategy implements ObjectBuilderStrateg
 
     @Override
     public CheckCategoryEnum supportedCategory() {
-        return CheckCategoryEnum.WORK_EXPERIENCE;
+        return CheckCategoryEnum.EMPLOYMENT;
     }
 
     @Override
@@ -67,7 +67,7 @@ public class WorkExperienceObjectBuilderStrategy implements ObjectBuilderStrateg
 	            verificationCaseSelectionRepository
 	                    .findByVerificationCase_CaseIdAndType(
 	                            caseId,
-	                            CheckCategoryEnum.WORK_EXPERIENCE
+	                            CheckCategoryEnum.EMPLOYMENT
 	                    );
 
 	    List<Long> experienceIds =
@@ -82,7 +82,7 @@ public class WorkExperienceObjectBuilderStrategy implements ObjectBuilderStrateg
 	            verificationObjectRepository
 	                    .findByVerificationCheckAndObjectType(
 	                            check,
-	                            CheckCategoryEnum.WORK_EXPERIENCE);
+	                            CheckCategoryEnum.EMPLOYMENT);
 	    
 	    
 	    

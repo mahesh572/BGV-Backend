@@ -4,6 +4,7 @@ package com.org.bgv.vendor.entity;
 import com.org.bgv.dto.CheckCategoryEnum;
 import com.org.bgv.entity.VerificationCaseCheck;
 import com.org.bgv.enums.VerificationObjectStatus;
+import com.org.bgv.enums.VerificationOutcome;
 
 import jakarta.persistence.*;
 import lombok.*;
@@ -45,7 +46,7 @@ public class VerificationObject {
 
     // CLEAR / DISCREPANCY / UNABLE_TO_VERIFY
     @Enumerated(EnumType.STRING)
-    private VerificationObjectStatus finalResult;
+    private VerificationOutcome outcome;
 
     private Boolean candidateSubmitted;
 

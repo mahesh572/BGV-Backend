@@ -39,7 +39,6 @@ public class DynamicMailService {
             helper.setTo(to);
             helper.setSubject(subject);
             helper.setText(body, true);
-
             mailSender.send(message);
         } catch (Exception e) {
             throw new RuntimeException(e);

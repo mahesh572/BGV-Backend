@@ -153,7 +153,7 @@ public class DataSeederConfig implements CommandLineRunner {
 		// Prepare category objects with labels
 		List<CheckCategory> categories = Arrays.asList(createCategory("IDENTITY_PROOF", "Identity Proof", "IDENTITY"),
 				createCategory("EDUCATION", "Education", "EDUCATION"),
-				createCategory("WORK_EXPERIENCE", "Professional/Work Experience", "WORK"),
+				createCategory("EMPLOYMENT", "Professional/Work Experience", "EMPLOYMENT"),
 				createCategory("OTHER", "Other", "OTHER"), createCategory("ADDRESS", "Address", "ADDRESS"),
 				createCategory("COURT", "Court", "COURT"));
 

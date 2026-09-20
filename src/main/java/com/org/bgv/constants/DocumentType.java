@@ -1,7 +1,7 @@
 package com.org.bgv.constants;
 
 public enum DocumentType {
-    AADHAR("Aadhar Card"),
+    AADHAAR("Aadhar Card"),
     PAN_CARD("PAN Card"),
     PASSPORT("Passport"),
     DRIVING_LICENSE("Driving License"),

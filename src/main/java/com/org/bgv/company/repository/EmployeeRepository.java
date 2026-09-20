@@ -8,6 +8,7 @@ import org.springframework.data.jpa.repository.JpaSpecificationExecutor;
 import org.springframework.stereotype.Repository;
 
 import com.org.bgv.company.entity.Employee;
+import com.org.bgv.user.enums.UserStatus;
 
 
 @Repository
@@ -46,7 +47,7 @@ public interface EmployeeRepository extends JpaRepository<Employee, Long>,JpaSpe
             String employeeCode
     );
     
-    Optional<Employee> findByUserUserIdAndStatus(Long userId,String status);
+    Optional<Employee> findByUserUserIdAndStatus(Long userId,UserStatus status);
     
     
 }

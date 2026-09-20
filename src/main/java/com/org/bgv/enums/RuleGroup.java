@@ -10,11 +10,11 @@ public enum RuleGroup {
 
 	RULE(Set.of(CheckCategoryEnum.IDENTITY.getName())),
     DOCUMENT_SELECTION(Set.of(CheckCategoryEnum.IDENTITY.getName())),
-    RECORD_COUNT(Set.of( CheckCategoryEnum.WORK_EXPERIENCE.getName())),
-    ADD_ON(Set.of( CheckCategoryEnum.WORK_EXPERIENCE.getName())),
-    CUSTOM(Set.of(  CheckCategoryEnum.WORK_EXPERIENCE.getName())),
-	NONE(Set.of(CheckCategoryEnum.IDENTITY.getName(), CheckCategoryEnum.EDUCATION.getName(), CheckCategoryEnum.WORK_EXPERIENCE.getName())),
-	ALL(Set.of( CheckCategoryEnum.EDUCATION.getName(), CheckCategoryEnum.WORK_EXPERIENCE.getName())),
+    RECORD_COUNT(Set.of( CheckCategoryEnum.EMPLOYMENT.getName())),
+    ADD_ON(Set.of( CheckCategoryEnum.EMPLOYMENT.getName())),
+    CUSTOM(Set.of(  CheckCategoryEnum.EMPLOYMENT.getName())),
+	NONE(Set.of(CheckCategoryEnum.IDENTITY.getName(), CheckCategoryEnum.EDUCATION.getName(), CheckCategoryEnum.EMPLOYMENT.getName())),
+	ALL(Set.of( CheckCategoryEnum.EDUCATION.getName(), CheckCategoryEnum.EMPLOYMENT.getName())),
 	// 🔹 Education Record Count Selection
     EDUCATION_RECORD_SELECTION(Set.of( CheckCategoryEnum.EDUCATION.getName())),
 
@@ -46,12 +46,3 @@ public enum RuleGroup {
 }
 
 
-/*
-IDENTITY("Identity", "IDENTITY", "Identity"),
-EDUCATION("Education", "EDUCATION", "Education"),
-WORK("Work Experience", "WORK", "Professional / Work Experience"),
-ADDRESS("Address", "ADDRESS", "Address Verification"),
-COURT("Court", "COURT", "Court / Criminal Check"),
-OTHER("Other", "OTHER", "Other");
-
-*/

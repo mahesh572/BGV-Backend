@@ -3,6 +3,7 @@ package com.org.bgv.service;
 import com.org.bgv.auth.dto.ResetPasswordRequest;
 import com.org.bgv.auth.entity.PasswordResetToken;
 import com.org.bgv.auth.service.ResetTokenService;
+import com.org.bgv.candidate.service.CandidateServiceUtil;
 import com.org.bgv.common.CandidateDTO;
 import com.org.bgv.common.ChangePasswordRequest;
 import com.org.bgv.common.ColumnMetadata;
@@ -19,6 +20,7 @@ import com.org.bgv.common.SortingMetadata;
 import com.org.bgv.common.SortingRequest;
 import com.org.bgv.common.UserDto;
 import com.org.bgv.common.UserSearchRequest;
+import com.org.bgv.common.navigation.PortalType;
 import com.org.bgv.company.entity.Employee;
 import com.org.bgv.company.repository.EmployeeRepository;
 import com.org.bgv.config.JwtUtil;
@@ -41,6 +43,7 @@ import com.org.bgv.repository.RoleRepository;
 import com.org.bgv.repository.UserRepository;
 import com.org.bgv.repository.UserRoleRepository;
 import com.org.bgv.repository.VendorRepository;
+import com.org.bgv.service.util.CompanyServiceUtil;
 import com.org.bgv.user.enums.UserStatus;
 import com.org.bgv.user.requests.RegistrationContext;
 import com.org.bgv.user.requests.UserRegistrationRequest;
@@ -90,6 +93,8 @@ public class UserService {
     private final VerificationCaseService verificationCaseService;
     private final ResetTokenService resetTokenService;
     private final EmployeeRepository employeeRepository;
+    private final CompanyServiceUtil companyServiceUtil;
+    private final CandidateServiceUtil candidateServiceUtill;
     
     private static final Logger logger = LoggerFactory.getLogger(UserService.class);
     
@@ -323,15 +328,7 @@ public class UserService {
         }
     }
     
-    public User getUserById(Long id) {
-        try {
-        	User user = userRepository.findById(id)
-                    .orElseThrow(() -> new RuntimeException("User not found with id: " + id));
-            return user;
-        } catch (Exception e) {
-            throw new RuntimeException("Failed to fetch user: " + e.getMessage(), e);
-        }
-    }
+   
 
     public UserDto create(UserDto userDto) {
         try {
@@ -475,53 +472,130 @@ public class UserService {
     }
     
     public UserDto getUserFromToken(String token) {
-    	UserDto userDto = null;
-    	try {
-        if (jwtUtil.validateToken(token)) {
-            String email = jwtUtil.getUsernameFromToken(token);
-            userDto = getUserByEmail(email);
 
-            // Try setting profileId, skip if not found
+        try {
+
+            if (!jwtUtil.validateToken(token)) {
+                return null;
+            }
+
+            String email = jwtUtil.getUsernameFromToken(token);
+            PortalType portal = jwtUtil.getPortalFromToken(token);
+
+            UserDto userDto = getUserByEmail(email);
+
+            if (userDto == null) {
+                return null;
+            }
+
+            userDto.setPortal(portal);
+
+            // -------------------------------------------------
+            // Profile
+            // -------------------------------------------------
             try {
-            	logger.info("userDto.getUserId()::::::::::::::::::::{}",userDto.getUserId());
-                Long profileId = profileService.getProfileIdByUserId(userDto.getUserId());
+
+                logger.info(
+                        "Getting profile for userId: {}",
+                        userDto.getUserId()
+                );
+
+                Long profileId =
+                        profileService.getProfileIdByUserId(userDto.getUserId());
+
                 if (profileId != null) {
                     userDto.setProfileId(profileId);
                 }
+
             } catch (Exception e) {
-                System.out.println("⚠️ No profile found for userId: " + userDto.getUserId());
+
+                logger.warn(
+                        "No profile found for userId: {}",
+                        userDto.getUserId(),
+                        e
+                );
             }
 
-            // Set company info if available
-            List<CompanyUser> companyUsers = companyUserRepository.findByUserUserId(userDto.getUserId());
-            if (companyUsers != null && !companyUsers.isEmpty()) {
-                userDto.setCompanyId(companyUsers.get(0).getCompanyId());
+            // -------------------------------------------------
+            // Company
+            // -------------------------------------------------
+            Long companyId;
+
+            if (portal == PortalType.USER) {
+
+                Company company = companyServiceUtil.getDefaultCompany();
+
+                if (company == null) {
+                    throw new IllegalStateException(
+                            "Default company not configured"
+                    );
+                }
+
+                companyId = company.getId();
+
+            } else {
+
+                List<CompanyUser> companyUsers =
+                        companyUserRepository.findByUserUserId(
+                                userDto.getUserId()
+                        );
+
+                if (companyUsers == null || companyUsers.isEmpty()) {
+                    throw new IllegalStateException(
+                            "No company association found for user: "
+                                    + userDto.getUserId()
+                    );
+                }
+
+                companyId = companyUsers.get(0).getCompanyId();
             }
-            if(userDto.getRoles().contains(RoleConstants.ROLE_CANDIDATE)) {
-            	CandidateDTO candidate = candidateService.getCandidateByUserId(userDto.getUserId());
-            	if(candidate!=null) {
-            		userDto.setHasConsentProvided(candidate.getIsConsentProvided()==null?Boolean.FALSE:candidate.getIsConsentProvided());
-            		userDto.setCandidateId(candidate.getCandidateId());
-            		
-            	}
-            }else {
-            	userDto.setHasConsentProvided(Boolean.TRUE);
-            	
+
+            userDto.setCompanyId(companyId);
+
+            // -------------------------------------------------
+            // Candidate
+            // -------------------------------------------------
+            if (userDto.getRoles().contains(RoleConstants.ROLE_CANDIDATE)) {
+
+                CandidateDTO candidate =
+                        candidateService.getCandidateByUserIdAndCompanyId(
+                                userDto.getUserId(),
+                                companyId
+                        );
+
+                if (candidate != null) {
+
+                    userDto.setCandidateId(
+                            candidate.getCandidateId()
+                    );
+
+                    userDto.setHasConsentProvided(
+                            Boolean.TRUE.equals(
+                                    candidate.getIsConsentProvided()
+                            )
+                    );
+
+                } else {
+
+                    userDto.setHasConsentProvided(Boolean.FALSE);
+                }
+
+            } else {
+
+                userDto.setHasConsentProvided(Boolean.TRUE);
             }
-            
-            logger.info("############################################################################:::::::::::::{}",UserType.VENDOR.name());
-            /*
-            if(userDto.getUserType()!=null && userDto.getUserType().equals(UserType.VENDOR)) {
-            	Vendor vendor = vendorRepository.findByUser_userId(userDto.getUserId());
-            	logger.info("in user service:::::::::::{}",vendor);
-            	userDto.setVendorId(vendor.getId());
-            }
-            */
+
+            return userDto;
+
+        } catch (Exception e) {
+
+            logger.error(
+                    "Error while getting user from token",
+                    e
+            );
+
+            return null;
         }
-			}catch (Exception e) {
-				e.printStackTrace();
-			}
-        return userDto;
     }
     
     public void changePasswordByUser(Long userId, ChangePasswordRequest request) {
@@ -750,7 +824,7 @@ public class UserService {
                     .gender(profile != null ? profile.getGender() : null)
                     .nationality(profile != null ? profile.getNationality() : "")
                     .maritalStatus(profile != null ? profile.getMaritalStatus() : "")
-                    .status("ACTIVE")
+                    .status(UserStatus.ACTIVE)
                     .build();
 
             employeeRepository.save(employee);

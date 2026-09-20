@@ -43,6 +43,11 @@ public class ReferenceNumberGenerator {
     public String generateInvoiceNumber() {
         return generate("INVOICE", "INV");
     }
+    
+    @Transactional
+    public String generatePolicyNumber() {
+        return generate("POLICY", "POLICY");
+    }
 
     private String generate(String type, String prefix) {
         int year = Year.now().getValue();

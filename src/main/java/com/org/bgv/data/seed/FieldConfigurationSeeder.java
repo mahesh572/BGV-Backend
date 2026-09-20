@@ -95,63 +95,63 @@ public class FieldConfigurationSeeder implements CommandLineRunner {
                 // WORK EXPERIENCE
                 // =========================================
 
-                create(CheckCategoryEnum.WORK_EXPERIENCE, "companyName",
+                create(CheckCategoryEnum.EMPLOYMENT, "companyName",
                         "Company Name", "STRING",
                         true, true, true, true, 1),
 
-                create(CheckCategoryEnum.WORK_EXPERIENCE, "position",
+                create(CheckCategoryEnum.EMPLOYMENT, "position",
                         "Designation", "STRING",
                         true, true, true, true, 2),
 
-                create(CheckCategoryEnum.WORK_EXPERIENCE, "employeeId",
+                create(CheckCategoryEnum.EMPLOYMENT, "employeeId",
                         "Employee Id", "STRING",
                         false, true, true, true, 3),
 
-                create(CheckCategoryEnum.WORK_EXPERIENCE, "startDate",
+                create(CheckCategoryEnum.EMPLOYMENT, "startDate",
                         "Start Date", "DATE",
                         true, true, true, true, 4),
 
-                create(CheckCategoryEnum.WORK_EXPERIENCE, "endDate",
+                create(CheckCategoryEnum.EMPLOYMENT, "endDate",
                         "End Date", "DATE",
                         false, true, true, true, 5),
 
-                create(CheckCategoryEnum.WORK_EXPERIENCE, "employmentType",
+                create(CheckCategoryEnum.EMPLOYMENT, "employmentType",
                         "Employment Type", "STRING",
                         false, true, true, true, 6),
 
-                create(CheckCategoryEnum.WORK_EXPERIENCE, "currentlyWorking",
+                create(CheckCategoryEnum.EMPLOYMENT, "currentlyWorking",
                         "Currently Working", "BOOLEAN",
                         false, false, true, false, 7),
 
-                create(CheckCategoryEnum.WORK_EXPERIENCE, "managerEmailId",
+                create(CheckCategoryEnum.EMPLOYMENT, "managerEmailId",
                         "Manager Email", "STRING",
                         false, false, true, false, 8),
 
-                create(CheckCategoryEnum.WORK_EXPERIENCE, "hrEmailId",
+                create(CheckCategoryEnum.EMPLOYMENT, "hrEmailId",
                         "HR Email", "STRING",
                         false, false, true, false, 9),
 
-                create(CheckCategoryEnum.WORK_EXPERIENCE, "address",
+                create(CheckCategoryEnum.EMPLOYMENT, "address",
                         "Address", "STRING",
                         false, true, true, true, 10),
 
-                create(CheckCategoryEnum.WORK_EXPERIENCE, "city",
+                create(CheckCategoryEnum.EMPLOYMENT, "city",
                         "City", "STRING",
                         false, true, true, true, 11),
 
-                create(CheckCategoryEnum.WORK_EXPERIENCE, "state",
+                create(CheckCategoryEnum.EMPLOYMENT, "state",
                         "State", "STRING",
                         false, true, true, true, 12),
 
-                create(CheckCategoryEnum.WORK_EXPERIENCE, "country",
+                create(CheckCategoryEnum.EMPLOYMENT, "country",
                         "Country", "STRING",
                         false, true, true, true, 13),
 
-                create(CheckCategoryEnum.WORK_EXPERIENCE, "noticePeriod",
+                create(CheckCategoryEnum.EMPLOYMENT, "noticePeriod",
                         "Notice Period", "STRING",
                         false, false, true, false, 14),
 
-                create(CheckCategoryEnum.WORK_EXPERIENCE, "reason",
+                create(CheckCategoryEnum.EMPLOYMENT, "reason",
                         "Reason For Leaving", "STRING",
                         false, false, true, false, 15),
 

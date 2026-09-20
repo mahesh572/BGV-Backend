@@ -19,6 +19,7 @@ import com.org.bgv.enums.ActivitySeverity;
 import com.org.bgv.enums.ActivityType;
 import com.org.bgv.enums.VendorNoteType;
 import com.org.bgv.enums.VerificationExecutionStatus;
+import com.org.bgv.enums.VerificationOutcome;
 import com.org.bgv.exceptions.BusinessException;
 import com.org.bgv.repository.RoleRepository;
 import com.org.bgv.repository.UserRepository;
@@ -110,8 +111,8 @@ public class VerificationMethodExecutionService {
         List<VerificationExecutionStatus> terminalStatuses = List.of(
                 VerificationExecutionStatus.COMPLETED,
                 VerificationExecutionStatus.CANCELLED,
-                VerificationExecutionStatus.VISIT_COMPLETED,
-                VerificationExecutionStatus.VERIFIED
+                VerificationExecutionStatus.VISIT_COMPLETED
+              //  VerificationExecutionStatus.VERIFIED
         );
         boolean alreadyRunning =
                 executionRepository
@@ -255,12 +256,12 @@ public class VerificationMethodExecutionService {
 
             log.info("Verification attempt completed. ExecutionId={}", executionId);
 
-            if ("VERIFIED".equalsIgnoreCase(request.getOutcome())) {
+            if (VerificationOutcome.VERIFIED.equals(request.getOutcome())) {
 
                 log.info("Verification successful. ExecutionId={}", executionId);
 
                 execution.setStatus(VerificationExecutionStatus.COMPLETED);
-                execution.setOutcomeCode(request.getOutcome());
+                execution.setOutcome(request.getOutcome());
                 execution.setOutcomeRemarks(request.getNotes());
                 execution.setCompletedAt(LocalDateTime.now());
 
@@ -353,7 +354,7 @@ public class VerificationMethodExecutionService {
             VerificationExecutionStatus target
     ) {
 
-        if (current == VerificationExecutionStatus.VERIFIED && target!=VerificationExecutionStatus.UNDER_REVIEW) {
+        if (current == VerificationExecutionStatus.COMPLETED && target!=VerificationExecutionStatus.UNDER_REVIEW) {
             throw new IllegalStateException("Cannot change status of Verified execution");
         }
 

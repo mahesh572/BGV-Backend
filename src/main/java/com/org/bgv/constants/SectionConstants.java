@@ -5,7 +5,8 @@ public enum SectionConstants {
     BASIC_DETAILS(1, "Basic Details"),
     IDENTITY(2, "Identity"),
     EDUCATION(3, "Education"),
-    WORK_EXPERIENCE(4, "Work Experience"),
+   // WORK_EXPERIENCE(4, "Work Experience"),
+    EMPLOYMENT(4,"Employment"),
     ADDRESS(5, "Address"),
     DOCUMENTS(6, "Documents"),
     OTHER(7, "Other");

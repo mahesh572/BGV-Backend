@@ -5,6 +5,8 @@ import java.util.Collection;
 import org.springframework.security.core.GrantedAuthority;
 import org.springframework.security.core.userdetails.UserDetails;
 
+import com.org.bgv.common.navigation.PortalType;
+
 import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Data;
@@ -31,6 +33,7 @@ public class CustomUserDetails implements UserDetails {
     private boolean active;
     private String department;
     private String userType;
+    private PortalType portal;
     
    
 }

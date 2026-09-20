@@ -1,12 +1,16 @@
 package com.org.bgv.vendor.dto;
 
 
+import com.org.bgv.enums.VerificationOutcome;
+
 import lombok.Data;
 
 @Data
 public class CompleteFieldVisitRequest {
 
-    private String outcome;
+  //  private String outcome;
+	
+	private VerificationOutcome outcome;
 
     private String remarks;
 

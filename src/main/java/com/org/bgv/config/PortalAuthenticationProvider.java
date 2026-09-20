@@ -12,6 +12,7 @@ import com.org.bgv.common.navigation.PortalType;
 import com.org.bgv.company.repository.EmployeeRepository;
 import com.org.bgv.service.CustomUserDetailsService;
 import com.org.bgv.service.util.UserServiceUtil;
+import com.org.bgv.user.enums.UserStatus;
 
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -58,7 +59,7 @@ public class PortalAuthenticationProvider implements AuthenticationProvider {
                 }
             	
             	employeeRepository
-                    .findByUserUserIdAndStatus(user.getUserId(), "ACTIVE")
+                    .findByUserUserIdAndStatus(user.getUserId(), UserStatus.ACTIVE)
                     .orElseThrow(() -> {
                         log.warn("❌ Not active employee | userId={}", user.getUserId());
                         return new AccessDeniedException("User is not an active employee");

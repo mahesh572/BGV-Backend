@@ -36,6 +36,7 @@ import com.org.bgv.candidate.entity.Candidate;
 import com.org.bgv.candidate.entity.CandidateIdentity;
 import com.org.bgv.candidate.repository.CandidateConsentRepository;
 import com.org.bgv.candidate.repository.CandidateRepository;
+import com.org.bgv.candidate.service.CandidateServiceUtil;
 import com.org.bgv.candidate.service.IdentityHashUtil;
 import com.org.bgv.common.CandidateDTO;
 import com.org.bgv.common.CandidateDetailsDTO;
@@ -99,6 +100,7 @@ public class CandidateService {
     private final ReferenceNumberGenerator referenceNumberGenerator;
   //  private final UserService userService;
     private final RoleService roleService;
+    private final CandidateServiceUtil candidateServiceUtill;
     
     private static final Logger log = LoggerFactory.getLogger(CandidateService.class);
     
@@ -135,32 +137,7 @@ public class CandidateService {
                     return newUser;
                 });
             
-            /*
-         // 1️⃣ Ensure Profile exists
-            if (!profileRepository.existsByUserUserId(user.getUserId())) {
-
-                log.info("Profile not found. Creating profile for userId={}", user.getUserId());
-
-                Profile profile = Profile.builder()
-                        .user(user)
-                        .firstName(dto.getFirstName())
-                        .lastName(dto.getLastName())
-                        .phoneNumber(dto.getMobileNo())
-                      //  .profileSource(Constants.PROFILE_SOURCE_EMPLOYER)
-                      //  .lastUpdatedSource(Constants.UPDATE_SOURCE_SYSTEM)
-                      //  .status(Constants.PROFILE_STATUS_DRAFT)
-                        .consentProvided(false)
-                        .build();
-
-                profileRepository.save(profile);
-
-                log.info("Profile created successfully for userId={}", user.getUserId());
-
-            } else {
-                log.debug("Profile already exists for userId={}", user.getUserId());
-            }
-
-    */
+           
             log.debug("Using userId={} for candidate creation", user.getUserId());
 
             // 2️⃣ Validate company
@@ -437,11 +414,24 @@ public class CandidateService {
         }
     }
    
+    
     public CandidateDTO getCandidateByUserId(Long userId) {
         return candidateRepository.findByUserUserId(userId)
                 .map(candidateMapper::toDto)
                 .orElse(null);
     }
+    
+    public CandidateDTO getCandidateByUserIdAndCompanyId(
+            Long userId,
+            Long companyId) {
+
+        Candidate candidate =
+                candidateServiceUtill.getCandidate(userId, companyId);
+
+        return candidateMapper.toDto(candidate);
+    }
+    
+    
 
 
     // Additional method to upload signature as image
@@ -967,6 +957,42 @@ public class CandidateService {
         candidate.setVerificationStatus(verificationStatus);
         candidate.setIsVerified("VERIFIED".equals(verificationStatus));
         candidateRepository.save(candidate);
+    }
+    
+    
+    public Candidate createCandidateforSelf(User user,Company company) {
+    	
+    	// 3️⃣ Check candidate already exists for this company
+        if (candidateRepository.existsByUserUserIdAndCompanyId(
+        		user.getUserId(), company.getId())) {
+
+            throw new RuntimeException("Candidate already exists for this company");
+        }
+        
+        String candidtaeRef = referenceNumberGenerator.generateCandidateRef();
+		
+		  // 4️⃣ Create Candidate
+        Candidate candidate = Candidate.builder()
+                .company(company)
+                .user(user)
+                .sourceType(Constants.CANDIDATE_SOURCE_SELF)
+                .verificationStatus(null)
+                .isActive(true)
+                .isVerified(false)
+                .isConsentProvided(false)
+                .candidateRef(candidtaeRef)
+                .createdAt(LocalDateTime.now())
+               // .firstName(dto.getFirstName())
+              //  .lastName(dto.getLastName())
+              //  .phoneNumber(dto.getMobileNo())
+              //  .emailAddress(dto.getEmail())
+                .status(CandidateStatus.CREATED)
+                .build();
+
+        candidate =candidateRepository.save(candidate);
+        
+        return candidate;
+    	
     }
 
 }

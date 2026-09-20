@@ -173,7 +173,7 @@ public class ActionReasonSeeder implements CommandLineRunner {
             "INCOMPLETE_DOCUMENT"
         );
 
-        map("Work Experience", persistedReasons,
+        map("Employment", persistedReasons,
             "COMPANY_NOT_FOUND",
             "EMPLOYMENT_MISMATCH",
             "RECORD_NOT_FOUND",

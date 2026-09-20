@@ -2,6 +2,8 @@ package com.org.bgv.vendor.dto;
 
 
 import com.org.bgv.enums.VerificationExecutionStatus;
+import com.org.bgv.enums.VerificationOutcome;
+
 import lombok.Data;
 
 @Data
@@ -9,7 +11,9 @@ public class UpdateExecutionStatusRequest {
 
     private VerificationExecutionStatus status;
     
-    private String outcome;
+  //  private String outcome;
+    
+    private VerificationOutcome outcome;
 
     private String notes;
     

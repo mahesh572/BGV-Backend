@@ -6,7 +6,9 @@ import com.org.bgv.common.VerificationCheckDTO;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.node.ObjectNode;
 import com.org.bgv.bgvpackage.entity.EmployerCheckPricing;
+import com.org.bgv.bgvpackage.entity.PackageCheckCategoryAllowedRuleType;
 import com.org.bgv.bgvpackage.repository.EmployerCheckPricingRepository;
+import com.org.bgv.bgvpackage.repository.PackageCheckCategoryAllowedRuleTypeRepository;
 import com.org.bgv.candidate.dto.CaseStatisticsDTO;
 import com.org.bgv.candidate.dto.SectionNamesDisplayDTO;
 import com.org.bgv.candidate.dto.VerificationCaseDTO;
@@ -68,8 +70,10 @@ import com.org.bgv.constants.SectionConstants;
 import com.org.bgv.constants.VerificationStatus;
 import com.org.bgv.dto.*;
 import com.org.bgv.entity.*;
+import com.org.bgv.enums.CaseSource;
 import com.org.bgv.enums.InvoiceStatus;
 import com.org.bgv.enums.RuleGroup;
+import com.org.bgv.exceptions.BusinessException;
 import com.org.bgv.invoice.entity.CasePayment;
 import com.org.bgv.invoice.entity.Invoice;
 import com.org.bgv.invoice.entity.InvoiceItem;
@@ -166,6 +170,9 @@ public class VerificationCaseService {
 	private final CasePaymentRepository casePaymentRepository;
 	private final VerificationObjectRepository verificationObjectRepository;
 	private final VerificationFieldComparisonRepository verificationFieldComparisonRepository;
+	private final BgvPackageRepository bgvPackageRepository;
+	private final PackageCheckCategoryRuleTypeRepository packageCheckCategoryRuleTypeRepository;
+	private final PackageCheckCategoryAllowedRuleTypeRepository packageCheckCategoryAllowedRuleTypeRepository;
 
 	private static final DateTimeFormatter DATE_FORMATTER = DateTimeFormatter.ofPattern("dd MMM yyyy");
 	private static final DateTimeFormatter TIMESTAMP_FORMATTER = DateTimeFormatter.ofPattern("dd MMM yyyy HH:mm");
@@ -174,29 +181,74 @@ public class VerificationCaseService {
 	public VerificationCaseResponse createVerificationCase(VerificationCaseRequest request) {
 		log.info("Creating candidate case for candidate: {}, employer package: {}", request.getCandidateId(),
 				request.getEmployerPackageId());
+		
+		log.info(
+		        "Creating verification case | candidateId={} | source={}",
+		        request.getCandidateId(),
+		        request.getSource()
+		    );
+		
+		EmployerPackage employerPackage = null;
+	    BgvPackage bgvPackage;
+	    
+	    
+	    
+	    if (request.getSource() == CaseSource.EMPLOYER) {
 
-		// Validate employer package exists and is active
-		EmployerPackage employerPackage = employerPackageRepository.findById(request.getEmployerPackageId())
-				.orElseThrow(() -> new RuntimeException("Employer package not found"));
+	        employerPackage = employerPackageRepository
+	                .findById(request.getEmployerPackageId())
+	                .orElseThrow(() ->
+	                        new RuntimeException("Employer package not found"));
 
+	        if (employerPackage.getStatus() != EmployerPackageStatus.ACTIVE) {
+	            throw new RuntimeException("Employer package is not active");
+	        }
+
+	        bgvPackage = employerPackage.getBgvPackage();
+
+	    } else {
+
+	        bgvPackage = bgvPackageRepository
+	                .findById(request.getPackageId())
+	                .orElseThrow(() ->
+	                        new RuntimeException("Global package not found"));
+	    }
+	    
+	    
+	    /*
 		if (employerPackage.getStatus() != EmployerPackageStatus.ACTIVE) {
 			throw new RuntimeException("Employer package is not active");
 		}
-
+	     */
+	    
 		// Check if candidate already has a case with this package
-		if (verificationCaseRepository.findByCandidateIdAndEmployerPackageIdAndCompanyId(request.getCandidateId(),
-				request.getEmployerPackageId(), request.getCompanyId()).isPresent()) {
-			log.info(
-					"####################################################################################################################");
-			throw new RuntimeException("Candidate already has a case with this package");
-		}
+	    
+	    if(request.getEmployerPackageId()!=null) {
+	    	
+	    	  boolean activeCaseExists =
+	  	            verificationCaseRepository
+	  	                    .existsByCandidateIdAndEmployerPackageIdAndCompanyIdAndStatusNotIn(
+	  	                            request.getCandidateId(),
+	  	                            request.getEmployerPackageId(),
+	  	                            request.getCompanyId(),
+	  	                            List.of(CaseStatus.COMPLETED)
+	  	                    );
+
+	  	    if (activeCaseExists) {
+	  	        throw new BusinessException(
+	  	                "Candidate already has an active verification case with this package");
+	  	    }
+	    }
+	  
 
 		
 		// Create verification case
 		VerificationCase verificationCase = VerificationCase.builder()
 				.candidateId(request.getCandidateId())
 				.companyId(request.getCompanyId())
+				.caseSource(request.getSource())
 				.employerPackage(employerPackage)
+				.bgvPackage(bgvPackage)
 				//  .basePrice(pricing.getBasePrice())
 				//  .addonPrice(pricing.getAddonPrice())
 				.totalPrice(request.getTotalPrice())
@@ -208,7 +260,16 @@ public class VerificationCaseService {
 
 		VerificationCase savedCase = verificationCaseRepository.saveAndFlush(verificationCase);
 
-		saveCandidatePackageRules(request, savedCase);
+		// saveCandidatePackageRules(request, savedCase);
+		
+		if (request.getSource() == CaseSource.EMPLOYER) {
+
+		    saveCandidatePackageRules(request, savedCase);
+
+		} else {
+
+		    saveGlobalPackageRules(request, savedCase, bgvPackage);
+		}
 
 		// Create verification case checks based on categories - 
 
@@ -438,7 +499,7 @@ public class VerificationCaseService {
 	                    : 1;
 
 	            PricingInfo pricing = pricingService.resolvePricing(
-	                    request.getCompanyId(), categoryId, ruleType
+	                    request.getCompanyId(), categoryId, ruleType,true
 	            );
 
 	            BigDecimal unitPrice = pricing != null ? pricing.getUnitPrice() : BigDecimal.ZERO;
@@ -940,6 +1001,11 @@ public class VerificationCaseService {
 	}
 
 	private EmployerPackageInfo mapToEmployerPackageInfo(EmployerPackage employerPackage) {
+		
+		 if (employerPackage == null) {
+		        return null;
+		    }
+		 
 		return EmployerPackageInfo.builder().id(employerPackage.getId()).companyId(employerPackage.getCompanyId())
 				.status(employerPackage.getStatus().name()).build();
 	}
@@ -1757,80 +1823,188 @@ public class VerificationCaseService {
 	}
 	
 	
-	/*
-	
-	@Transactional
-	public void populateCaseDocuments(Long caseId) {
-
-	    // 1. Fetch case
-	    VerificationCase verificationCase = verificationCaseRepository.findById(caseId)
-	            .orElseThrow(() -> new RuntimeException("Case not found"));
-
-	    // 2. Fetch rule documents
-	    List<CandidatePackageRuleDocument> ruleDocs =
-	            candidatePackageRuleDocumentRepository.findByVerificationCase_CaseId(caseId);
-
-	    for (CandidatePackageRuleDocument ruleDoc : ruleDocs) {
-
-	        Long docTypeId = ruleDoc.getDocumentTypeId();
-	        Long categoryId = ruleDoc.getCategoryId();
-
-	        // 3. Avoid duplicate case document
-	        boolean alreadyExists =
-	                verificationCaseDocumentRepository
-	                        .existsByVerificationCase_CaseIdAndDocumentType_DocTypeId(caseId, docTypeId);
-
-	        if (alreadyExists) continue;
-	        
-	        DocumentType documentType=documentTypeRepository.findById(docTypeId).orElseThrow(()->new RuntimeException("Document type record not Found"));
-	       
-	        CheckCategory checkCategory = checkCategoryRepository.findByCategoryId(categoryId);
-	        // 4. Create VerificationCaseDocument
-	        VerificationCaseDocument caseDoc = VerificationCaseDocument.builder()
-	                .verificationCase(verificationCase)
-	                .checkCategory(checkCategory)
-	                .documentType(documentType) // or fetch if needed
-	                .required(ruleDoc.getRequired()) 
-	                .isAddOn(ruleDoc.getSelected())
-	                .documentPrice(ruleDoc.getPrice())
-	                .verificationStatus(DocumentStatus.PENDING)
-	                .build();
-
-	        caseDoc = verificationCaseDocumentRepository.save(caseDoc);
-
-	        // 5. Fetch uploaded documents
-	        List<Document> uploadedDocs =
-	                documentRepository.findByVerificationCase_CaseIdAndDocTypeId(caseId, documentType);
-
-	        // 6. Link documents
-	        for (Document doc : uploadedDocs) {
-
-	            boolean linkExists =
-	                    verificationCaseDocumentLinkRepository
-	                            .existsByCaseDocumentAndDocument(caseDoc, doc);
-
-	            if (linkExists) continue;
-
-	            VerificationCaseDocumentLink link = VerificationCaseDocumentLink.builder()
-	                    .caseDocument(caseDoc)
-	                    .document(doc)
-	                    .status(DocumentStatus.SUBMITTED)
-	                    .build();
-
-	            verificationCaseDocumentLinkRepository.save(link);
-	        }
-
-	        // 7. Update overall status
-	        if (!uploadedDocs.isEmpty()) {
-	            caseDoc.setVerificationStatus(DocumentStatus.SUBMITTED);
-	        }
-
-	        verificationCaseDocumentRepository.save(caseDoc);
-	    }
-	}
-	*/
 	
 	private int safeCount(Integer count) {
 	    return count != null ? count : 1;
+	}
+	
+	
+	@Transactional
+	public void saveGlobalPackageRules(
+	        VerificationCaseRequest request,
+	        VerificationCase savedCase,
+	        BgvPackage bgvPackage) {
+
+	    Long packageId = bgvPackage.getPackageId();
+
+	    log.info(
+	            "Saving GLOBAL package rule snapshot | caseId={} | packageId={}",
+	            savedCase.getCaseId(),
+	            packageId
+	    );
+
+	    List<PackageCheckCategoryRuleType> packageRules =
+	            packageCheckCategoryRuleTypeRepository
+	                    .findByBgvPackage_PackageId(packageId);
+
+	    List<PackageCheckCategoryAllowedRuleType> allowedRules =
+	            packageCheckCategoryAllowedRuleTypeRepository
+	                    .findByBgvPackage_PackageId(packageId);
+
+	    Map<Long, List<PackageCheckCategoryRuleType>> rulesByCategory =
+	            packageRules.stream()
+	                    .collect(Collectors.groupingBy(
+	                            PackageCheckCategoryRuleType::getCheckCategoryId
+	                    ));
+
+	    Map<Long, List<PackageCheckCategoryAllowedRuleType>> allowedByCategory =
+	            allowedRules.stream()
+	                    .collect(Collectors.groupingBy(
+	                            r -> r.getCheckCategory().getCategoryId()
+	                    ));
+
+	    List<CandidatePackageRule> rulesToSave = new ArrayList<>();
+
+	    for (CategoryCase category : request.getCategories()) {
+
+	        Long categoryId = category.getCategoryId();
+
+	        List<PackageCheckCategoryRuleType> configuredRules =
+	                rulesByCategory.getOrDefault(
+	                        categoryId,
+	                        Collections.emptyList()
+	                );
+
+	        Set<Long> processed = new HashSet<>();
+
+	        // -----------------------------------------
+	        // PACKAGE RULES
+	        // -----------------------------------------
+
+	        for (PackageCheckCategoryRuleType packageRule : configuredRules) {
+
+	            Long ruleTypeId = packageRule.getRuleTypeId();
+
+	            RuleTypes ruleType = ruleTypesRepository
+	                    .findById(ruleTypeId)
+	                    .orElse(null);
+
+	            if (ruleType == null) {
+	                continue;
+	            }
+
+	            processed.add(ruleTypeId);
+
+	            int count = Boolean.TRUE.equals(packageRule.getRequiresCount())
+	                    ? safeCount(packageRule.getSelectedCount())
+	                    : 1;
+
+	            CandidatePackageRule candidateRule =
+	                    CandidatePackageRule.builder()
+	                            .employerPackageId(null)
+	                            .companyId(request.getCompanyId())
+	                            .candidateId(request.getCandidateId())
+	                            .verificationCase(savedCase)
+	                            .checkCategoryId(categoryId)
+	                            .ruleTypeId(ruleTypeId)
+	                            .selectedCount(count)
+	                            .required(true)
+	                            .includedInPackage(true)
+	                            .addon(false)
+	                            .unitPrice(BigDecimal.ZERO)
+	                            .totalPrice(BigDecimal.ZERO)
+	                            .build();
+
+	            rulesToSave.add(candidateRule);
+
+	            log.info(
+	                    "GLOBAL package rule snapshot | category={} | ruleType={} | count={}",
+	                    categoryId,
+	                    ruleTypeId,
+	                    count
+	            );
+	        }
+
+	        // -----------------------------------------
+	        // SELECTED OPTIONAL RULES
+	        // -----------------------------------------
+
+	        List<PackageCheckCategoryAllowedRuleType> allowed =
+	                allowedByCategory.getOrDefault(
+	                        categoryId,
+	                        Collections.emptyList()
+	                );
+
+	        Set<Long> allowedRuleIds = allowed.stream()
+	                .map(r -> r.getRuleType().getRuleTypeId())
+	                .collect(Collectors.toSet());
+
+	        for (SelectedRuleRequest selected :
+	                category.getSelectedRules()) {
+
+	            Long ruleTypeId = selected.getRuleTypeId();
+
+	            // Don't allow arbitrary rule IDs
+	            if (!allowedRuleIds.contains(ruleTypeId)
+	                    && !processed.contains(ruleTypeId)) {
+
+	                throw new BusinessException(
+	                        "Rule type " + ruleTypeId
+	                                + " is not allowed for package "
+	                                + packageId
+	                                + " and category "
+	                                + categoryId
+	                );
+	            }
+
+	            if (processed.contains(ruleTypeId)) {
+	                continue;
+	            }
+
+	            RuleTypes ruleType = ruleTypesRepository
+	                    .findById(ruleTypeId)
+	                    .orElseThrow(() ->
+	                            new BusinessException(
+	                                    "Rule type not found: " + ruleTypeId
+	                            ));
+
+	            int count = Boolean.TRUE.equals(ruleType.getRequiresCount())
+	                    ? safeCount(selected.getSelectedCount())
+	                    : 1;
+	            
+	            PricingInfo pricing = pricingService.resolvePricing(
+	                    request.getCompanyId(), categoryId, ruleType,false
+	            );
+
+	            BigDecimal unitPrice = pricing != null ? pricing.getUnitPrice() : BigDecimal.ZERO;
+	            
+
+	            CandidatePackageRule candidateRule =
+	                    CandidatePackageRule.builder()
+	                            .employerPackageId(null)
+	                            .companyId(request.getCompanyId())
+	                            .candidateId(request.getCandidateId())
+	                            .verificationCase(savedCase)
+	                            .checkCategoryId(categoryId)
+	                            .ruleTypeId(ruleTypeId)
+	                            .selectedCount(count)
+	                            .required(false)
+	                            .includedInPackage(false)
+	                            .addon(true)
+	                            .unitPrice(unitPrice)
+	                           // .totalPrice(BigDecimal.ZERO)
+	                            .build();
+
+	            rulesToSave.add(candidateRule);
+	        }
+	    }
+
+	    candidatePackageRuleRepository.saveAll(rulesToSave);
+
+	    log.info(
+	            "GLOBAL package snapshot complete | caseId={} | rules={}",
+	            savedCase.getCaseId(),
+	            rulesToSave.size()
+	    );
 	}
 }

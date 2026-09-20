@@ -21,7 +21,7 @@ public class EmploymentFieldExtractor
     
     @Override
     public CheckCategoryEnum getType() {
-        return CheckCategoryEnum.WORK_EXPERIENCE;
+        return CheckCategoryEnum.EMPLOYMENT;
     }
 
 
@@ -32,7 +32,7 @@ public class EmploymentFieldExtractor
                 repository.findById(sourceId)
                         .orElseThrow(() ->
                                 new RuntimeException(
-                                        "Work experience record not found : " + sourceId));
+                                        "Employmement record not found : " + sourceId));
 
         Map<String, Object> map = new LinkedHashMap<>();
 

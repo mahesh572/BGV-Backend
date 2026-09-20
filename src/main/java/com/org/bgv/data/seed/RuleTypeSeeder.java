@@ -36,7 +36,7 @@ public class RuleTypeSeeder implements CommandLineRunner {
         }
 
         CheckCategory education = categoryRepo.findByName(CheckCategoryEnum.EDUCATION.getName()).orElseThrow();
-        CheckCategory work = categoryRepo.findByName(CheckCategoryEnum.WORK_EXPERIENCE.getName()).orElseThrow();
+        CheckCategory work = categoryRepo.findByName(CheckCategoryEnum.EMPLOYMENT.getName()).orElseThrow();
         CheckCategory identity = categoryRepo.findByName(CheckCategoryEnum.IDENTITY.getName()).orElseThrow();
         CheckCategory address = categoryRepo.findByName(CheckCategoryEnum.ADDRESS.getName()).orElseThrow();
 

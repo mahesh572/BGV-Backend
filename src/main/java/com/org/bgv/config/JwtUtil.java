@@ -1,5 +1,6 @@
 package com.org.bgv.config;
 
+import java.nio.charset.StandardCharsets;
 import java.util.Date;
 import java.util.function.Function;
 
@@ -8,6 +9,8 @@ import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.security.core.userdetails.UserDetails;
 import org.springframework.stereotype.Component;
+
+import com.org.bgv.common.navigation.PortalType;
 
 import io.jsonwebtoken.Claims;
 import io.jsonwebtoken.JwtException;
@@ -52,6 +55,7 @@ public class JwtUtil {
     	logger.debug("JwtUtil::::userDetails::::{}",userDetails);
         return Jwts.builder()
                 .setSubject(userDetails.getUsername())
+                .claim("portal", userDetails.getPortal().name())
                 .setIssuedAt(new Date())
                 .setExpiration(new Date(System.currentTimeMillis() + jwtExpirationMs))
                 .signWith(Keys.hmacShaKeyFor(jwtSecret.getBytes()), SignatureAlgorithm.HS256)
@@ -95,6 +99,19 @@ public class JwtUtil {
             return false;
         }
     }
+    
+    public PortalType getPortalFromToken(String token) {
+
+        String portal = Jwts.parserBuilder()
+                .setSigningKey(jwtSecret.getBytes(StandardCharsets.UTF_8))
+                .build()
+                .parseClaimsJws(token)
+                .getBody()
+                .get("portal", String.class);
+
+        return PortalType.valueOf(portal);
+    }
+    
     public String extractTokenFromHeader(String authorizationHeader) {
         if (authorizationHeader != null && authorizationHeader.startsWith("Bearer ")) {
             return authorizationHeader.substring(7);

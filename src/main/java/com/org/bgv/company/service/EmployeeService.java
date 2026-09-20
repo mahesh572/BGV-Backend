@@ -99,7 +99,7 @@ public class EmployeeService {
                         .designation(request.getDesignation())
                         .department(request.getDepartment())
                         .employmentType(request.getEmploymentType())
-                        .status("ACTIVE")
+                        .status(UserStatus.ACTIVE)
                         .build()
         );
 
@@ -160,7 +160,7 @@ public class EmployeeService {
         }
 
         // ✅ Soft delete (recommended)
-        employee.setStatus("INACTIVE");
+        employee.setStatus(UserStatus.DISABLED);
         employeeRepository.save(employee);
     }
     

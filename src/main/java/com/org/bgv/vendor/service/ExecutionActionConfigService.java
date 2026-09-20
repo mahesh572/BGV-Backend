@@ -12,6 +12,7 @@ import com.org.bgv.enums.VerificationExecutionAction;
 import com.org.bgv.enums.VerificationExecutionStatus;
 import com.org.bgv.enums.VerificationMethodCode;
 import com.org.bgv.service.UserService;
+import com.org.bgv.service.util.UserServiceUtil;
 
 import lombok.AllArgsConstructor;
 
@@ -21,6 +22,7 @@ public class ExecutionActionConfigService {
 	
 	private final UserService userService;
 	private final ActionPolicyFactory actionPolicyFactory;
+	private final UserServiceUtil userServiceUtil;
 
 	    public List<VerificationExecutionAction> getActions(
 	            VerificationMethodCode methodCode,
@@ -197,9 +199,9 @@ public class ExecutionActionConfigService {
             VerificationExecutionStatus status,VerificationMethodCode methodCode) {
     	
     	 Long userId = SecurityUtils.getCurrentUserId();
-    	 User fieldAgent = userService.getUserById(userId);
+    	 User fieldAgent = userServiceUtil.getUserById(userId);
     	
-    	 User currentUser = userService.getUserById(SecurityUtils.getCurrentUserId());
+    	 User currentUser = userServiceUtil.getUserById(SecurityUtils.getCurrentUserId());
 
     	 ActionPolicy policy = actionPolicyFactory.getPolicy(currentUser);
 

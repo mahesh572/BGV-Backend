@@ -38,6 +38,7 @@ import com.org.bgv.dto.AuthRequest;
 import com.org.bgv.dto.AuthResponse;
 import com.org.bgv.service.CompanyService;
 import com.org.bgv.service.UserService;
+import com.org.bgv.user.enums.UserStatus;
 import com.org.bgv.user.requests.ActivationRequest;
 import com.org.bgv.user.requests.UserRegistrationRequest;
 import com.org.bgv.user.service.AccountActivationService;
@@ -105,6 +106,7 @@ public class AuthController {
 
             CustomUserDetails user =
                     (CustomUserDetails) authentication.getPrincipal();
+            user.setPortal(portal);
 
             String accessToken = jwtUtil.generateToken(user);
             String refreshToken = jwtUtil.generateRefreshToken(user);
@@ -365,7 +367,7 @@ public class AuthController {
                 employeeRepository
                     .findByUserUserIdAndStatus(
                             userDetails.getUserId(),
-                            "ACTIVE"
+                            UserStatus.ACTIVE
                     )
                     .orElseThrow(() ->
                             new IllegalStateException(

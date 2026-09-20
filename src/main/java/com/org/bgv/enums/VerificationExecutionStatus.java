@@ -12,11 +12,7 @@ public enum VerificationExecutionStatus {
 
     UNDER_REVIEW,
 
-    VERIFIED,
-
-    DISCREPANCY_FOUND,
-
-    UNABLE_TO_VERIFY,
+    
 
     CANCELLED,
     PENDING_VENDOR_ACTION,
@@ -53,5 +49,9 @@ public enum VerificationExecutionStatus {
     PENDING_REVIEW,
     APPROVED,
     SEND_EMAIL,
-    RESEND_EMAIL
+    RESEND_EMAIL,
+    
+   // VERIFIED,
+  //  DISCREPANCY_FOUND,
+  //  UNABLE_TO_VERIFY
 }

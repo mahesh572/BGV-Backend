@@ -90,10 +90,10 @@ public class VerificationMethodSeeder implements CommandLineRunner {
                 false);
 
         // mappings (idempotent)
-        mapIfNotExists(CheckCategoryEnum.WORK_EXPERIENCE, email);
-        mapIfNotExists(CheckCategoryEnum.WORK_EXPERIENCE, phone);
-        mapIfNotExists(CheckCategoryEnum.WORK_EXPERIENCE, portal);
-        mapIfNotExists(CheckCategoryEnum.WORK_EXPERIENCE, fieldVisit);
+        mapIfNotExists(CheckCategoryEnum.EMPLOYMENT, email);
+        mapIfNotExists(CheckCategoryEnum.EMPLOYMENT, phone);
+        mapIfNotExists(CheckCategoryEnum.EMPLOYMENT, portal);
+        mapIfNotExists(CheckCategoryEnum.EMPLOYMENT, fieldVisit);
 
         mapIfNotExists(CheckCategoryEnum.EDUCATION, email);
         mapIfNotExists(CheckCategoryEnum.EDUCATION, phone);

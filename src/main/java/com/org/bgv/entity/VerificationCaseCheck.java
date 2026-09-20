@@ -5,6 +5,7 @@ import java.util.List;
 import java.util.ArrayList;
 import com.org.bgv.constants.CaseCheckStatus;
 import com.org.bgv.constants.CaseStatus;
+import com.org.bgv.enums.VerificationOutcome;
 import com.org.bgv.onboarding.entity.Company;
 import com.org.bgv.vendor.entity.VendorUser;
 import com.org.bgv.vendor.entity.VerificationAction;
@@ -93,4 +94,7 @@ public class VerificationCaseCheck {
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "assigned_by")
     private User assignedBy;
+    
+    @Enumerated(EnumType.STRING)
+    private VerificationOutcome outcome;
 }

@@ -10,7 +10,9 @@ import com.org.bgv.common.PackageDocumentDTO;
 import com.org.bgv.common.PackageDocumentRequest;
 import com.org.bgv.common.PackageRequest;
 import com.org.bgv.common.PackageRuleTypeDTO;
+import com.org.bgv.common.RoleConstants;
 import com.org.bgv.common.RuleTypesDTO;
+import com.org.bgv.company.dto.CategoryPreviewDTO;
 import com.org.bgv.company.entity.EmployerPackageAllowedDocument;
 import com.org.bgv.company.entity.EmployerPackageCheckCategory;
 import com.org.bgv.company.entity.EmployerPackageCheckCategoryAllowedRuleType;
@@ -19,11 +21,16 @@ import com.org.bgv.company.repository.EmployerPackageAllowedDocumentRepository;
 import com.org.bgv.company.repository.EmployerPackageCheckCategoryAllowedRuleTypeRepository;
 import com.org.bgv.company.repository.EmployerPackageCheckCategoryRepository;
 import com.org.bgv.company.repository.EmployerPackageRuleRepository;
+import com.org.bgv.config.SecurityUtils;
 import com.org.bgv.constants.EmployerPackageStatus;
 import com.org.bgv.constants.SelectionType;
 import com.org.bgv.dto.*;
 import com.org.bgv.entity.*;
+import com.org.bgv.enums.PackageType;
+import com.org.bgv.exceptions.BusinessException;
 import com.org.bgv.repository.*;
+import com.org.bgv.service.util.UserServiceUtil;
+
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
@@ -31,6 +38,7 @@ import org.springframework.transaction.annotation.Transactional;
 
 import java.time.LocalDateTime;
 import java.util.ArrayList;
+import java.util.Collections;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
@@ -58,6 +66,7 @@ public class PackageService  {
     private final EmployerPackageCheckCategoryAllowedRuleTypeRepository employerPackageCheckCategoryAllowedRuleTypeRepository;
     private final EmployerPackageCheckCategoryRepository employerPackageCheckCategoryRepository;
     private final EmployerPackageAllowedDocumentRepository employerPackageAllowedDocumentRepository;
+    private final UserServiceUtil userServiceUtil;
 
     
     @Transactional
@@ -78,6 +87,7 @@ public class PackageService  {
                 .basePrice(request.getBasePrice())
                 .isActive(request.getIsActive())
                 .price(request.getPrice())
+                .packageType(request.getType())
                 .build();
         
         BgvPackage savedPackage = packageRepository.save(bgvPackage);
@@ -110,6 +120,38 @@ public class PackageService  {
         return packageRepository.findAll().stream()
         		.map(pkg -> convertToDTO(pkg, Boolean.TRUE)) // categories not required
                 .collect(Collectors.toList());
+    }
+    
+    
+    public List<PackageDTO> getPackagesForCurrentUser() {
+
+        Long userId = SecurityUtils.getCurrentUserId();
+        
+       User user = userServiceUtil.getUserById(userId);
+       
+       user.getRoles().forEach(e->log.info("under the package service:::::::::::::{}",e.getRole().getName()));
+       
+       
+       
+       Long companyId = SecurityUtils.getCurrentUserCompanyId();
+        
+        if (userServiceUtil.hasRole(userId, RoleConstants.ADMINISTRATOR)) {
+        	return packageRepository.findAll().stream()
+            		.map(pkg -> convertToDTO(pkg, Boolean.TRUE)) // categories not required
+                    .collect(Collectors.toList());
+        }
+
+        if (userServiceUtil.hasRole(userId, RoleConstants.TYPE_EMPLOYER_LABEL)) {
+            return getAllPackages(companyId);
+        }
+
+        if (userServiceUtil.hasRole(userId, RoleConstants.ROLE_USER)) {
+            return packageRepository.findByPackageType(PackageType.GLOBAL).stream()
+            		.map(pkg -> convertToDTO(pkg, Boolean.TRUE)) // categories not required
+                    .collect(Collectors.toList());
+        }
+
+        return Collections.emptyList();
     }
     
     @Transactional(readOnly = true)
@@ -778,6 +820,8 @@ public class PackageService  {
     }
     
    
+   
+  
     
     
 }

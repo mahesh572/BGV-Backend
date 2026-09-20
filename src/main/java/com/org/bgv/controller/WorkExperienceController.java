@@ -41,13 +41,13 @@ public class WorkExperienceController {
         try {
             List<WorkExperienceDTO> savedExperiences = workExperienceService.saveWorkExperiences(workExperienceDTOs, candidateId,caseId);
             return ResponseEntity.status(HttpStatus.CREATED)
-                    .body(CustomApiResponse.success("Work experiences saved successfully", savedExperiences, HttpStatus.CREATED));
+                    .body(CustomApiResponse.success("Employmement saved successfully", savedExperiences, HttpStatus.CREATED));
         } catch (RuntimeException e) {
             return ResponseEntity.status(HttpStatus.NOT_FOUND)
                     .body(CustomApiResponse.failure(e.getMessage(), HttpStatus.NOT_FOUND));
         } catch (Exception e) {
             return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
-                    .body(CustomApiResponse.failure("Failed to save work experiences: " + e.getMessage(), HttpStatus.INTERNAL_SERVER_ERROR));
+                    .body(CustomApiResponse.failure("Failed to save Employmements: " + e.getMessage(), HttpStatus.INTERNAL_SERVER_ERROR));
         }
     }
 
@@ -56,13 +56,13 @@ public class WorkExperienceController {
         try {
         	WorkExperienceResponse experiences = workExperienceService.getWorkExperiencesByProfile(candidateId,caseId);
             
-            return ResponseEntity.ok(CustomApiResponse.success("Work experiences retrieved successfully", experiences, HttpStatus.OK));
+            return ResponseEntity.ok(CustomApiResponse.success("Employmements retrieved successfully", experiences, HttpStatus.OK));
         } catch (RuntimeException e) {
             return ResponseEntity.status(HttpStatus.NOT_FOUND)
                     .body(CustomApiResponse.failure(e.getMessage(), HttpStatus.NOT_FOUND));
         } catch (Exception e) {
             return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
-                    .body(CustomApiResponse.failure("Failed to retrieve work experiences: " + e.getMessage(), HttpStatus.INTERNAL_SERVER_ERROR));
+                    .body(CustomApiResponse.failure("Failed to retrieve Employmements: " + e.getMessage(), HttpStatus.INTERNAL_SERVER_ERROR));
         }
     }
     
@@ -74,13 +74,13 @@ public class WorkExperienceController {
         try {
             List<WorkExperienceDTO> updatedExperiences = workExperienceService.updateWorkExperiences(workExperienceDTOs, candidateId,caseId);
             return ResponseEntity.ok()
-                    .body(CustomApiResponse.success("Work experiences updated successfully", updatedExperiences, HttpStatus.OK));
+                    .body(CustomApiResponse.success("Employmements updated successfully", updatedExperiences, HttpStatus.OK));
         } catch (RuntimeException e) {
             return ResponseEntity.status(HttpStatus.NOT_FOUND)
                     .body(CustomApiResponse.failure(e.getMessage(), HttpStatus.NOT_FOUND));
         } catch (Exception e) {
             return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
-                    .body(CustomApiResponse.failure("Failed to update work experiences: " + e.getMessage(), HttpStatus.INTERNAL_SERVER_ERROR));
+                    .body(CustomApiResponse.failure("Failed to update Employmements: " + e.getMessage(), HttpStatus.INTERNAL_SERVER_ERROR));
         }
     }
     
@@ -91,13 +91,13 @@ public class WorkExperienceController {
         try {
             workExperienceService.deleteWorkExperience(candidateId, id);
             return ResponseEntity.ok()
-                    .body(CustomApiResponse.success("Work experience deleted successfully", null, HttpStatus.OK));
+                    .body(CustomApiResponse.success("Employmement deleted successfully", null, HttpStatus.OK));
         } catch (RuntimeException e) {
             return ResponseEntity.status(HttpStatus.NOT_FOUND)
                     .body(CustomApiResponse.failure(e.getMessage(), HttpStatus.NOT_FOUND));
         } catch (Exception e) {
             return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
-                    .body(CustomApiResponse.failure("Failed to delete work experience: " + e.getMessage(), HttpStatus.INTERNAL_SERVER_ERROR));
+                    .body(CustomApiResponse.failure("Failed to delete Employmement: " + e.getMessage(), HttpStatus.INTERNAL_SERVER_ERROR));
         }
     }
 	
